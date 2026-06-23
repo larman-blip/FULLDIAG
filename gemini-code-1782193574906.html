@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIAG-OS MAXISYS V4 | Professional OBD Diagnostics</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+    </style>
+</head>
+<body class="h-full flex overflow-hidden selection:bg-cyan-500 selection:text-slate-950">
+
+    <div class="flex w-full h-full">
+
+        <!-- SIDEBAR LEFT -->
+        <aside class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col h-full shrink-0 z-20">
+            <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800 bg-slate-950/60">
+                <div class="flex items-center space-x-2.5" onclick="showHomeView()">
+                    <span class="relative flex h-3.5 w-3.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-cyan-500"></span>
+                    </span>
+                    <h1 class="text-lg font-bold tracking-wider text-white cursor-pointer hover:text-cyan-400 transition-colors">DIAG-OS <span class="text-cyan-400 font-mono text-sm">MAXISYS</span></h1>
+                </div>
+                <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400">V4.0</span>
+            </div>
+
+            <!-- Search input bar -->
+            <div class="p-4 border-b border-slate-800 bg-slate-900/40">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-slate-500 text-sm"></i>
+                    </span>
+                    <input 
+                        type="text" 
+                        id="moduleSearch" 
+                        placeholder="Rechercher un module..." 
+                        class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 block pl-10 pr-3.5 py-2 transition-all outline-none placeholder-slate-500"
+                        onkeyup="filterModules()"
+                    >
+                </div>
+            </div>
+
+            <!-- Sidebar Modules list divided by families -->
+            <nav class="flex-1 overflow-y-auto p-4 space-y-4" id="sidebarNav">
+                
+                <!-- CATEGORY 1: ACTIONNEURS -->
+                <div class="border border-slate-800 rounded-lg overflow-hidden bg-slate-950/20 category-container" data-cat="actionneurs">
+                    <button onclick="toggleCategory('cat-actionneurs')" class="w-full flex items-center justify-between p-3.5 bg-slate-850 hover:bg-slate-800 transition-colors duration-200 text-left">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-gears text-cyan-400"></i>
+                            <span class="font-semibold text-sm text-slate-200">Actionneurs</span>
+                        </div>
+                        <i id="arrow-cat-actionneurs" class="fa-solid fa-chevron-up text-slate-500 text-xs transition-transform duration-300"></i>
+                    </button>
+                    <div id="cat-actionneurs" class="transition-all duration-300 overflow-hidden max-h-[1000px]">
+                        <ul class="divide-y divide-slate-800/50 bg-slate-900/30">
+                            <li class="module-item" data-name="actuateur turbocompresseur">
+                                <button onclick="loadModule('actionneurs', 'actuateur_turbocompresseur.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Actuateur Turbocompresseur</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="diagnostic alternateur multi architecture">
+                                <button onclick="loadModule('actionneurs', 'diagnostic_alternateur_multi_architecture.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Diagnostic Alternateur Multi-Architecture</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="diagnostic demarreur circuit demarrage">
+                                <button onclick="loadModule('actionneurs', 'diagnostic_demarreur.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Diagnostic Démarreur & Circuit</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="diagnostic injecteurs common rail">
+                                <button onclick="loadModule('actionneurs', 'diagnostic_injecteurs_common_rail.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Diagnostic Injecteurs Common Rail</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive injecteur diagnostic module">
+                                <button onclick="loadModule('actionneurs', 'interactive_injecteur_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive Injecteur Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive actuateur diagnostic module">
+                                <button onclick="loadModule('actionneurs', 'interactive_actuateur_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Régulateur de Débit / Pression HP</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive blower motor diagnostic pulseur air habitacle">
+                                <button onclick="loadModule('actionneurs', 'interactive_blower_motor_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Pulseur d'Air Habitacle</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive door lock diagnostic serrure de porte centralisation">
+                                <button onclick="loadModule('actionneurs', 'interactive_door_lock_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Serrure de Porte / Centralisation</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive led headlights diagnostic projecteurs feux croisement">
+                                <button onclick="loadModule('actionneurs', 'interactive_led_headlights_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Projecteurs LED & Feux de Croisement</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive papillon diagnostic module">
+                                <button onclick="loadModule('actionneurs', 'interactive_papillon_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive Papillon Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive power window diagnostic leve vitre electrique">
+                                <button onclick="loadModule('actionneurs', 'interactive_power_window_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Lève-Vitre Électrique</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive reverse light diagnostic feu recul contacteur boite">
+                                <button onclick="loadModule('actionneurs', 'interactive_reverse_light_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Feu de Recul / Capteur de Boîte</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="serrure de hayon arriere tailgate lock trunk diagnostic">
+                                <button onclick="loadModule('actionneurs', 'interactive_tailgate_lock_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Serrure Hayon Arrière (Ref)</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="moteur d'essuie-glace wiper motor diagnostic">
+                                <button onclick="loadModule('actionneurs', 'interactive_wiper_motor_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Moteur d'Essuie-Glace (Ref)</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="ventilateur de refroidissement radiator cooling fan">
+                                <button onclick="loadModule('actionneurs', 'ventilateur_refroidissement.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Ventilateur Radiateur</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="pompe a carburant basse pression bp fuel pump">
+                                <button onclick="loadModule('actionneurs', 'pompe_carburant_bp.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-cube text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Pompe à Carburant BP</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="centrale climatisation habitacle climate control bcm ac">
+                                <button onclick="loadModule('actionneurs', 'centrale_climatisation.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-snowflake text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Diagnostic Système de Climatisation</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- CATEGORY 2: CAPTEURS -->
+                <div class="border border-slate-800 rounded-lg overflow-hidden bg-slate-950/20 category-container" data-cat="capteurs">
+                    <button onclick="toggleCategory('cat-capteurs')" class="w-full flex items-center justify-between p-3.5 bg-slate-850 hover:bg-slate-800 transition-colors duration-200 text-left">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-microchip text-yellow-500"></i>
+                            <span class="font-semibold text-sm text-slate-200">Capteurs</span>
+                        </div>
+                        <i id="arrow-cat-capteurs" class="fa-solid fa-chevron-up text-slate-500 text-xs transition-transform duration-300"></i>
+                    </button>
+                    <div id="cat-capteurs" class="transition-all duration-300 overflow-hidden max-h-[1000px]">
+                        <ul class="divide-y divide-slate-800/50 bg-slate-900/30">
+                            <li class="module-item" data-name="interactive maf diagnostic module">
+                                <button onclick="loadModule('capteurs', 'interactive_maf_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive MAF Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="module technique capteur maf con deep diag">
+                                <button onclick="loadModule('capteurs', 'module_technique_capteur_maf_con_deep_diag.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Technique Capteur MAF Con Deep Diag</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive map diagnostic module">
+                                <button onclick="loadModule('capteurs', 'interactive_map_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive MAP Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive rail pressure diagnostic module">
+                                <button onclick="loadModule('capteurs', 'interactive_rail_pressure_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive Rail Pressure Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive abs wheel speed sensor speedometre diagnostic capteur vitesse roue abs">
+                                <button onclick="loadModule('capteurs', 'interactive_abs_wheel_sensor_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Capteur de Vitesse de Roue ABS</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive pmh diagnostic module">
+                                <button onclick="loadModule('capteurs', 'interactive_pmh_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive PMH Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="module diagnostic pmh">
+                                <button onclick="loadModule('capteurs', 'module_diagnostic_pmh.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Module Diagnostic PMH</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive aac diagnostic module">
+                                <button onclick="loadModule('capteurs', 'interactive_aac_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive AAC Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive ect diagnostic module">
+                                <button onclick="loadModule('capteurs', 'interactive_ect_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive ECT Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive lambda diagnostic module">
+                                <button onclick="loadModule('capteurs', 'interactive_lambda_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive Lambda Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive parking sensors diagnostic radar recul obstacle ultrason">
+                                <button onclick="loadModule('capteurs', 'interactive_parking_sensors_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Radars de Recul & Ultrasons</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="capteur d'angle volant sas steering angle sensor">
+                                <button onclick="loadModule('capteurs', 'interactive_steering_angle_sensor_diagnostic.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white font-mono">Angle Volant (SAS) (Ref)</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="capteur de vitesse vehicule vss speedometer">
+                                <button onclick="loadModule('capteurs', 'interactive_vitesse_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white font-mono">Vitesse Véhicule (VSS) (Ref)</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="capteur pression suralimentation turbo boost manifold">
+                                <button onclick="loadModule('capteurs', 'capteur_pression_suralimentation.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Capteur Pression Turbo</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="capteur temperature carburant diesel fuel temp">
+                                <button onclick="loadModule('capteurs', 'capteur_temperature_carburant.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Température Carburant</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="capteur de cliquetis knock sensor vibration">
+                                <button onclick="loadModule('capteurs', 'capteur_de_cliquetis.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-satellite-dish text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Capteur de Cliquetis</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- CATEGORY 3: ANTI-POLLUTION -->
+                <div class="border border-slate-800 rounded-lg overflow-hidden bg-slate-950/20 category-container" data-cat="antipollution">
+                    <button onclick="toggleCategory('cat-antipollution')" class="w-full flex items-center justify-between p-3.5 bg-slate-850 hover:bg-slate-800 transition-colors duration-200 text-left">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-leaf text-emerald-400"></i>
+                            <span class="font-semibold text-sm text-slate-200">Anti-pollution</span>
+                        </div>
+                        <i id="arrow-cat-antipollution" class="fa-solid fa-chevron-up text-slate-500 text-xs transition-transform duration-300"></i>
+                    </button>
+                    <div id="cat-antipollution" class="transition-all duration-300 overflow-hidden max-h-[1000px]">
+                        <ul class="divide-y divide-slate-800/50 bg-slate-900/30">
+                            <li class="module-item" data-name="interactive egr diagnostic module">
+                                <button onclick="loadModule('antipollution', 'interactive_egr_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-smog text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive EGR Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="interactive fap diagnostic module">
+                                <button onclick="loadModule('antipollution', 'interactive_fap_diagnostic_module.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-smog text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Interactive FAP Diagnostic Module</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="systeme adblue">
+                                <button onclick="loadModule('antipollution', 'syst_me_adblue.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-smog text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Système AdBlue</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- CATEGORY 4: RÉSEAUX & MULTIPLEXAGE -->
+                <div class="border border-slate-800 rounded-lg overflow-hidden bg-slate-950/20 category-container" data-cat="multiplexage">
+                    <button onclick="toggleCategory('cat-multiplexage')" class="w-full flex items-center justify-between p-3.5 bg-slate-850 hover:bg-slate-800 transition-colors duration-200 text-left">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-network-wired text-emerald-400"></i>
+                            <span class="font-semibold text-sm text-slate-200">Réseaux & Électronique</span>
+                        </div>
+                        <i id="arrow-cat-multiplexage" class="fa-solid fa-chevron-up text-slate-500 text-xs transition-transform duration-300"></i>
+                    </button>
+                    <div id="cat-multiplexage" class="transition-all duration-300 overflow-hidden max-h-[1000px]">
+                        <ul class="divide-y divide-slate-800/50 bg-slate-900/30">
+                            <li class="module-item" data-name="diagnostic lignes can bus high low communication">
+                                <button onclick="loadModule('multiplexage', 'diagnostic_lignes_can_bus.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-circle-nodes text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Lignes CAN Bus (H/L)</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="relais de puissance intelligent ipdm fuses relay">
+                                <button onclick="loadModule('multiplexage', 'relais_puissance_intelligent.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-bolt-lightning text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white">Relais Intelligent (IPDM)</span>
+                                </button>
+                            </li>
+                            <li class="module-item" data-name="module de commande colonne de direction com2000 steering switches">
+                                <button onclick="loadModule('multiplexage', 'commande_colonne_direction.html')" class="w-full text-left px-4 py-2.5 hover:bg-slate-800/40 text-xs transition-all flex items-start space-x-2 border-l-2 border-transparent hover:border-cyan-500">
+                                    <i class="fa-solid fa-ring text-slate-500 mt-0.5"></i>
+                                    <span class="text-slate-300 hover:text-white font-mono">Module Colonne (COM2000)</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+            </nav>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs font-mono text-slate-500">
+                <span class="flex items-center"><i class="fa-solid fa-circle text-emerald-500 text-[8px] mr-1.5 animate-pulse"></i> OBD LINK CONNECTED</span>
+                <span>LTE v4G</span>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTAINER -->
+        <main class="flex-1 flex flex-col h-full bg-slate-950 relative overflow-hidden">
+            
+            <header class="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-900/60 backdrop-blur-md z-10 shrink-0">
+                <div class="flex items-center space-x-3">
+                    
+                    <button onclick="showHomeView()" id="btnHome" class="flex items-center space-x-2 text-white bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-lg hover:bg-slate-700 transition-all font-mono text-xs shadow-sm">
+                        <i class="fa-solid fa-house text-cyan-400"></i>
+                        <span>ACCUEIL</span>
+                    </button>
+                    
+                    <button onclick="showInfoView()" id="btnInfo" class="flex items-center space-x-2 text-slate-400 bg-slate-900/40 border border-slate-800/80 px-3.5 py-2 rounded-lg hover:bg-slate-800 transition-all font-mono text-xs shadow-sm">
+                        <i class="fa-solid fa-circle-info text-slate-400" id="btnInfoIcon"></i>
+                        <span>QUI SOMMES-NOUS / INFO</span>
+                    </button>
+
+                    <span class="text-slate-700">|</span>
+                    <div id="headerTitle" class="text-slate-300 font-semibold tracking-wide text-sm font-mono">PANNEAU GENERAL - ECU TELEMETRY</div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="bg-slate-950/80 px-3.5 py-1.5 rounded-lg border border-slate-800 flex items-center space-x-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        <span class="text-xs font-mono font-bold text-slate-300" id="liveVoltage">14.1 V</span>
+                    </div>
+                    <div class="bg-slate-950/80 px-3.5 py-1.5 rounded-lg border border-slate-800 flex items-center space-x-2">
+                        <i class="fa-solid fa-temperature-three-quarters text-amber-500 text-xs"></i>
+                        <span class="text-xs font-mono font-bold text-slate-300" id="liveTemp">88°C</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 relative overflow-hidden" id="viewportArea">
+                
+                <!-- 1. DYNAMIC HOMEPAGE: THE GROUP & SENSOR FAMILIES DASHBOARD -->
+                <div id="ecuDashboard" class="absolute inset-0 overflow-y-auto p-6 md:p-8 flex flex-col justify-between space-y-6">
+                    
+                    <div class="space-y-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start gap-3">
+                            <div>
+                                <h2 class="text-2xl font-black tracking-wider text-white">Espace de Contrôle & Diagnostic Automobile</h2>
+                                <p class="text-xs text-slate-400 font-mono mt-1 uppercase">Surveillance active des familles de capteurs, actionneurs et réseaux multiplexés</p>
+                            </div>
+                            <div class="flex space-x-2 self-start">
+                                <span class="text-[10px] font-mono border border-cyan-500/30 text-cyan-400 bg-cyan-950/50 px-2.5 py-1 rounded">FAST INTERACTIVE PORTAL</span>
+                                <span class="text-[10px] font-mono border border-emerald-500/30 text-emerald-400 bg-emerald-950/50 px-2.5 py-1 rounded">DASHBOARD INTEGRITY</span>
+                            </div>
+                        </div>
+
+                        <!-- INTERACTIVE GROUPS GRID -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <!-- FAMILY CARD 1: ACTIONNEURS -->
+                            <div onclick="openFamilyDirect('cat-actionneurs')" class="group/card cursor-pointer bg-slate-900/40 border border-slate-800/80 p-5 rounded-xl relative shadow-lg hover:border-cyan-500/60 hover:bg-slate-900/60 transition-all duration-300 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 rounded-lg bg-cyan-950/40 border border-cyan-800/30 flex items-center justify-center text-cyan-400 group-hover/card:scale-110 transition-transform">
+                                                <i class="fa-solid fa-gears text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-base font-bold text-white tracking-wide group-hover/card:text-cyan-400 transition-colors">Actionneurs</h3>
+                                                <span class="text-[10px] font-mono text-cyan-400 uppercase">Signaux de Sortie / PWM / Solénoïdes</span>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-mono bg-slate-800 px-2 py-1 rounded text-slate-400">17 Modules</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                                        Composants chargés d'exécuter les consignes du calculateur (ECU). Contrôlez les injecteurs, démarreur, pulseurs d'air, feux LED, papillon motorisé ou lève-vitre.
+                                    </p>
+                                    
+                                    <div class="bg-slate-950/50 rounded-lg p-3 border border-slate-800/80 mb-4">
+                                        <div class="flex justify-between items-center text-[11px] font-mono text-slate-500">
+                                            <span>Consigne Papillon (TPS) :</span>
+                                            <span class="text-cyan-400 font-bold" id="dashTps">42.0%</span>
+                                        </div>
+                                        <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                            <div class="bg-cyan-500 h-full rounded-full transition-all duration-300" id="dashTpsBar" style="width: 42%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="w-full py-2 bg-slate-800 group-hover/card:bg-cyan-950/40 group-hover/card:border-cyan-500/50 text-center text-xs font-mono rounded-lg transition-all text-slate-300 border border-slate-700 group-hover/card:text-cyan-400 flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    <span>Ouvrir la liste des Actionneurs</span>
+                                </div>
+                            </div>
+
+                            <!-- FAMILY CARD 2: CAPTEURS -->
+                            <div onclick="openFamilyDirect('cat-capteurs')" class="group/card cursor-pointer bg-slate-900/40 border border-slate-800/80 p-5 rounded-xl relative shadow-lg hover:border-yellow-500/60 hover:bg-slate-900/60 transition-all duration-300 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 rounded-lg bg-yellow-950/40 border border-yellow-800/30 flex items-center justify-center text-yellow-400 group-hover/card:scale-110 transition-transform">
+                                                <i class="fa-solid fa-microchip text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-base font-bold text-white tracking-wide group-hover/card:text-yellow-400 transition-colors">Capteurs</h3>
+                                                <span class="text-[10px] font-mono text-yellow-400 uppercase">Acquisition analogique & numérique</span>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-mono bg-slate-800 px-2 py-1 rounded text-slate-400">16 Modules</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                                        Organes d'information transmettant la vitesse, pression, température et obstacles. Étudiez les signaux ABS, radars de recul, débitmètre (MAF) ou capteurs de cliquetis.
+                                    </p>
+
+                                    <div class="bg-slate-950/50 rounded-lg p-3 border border-slate-800/80 mb-4">
+                                        <div class="flex justify-between items-center text-[11px] font-mono text-slate-500">
+                                            <span>Température Moteur (ECT) :</span>
+                                            <span class="text-yellow-400 font-bold" id="dashTemp">88.5 °C</span>
+                                        </div>
+                                        <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                            <div class="bg-yellow-500 h-full rounded-full transition-all duration-300" id="dashTempBar" style="width: 75%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="w-full py-2 bg-slate-800 group-hover/card:bg-yellow-950/40 group-hover/card:border-yellow-500/50 text-center text-xs font-mono rounded-lg transition-all text-slate-300 border border-slate-700 group-hover/card:text-yellow-400 flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    <span>Ouvrir la liste des Capteurs</span>
+                                </div>
+                            </div>
+
+                            <!-- FAMILY CARD 3: ANTI-POLLUTION -->
+                            <div onclick="openFamilyDirect('cat-antipollution')" class="group/card cursor-pointer bg-slate-900/40 border border-slate-800/80 p-5 rounded-xl relative shadow-lg hover:border-emerald-500/60 hover:bg-slate-900/60 transition-all duration-300 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 rounded-lg bg-emerald-950/40 border border-emerald-800/30 flex items-center justify-center text-emerald-400 group-hover/card:scale-110 transition-transform">
+                                                <i class="fa-solid fa-leaf text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-base font-bold text-white tracking-wide group-hover/card:text-emerald-400 transition-colors">Anti-pollution</h3>
+                                                <span class="text-[10px] font-mono text-emerald-400 uppercase">EGR / FAP / SCR AdBlue</span>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-mono bg-slate-800 px-2 py-1 rounded text-slate-400">3 Modules</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                                        Modules d'analyse et d'injection pour la dépollution des gaz d'échappement. Suivez et diagnostiquez les colmatages FAP et les pannes du système AdBlue.
+                                    </p>
+
+                                    <div class="bg-slate-950/50 rounded-lg p-3 border border-slate-800/80 mb-4">
+                                        <div class="flex justify-between items-center text-[11px] font-mono text-slate-500">
+                                            <span>Régénération FAP en cours :</span>
+                                            <span class="text-emerald-400 font-bold">STANDBY</span>
+                                        </div>
+                                        <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                            <div class="bg-emerald-500 h-full rounded-full w-[15%]"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="w-full py-2 bg-slate-800 group-hover/card:bg-emerald-950/40 group-hover/card:border-emerald-500/50 text-center text-xs font-mono rounded-lg transition-all text-slate-300 border border-slate-700 group-hover/card:text-emerald-400 flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    <span>Ouvrir la liste Anti-pollution</span>
+                                </div>
+                            </div>
+
+                            <!-- FAMILY CARD 4: RÉSEAUX ET MULTIPLEXAGE -->
+                            <div onclick="openFamilyDirect('cat-multiplexage')" class="group/card cursor-pointer bg-slate-900/40 border border-slate-800/80 p-5 rounded-xl relative shadow-lg hover:border-violet-500/60 hover:bg-slate-900/60 transition-all duration-300 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 rounded-lg bg-violet-950/40 border border-violet-800/30 flex items-center justify-center text-violet-400 group-hover/card:scale-110 transition-transform">
+                                                <i class="fa-solid fa-network-wired text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-base font-bold text-white tracking-wide group-hover/card:text-violet-400 transition-colors">Réseaux & Électronique</h3>
+                                                <span class="text-[10px] font-mono text-violet-400 uppercase">Bus CAN (H/L) & Boitiers BSI/IPDM</span>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-mono bg-slate-800 px-2 py-1 rounded text-slate-400">4 Modules</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                                        Architecture de communication multiplexée inter-calculateurs. Examinez le bus CAN High/Low et déterminez les causes d'absence de communication ou court-circuit.
+                                    </p>
+
+                                    <div class="bg-slate-950/50 rounded-lg p-3 border border-slate-800/80 mb-4">
+                                        <div class="flex justify-between items-center text-[11px] font-mono text-slate-500">
+                                            <span>Fréquence d'activité CAN :</span>
+                                            <span class="text-violet-400 font-bold" id="dashCanRate">500 Kbps</span>
+                                        </div>
+                                        <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden animate-pulse">
+                                            <div class="bg-violet-500 h-full rounded-full w-full"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="w-full py-2 bg-slate-800 group-hover/card:bg-violet-950/40 group-hover/card:border-violet-500/50 text-center text-xs font-mono rounded-lg transition-all text-slate-300 border border-slate-700 group-hover/card:text-violet-400 flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    <span>Ouvrir la liste Réseaux</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- QUICK ACTION COMMAND BAR -->
+                    <div class="bg-slate-900/40 border border-slate-800/80 p-5 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 mt-auto">
+                        <div class="flex items-center space-x-3.5">
+                            <span class="relative flex h-3 w-3">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                            </span>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider">État d'alimentation OBD</h4>
+                                <p class="text-[10px] text-slate-400 font-mono">Surveillance active des défauts du bus et de l'ECU</p>
+                            </div>
+                        </div>
+                        <button onclick="triggerDtcReset()" class="px-5 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-400 border border-red-900/50 hover:border-red-500/70 font-semibold font-mono text-xs rounded-lg shadow-md transition-all flex items-center space-x-2 active:scale-95">
+                            <i class="fa-solid fa-fire-extinguisher"></i>
+                            <span>EFFACER TOUS LES CODES DÉFAUTS (DTC RESET)</span>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- 2. INFO & PRIVACY VIEW -->
+                <div id="aboutDashboard" class="hidden absolute inset-0 overflow-y-auto p-6 md:p-8 flex flex-col justify-start space-y-6">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="text-2xl font-black tracking-wider text-white uppercase">À Propos & Mentions Légales</h2>
+                            <p class="text-xs text-slate-400 font-mono mt-1 uppercase">Informations éditoriales, cookies tiers et exonération de responsabilité</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-slate-900/40 border border-slate-800/80 p-6 rounded-xl relative shadow-lg hover:border-cyan-500/40 transition-all duration-300">
+                            <div class="flex items-center space-x-3 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-950/30 border border-cyan-800/30 flex items-center justify-center text-cyan-400">
+                                    <i class="fa-solid fa-users text-lg"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-white tracking-wide">Qui sommes-nous ?</h3>
+                            </div>
+                            <p class="text-sm text-slate-300 leading-relaxed">
+                                Nous sommes une équipe de techniciens passionnés d'électronique et d'ingénierie embarquée. Notre but est de vulgariser les protocoles de diagnostic complexes (OBD, multiplexage, signaux capteurs/actionneurs) à travers des simulateurs visuels simples et professionnels.
+                            </p>
+                        </div>
+
+                        <div class="bg-slate-900/40 border border-slate-800/80 p-6 rounded-xl relative shadow-lg hover:border-emerald-500/40 transition-all duration-300">
+                            <div class="flex items-center space-x-3 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-950/30 border border-emerald-800/30 flex items-center justify-center text-emerald-400">
+                                    <i class="fa-solid fa-graduation-cap text-lg"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-white tracking-wide">À qui s'adresse cette plateforme ?</h3>
+                            </div>
+                            <p class="text-sm text-slate-300 leading-relaxed">
+                                Ce portail est une <strong class="text-emerald-400">ressource pédagogique gratuite</strong>, spécialement conçue pour les <strong>techniciens de diagnostic automobile</strong> praticiens, ainsi que pour les <strong>élèves et étudiants</strong> en génie mécanique et électronique embarquée.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/30 border border-slate-800/60 p-6 rounded-xl shadow-lg">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-amber-950/30 border border-amber-800/30 flex items-center justify-center text-amber-400">
+                                <i class="fa-solid fa-user-shield text-lg"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white tracking-wide uppercase">Politique de Confidentialité & Exonération de Responsabilité</h3>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                            La confidentialité de nos visiteurs est essentielle. Notre plateforme éducative n'enregistre aucune donnée nominative ou sensible sur ses serveurs. Nous utilisons des services tiers d'affichage publicitaire comme Google AdSense. Ces partenaires utilisent des cookies anonymes afin de vous présenter des annonces ciblées selon vos préférences de navigation. Vous pouvez configurer ou désactiver le dépôt de ces cookies publicitaires directement depuis les paramètres de votre navigateur.
+                        </p>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            <strong>Avis de non-responsabilité :</strong> Les schémas de câblage, oscillogrammes et méthodes de contrôle interactifs affichés sur cette application sont uniquement destinés à l'apprentissage théorique. Nous ne saurions être tenus responsables d'éventuels dommages matériels ou d'accidents électriques causés lors d'une mauvaise intervention réelle dans un atelier de réparation.
+                        </p>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-cyan-950/10 via-slate-900/50 to-cyan-950/10 border border-cyan-800/30 p-6 rounded-xl flex flex-col md:flex-row items-center justify-between shadow-lg">
+                        <div class="mb-4 md:mb-0 text-center md:text-left">
+                            <h4 class="text-sm font-bold text-white tracking-wide uppercase flex items-center justify-center md:justify-start">
+                                <i class="fa-solid fa-paper-plane text-cyan-400 mr-2 animate-bounce"></i> Une question ou une suggestion ?
+                            </h4>
+                            <p class="text-xs text-slate-400 mt-1">Écrivez-nous pour nous faire part de vos commentaires, demandes d'ajouts de schémas ou de partenariats.</p>
+                        </div>
+                        <a href="mailto:majdiarmani2@gmail.com" class="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs rounded-lg shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.03] transition-all flex items-center space-x-2 cursor-pointer">
+                            <i class="fa-solid fa-envelope text-sm"></i>
+                            <span>CONTACTEZ-NOUS : majdiarmani2@gmail.com</span>
+                        </a>
+                    </div>
+
+                    <div class="text-center pt-2">
+                        <button onclick="showHomeView()" class="text-xs text-cyan-400 hover:underline">
+                            ← Retour au Panneau Principal de Diagnostic
+                        </button>
+                    </div>
+                </div>
+
+                <!-- LOADING INTERFACE COMPONENT -->
+                <div id="moduleLoader" class="hidden absolute inset-0 bg-slate-950/90 z-40 flex flex-col items-center justify-center">
+                    <div class="relative w-20 h-20">
+                        <div class="absolute inset-0 rounded-full border-4 border-slate-800"></div>
+                        <div class="absolute inset-0 rounded-full border-4 border-t-cyan-500 animate-spin"></div>
+                    </div>
+                    <span class="text-sm font-mono text-cyan-400 tracking-wider mt-5 animate-pulse">CONNEXION AU SIMULATEUR ACTIVE...</span>
+                </div>
+
+                <!-- FRAME VIEWPORT -->
+                <iframe 
+                    id="viewportIframe"
+                    class="hidden w-full h-full border-none bg-white"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                    title="Live Diagnostic Viewport"
+                ></iframe>
+
+                <!-- DTC RESET SUCCESS TOAST -->
+                <div id="toastSuccess" class="hidden absolute bottom-6 right-6 bg-slate-900 border-2 border-red-500 text-red-200 p-4 rounded-xl shadow-2xl z-50 flex items-center space-x-3 max-w-sm animate-bounce">
+                    <div class="w-8 h-8 rounded-full bg-red-950 flex items-center justify-center text-red-500">
+                        <i class="fa-solid fa-check-double"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold font-mono text-red-400 uppercase">OBD RESET OK</div>
+                        <div class="text-[10px] text-slate-400 font-mono mt-0.5">Codes défauts effacés de la mémoire EEPROM de l'ECU.</div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        /* -------------------------------------------------------------
+           1. COMPREHENSIVE CATEGORY FOLDING/COLLAPSE FUNCTION
+        ------------------------------------------------------------- */
+        function toggleCategory(categoryId) {
+            const container = document.getElementById(categoryId);
+            const arrow = document.getElementById('arrow-' + categoryId);
+            if (!container || !arrow) return;
+
+            if (container.classList.contains('max-h-0')) {
+                container.classList.remove('max-h-0');
+                container.classList.add('max-h-[1000px]');
+                arrow.classList.remove('rotate-180');
+            } else {
+                container.classList.add('max-h-0');
+                container.classList.remove('max-h-[1000px]');
+                arrow.classList.add('rotate-180');
+            }
+        }
+
+        /* -------------------------------------------------------------
+           1b. FAST DIRECT CLICK FROM DASHBOARD CARDS (MODIFIED)
+           Affiche uniquement la famille cliquée et cache les autres
+        ------------------------------------------------------------- */
+        function openFamilyDirect(categoryId) {
+            // Force reset any custom text filter first
+            document.getElementById('moduleSearch').value = '';
+            
+            const categories = document.querySelectorAll('.category-container');
+            
+            categories.forEach(category => {
+                const currentCatId = 'cat-' + category.getAttribute('data-cat');
+                
+                if (currentCatId === categoryId) {
+                    // 1. Show the targeted family container
+                    category.style.display = 'block';
+                    
+                    // 2. Expand its content
+                    const contentDiv = document.getElementById(currentCatId);
+                    const arrow = document.getElementById('arrow-' + currentCatId);
+                    if (contentDiv && arrow) {
+                        contentDiv.classList.remove('max-h-0');
+                        contentDiv.classList.add('max-h-[1000px]');
+                        arrow.classList.remove('rotate-180');
+                    }
+                    
+                    // 3. Highlight effect on the button
+                    const parentBtn = category.querySelector('button');
+                    if (parentBtn) {
+                        parentBtn.classList.add('bg-slate-700', 'ring-2', 'ring-cyan-500/50');
+                        setTimeout(() => {
+                            parentBtn.classList.remove('bg-slate-700', 'ring-2', 'ring-cyan-500/50');
+                        }, 1000);
+                    }
+                } else {
+                    // 4. Hide all other families completely
+                    category.style.display = 'none';
+                }
+            });
+            
+            // Scroll to top of sidebar
+            document.getElementById('sidebarNav').scrollTop = 0;
+        }
+
+        /* -------------------------------------------------------------
+           1c. RESET SIDEBAR VISIBILITY
+           Fait réapparaitre toutes les familles
+        ------------------------------------------------------------- */
+        function resetSidebarVisibility() {
+            const categories = document.querySelectorAll('.category-container');
+            categories.forEach(category => {
+                category.style.display = 'block'; // Show all containers
+                
+                // Ensure all items inside are visible in case a search hid them
+                const modules = category.querySelectorAll('.module-item');
+                modules.forEach(module => {
+                    module.style.display = 'block';
+                });
+            });
+            document.getElementById('moduleSearch').value = '';
+        }
+
+        /* -------------------------------------------------------------
+           2. LIVE VANILLA SEARCH/FILTER THROUGH ALL SPECIFIC MODULES
+        ------------------------------------------------------------- */
+        function filterModules() {
+            const query = document.getElementById('moduleSearch').value.toLowerCase().trim();
+            const categories = document.querySelectorAll('.category-container');
+            
+            categories.forEach(category => {
+                const modules = category.querySelectorAll('.module-item');
+                let visibleCount = 0;
+                
+                modules.forEach(module => {
+                    const name = module.getAttribute('data-name');
+                    if (name.includes(query)) {
+                        module.style.display = 'block';
+                        visibleCount++;
+                    } else {
+                        module.style.display = 'none';
+                    }
+                });
+                
+                if (visibleCount > 0) {
+                    category.style.display = 'block'; // Ensure container is visible if matches found
+                    const catId = 'cat-' + category.getAttribute('data-cat');
+                    const targetDiv = document.getElementById(catId);
+                    const arrow = document.getElementById('arrow-' + catId);
+                    if (targetDiv && arrow) {
+                        targetDiv.classList.remove('max-h-0');
+                        targetDiv.classList.add('max-h-[1000px]');
+                        arrow.classList.remove('rotate-180');
+                    }
+                } else {
+                    category.style.display = 'none';
+                }
+            });
+        }
+
+        /* -------------------------------------------------------------
+           3. BACKGROUND TELEMETRY FLUCTUATIONS FOR GENERAL SENSORS
+        ------------------------------------------------------------- */
+        let state = {
+            throttle: 15,
+            coolant: 85,
+            voltage: 14.1,
+            time: 0
+        };
+
+        const liveVoltage = document.getElementById('liveVoltage');
+        const liveTemp = document.getElementById('liveTemp');
+        const dashTps = document.getElementById('dashTps');
+        const dashTpsBar = document.getElementById('dashTpsBar');
+        const dashTemp = document.getElementById('dashTemp');
+        const dashTempBar = document.getElementById('dashTempBar');
+
+        function runPowertrainEmulation() {
+            state.time += 0.05;
+            state.throttle = 35 + Math.sin(state.time) * 15;
+            state.coolant = 88 + Math.sin(state.time * 0.1) * 1.5;
+            state.voltage = 13.9 + Math.random() * 0.3;
+
+            if (liveVoltage) liveVoltage.textContent = state.voltage.toFixed(1) + " V";
+            if (liveTemp) liveTemp.textContent = Math.round(state.coolant) + "°C";
+
+            if (dashTps && dashTpsBar) {
+                const pct = Math.round(state.throttle);
+                dashTps.textContent = pct.toFixed(1) + "%";
+                dashTpsBar.style.width = pct + "%";
+            }
+            if (dashTemp && dashTempBar) {
+                dashTemp.textContent = state.coolant.toFixed(1) + " °C";
+                const tempPct = Math.min(Math.max((state.coolant - 60) * 2.5, 10), 100);
+                dashTempBar.style.width = tempPct + "%";
+            }
+        }
+
+        let simulationInterval = setInterval(runPowertrainEmulation, 50);
+
+        /* -------------------------------------------------------------
+           4. VIEWPORT NAVIGATION MANAGER
+        ------------------------------------------------------------- */
+        function resetHeaderButtons() {
+            const btnHome = document.getElementById('btnHome');
+            const btnInfo = document.getElementById('btnInfo');
+            const btnInfoIcon = document.getElementById('btnInfoIcon');
+            
+            btnHome.className = "flex items-center space-x-2 text-slate-400 bg-slate-900/40 border border-slate-800/80 px-3.5 py-2 rounded-lg hover:bg-slate-700 transition-all font-mono text-xs shadow-sm";
+            btnInfo.className = "flex items-center space-x-2 text-slate-400 bg-slate-900/40 border border-slate-800/80 px-3.5 py-2 rounded-lg hover:bg-slate-800 transition-all font-mono text-xs shadow-sm";
+            if (btnInfoIcon) btnInfoIcon.className = "fa-solid fa-circle-info text-slate-400";
+        }
+
+        function showHomeView() {
+            resetHeaderButtons();
+            
+            // Reset Sidebar to show all categories when going back to home
+            resetSidebarVisibility();
+
+            const btnHome = document.getElementById('btnHome');
+            btnHome.className = "flex items-center space-x-2 text-white bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-lg hover:bg-slate-700 transition-all font-mono text-xs shadow-sm";
+
+            document.getElementById('headerTitle').textContent = "PANNEAU GENERAL - ECU TELEMETRY";
+            
+            document.getElementById('ecuDashboard').classList.remove('hidden');
+            document.getElementById('aboutDashboard').classList.add('hidden');
+            document.getElementById('viewportIframe').classList.add('hidden');
+            document.getElementById('viewportIframe').removeAttribute('src');
+
+            clearInterval(simulationInterval);
+            simulationInterval = setInterval(runPowertrainEmulation, 50);
+        }
+
+        function showInfoView() {
+            resetHeaderButtons();
+            const btnInfo = document.getElementById('btnInfo');
+            const btnInfoIcon = document.getElementById('btnInfoIcon');
+            btnInfo.className = "flex items-center space-x-2 text-white bg-slate-850 border border-cyan-500/40 px-3.5 py-2 rounded-lg font-mono text-xs shadow-sm shadow-cyan-500/10";
+            if (btnInfoIcon) btnInfoIcon.className = "fa-solid fa-circle-info text-cyan-400";
+
+            document.getElementById('headerTitle').textContent = "À PROPOS / POLITIQUES DE CONFIDENTIALITÉ";
+
+            document.getElementById('ecuDashboard').classList.add('hidden');
+            document.getElementById('aboutDashboard').classList.remove('hidden');
+            document.getElementById('viewportIframe').classList.add('hidden');
+            document.getElementById('viewportIframe').removeAttribute('src');
+
+            clearInterval(simulationInterval);
+            simulationInterval = setInterval(runPowertrainEmulation, 50);
+        }
+
+        /* -------------------------------------------------------------
+           5. DYNAMIC MODULE FILE LOADER CORE
+        ------------------------------------------------------------- */
+        function loadModule(category, fileName) {
+            const ecuDashboard = document.getElementById('ecuDashboard');
+            const aboutDashboard = document.getElementById('aboutDashboard');
+            const viewportIframe = document.getElementById('viewportIframe');
+            const loader = document.getElementById('moduleLoader');
+            const headerTitle = document.getElementById('headerTitle');
+
+            clearInterval(simulationInterval);
+            resetHeaderButtons();
+
+            loader.classList.remove('hidden');
+            ecuDashboard.classList.add('hidden');
+            aboutDashboard.classList.add('hidden');
+            viewportIframe.classList.add('hidden');
+
+            headerTitle.textContent = "MODULE ACTIF: " + category.toUpperCase() + " / " + fileName.replace(/_/g, ' ').toUpperCase().replace('.HTML', '');
+
+            const cleanFileName = fileName.endsWith('.html') ? fileName.slice(0, -5) : fileName;
+            const moduleKey = category + '/' + cleanFileName;
+
+            setTimeout(() => {
+                viewportIframe.removeAttribute('srcdoc');
+                viewportIframe.src = moduleKey + '.html';
+                loader.classList.add('hidden');
+                viewportIframe.classList.remove('hidden');
+            }, 600);
+        }
+
+        /* -------------------------------------------------------------
+           6. INTERACTIVE CUSTOM RESET TOAST (NO ALERT)
+        ------------------------------------------------------------- */
+        function triggerDtcReset() {
+            const toast = document.getElementById('toastSuccess');
+            if (!toast) return;
+            
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
