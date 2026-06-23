@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Capteur AAC</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-pink: #ff33cc;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Crisp Vector Icon SVGs */
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter CSS Representation */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 12px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 25px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CLIP LOCK';
+            position: absolute;
+            top: -10px; left: calc(50% - 35px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 38px;
+            height: 50px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-terminal.selected-black {
+            border-color: #888888;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Selectors */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .state-btn.active, .arch-btn.active {
+            background: var(--neon-cyan);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-amber);
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+        }
+
+        /* Oscilloscope Controls & Canvas */
+        .oscillo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .scope-screen-wrapper {
+            background: var(--screen-bg);
+            border: 3px solid #2a3333;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        #scopeCanvas {
+            width: 100%;
+            height: 250px;
+            background: #030808;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .scope-grid-label {
+            position: absolute;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #55c5c5;
+        }
+
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .scope-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #181d1d;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .scope-select {
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .scope-select:focus {
+            border-color: var(--neon-cyan);
+            outline: none;
+        }
+
+        .btn-trigger {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #172222, #00ffcc);
+            border: 1px solid var(--neon-cyan);
+            color: #080b0b;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-trigger:hover {
+            box-shadow: 0 0 20px var(--neon-glow);
+            transform: scale(1.02);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">
+                <!-- Camshaft SVG Icon -->
+                <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="6" cy="12" r="3" stroke="currentColor" fill="none"/><circle cx="18" cy="12" r="3" stroke="currentColor" fill="none"/><path d="M9 12h6M12 6v12" stroke="currentColor"/></svg>
+                Diagnostic Technique - Capteur AAC (Arbre à Cames)
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module technique simule le diagnostic d'un capteur de position d'arbre à cames (AAC) à Effet Hall actif (3 fils). Il permet d'étudier la corrélation dynamique de calage entre l'arbre à cames et le vilebrequin (PMH) sur un oscilloscope à double trace. Sélectionnez l'état de la distribution, le régime, et contrôlez les signaux.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Volt/Lightning SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" fill="none"/></svg>
+                Simulateur de Test Guidé
+            </h3>
+            
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="color: var(--neon-amber);">Étape 1 : Sélectionner l'état physique de la distribution</label>
+            </div>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-arch-ok" onclick="changeArchitecture('ok')">Distribution Calée (OK)</button>
+                <button class="arch-btn" id="btn-arch-fail" onclick="changeArchitecture('fail')">Distribution Décalée (Jumped Tooth)</button>
+            </div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label>Étape 2 : Choisir l'état opérationnel du moteur</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-off" onclick="changeEngineState('off')">Contact ON (Moteur OFF)</button>
+                <button class="state-btn" id="btn-state-idle" onclick="changeEngineState('idle')">Moteur Ralenti (750 RPM)</button>
+                <button class="state-btn" id="btn-state-snap" onclick="changeEngineState('snap')">Régime Élevé (3500 RPM)</button>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 à 3) du connecteur ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. La Pin 2 correspond au signal numérique carré du capteur Hall (0V à 5V).
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;">Connecteur Capteur AAC</label>
+                    <div class="connector-housing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-1">GND</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-2">SIG</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-3" onclick="selectPin(3)">
+                            <span class="pin-num">3</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-3">VCC</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (Masse GND)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th>Nature du Fil (Effet Hall)</th>
+                        <th>Valeur Théorique Attendue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td>Masse capteur de référence</td>
+                        <td>Inférieure à 0.1 V (Connexion stable à la pin 15 de l'ECU)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td>Signal carré de position de came</td>
+                        <td>Rapport cyclique actif oscillant (moyenne de ~2.5 V au ralenti)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3</strong></td>
+                        <td>Alimentation stabilisée fournie</td>
+                        <td>+5.0 V constant de référence régulée de l'ECU</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Scope/Waveform SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-cyan);" viewBox="0 0 24 24"><path d="M3 12h3l3-9 4 18 3-12h5" stroke="currentColor" fill="none"/></svg>
+                Oscilloscope Virtuel à Double Trace (PMH / AAC)
+            </h3>
+            <div class="oscillo-container">
+                
+                <div class="scope-screen-wrapper">
+                    <div class="scope-grid-label label-volts" id="voltsDivLabel">Y: 2.0 V / Div</div>
+                    <div class="scope-grid-label label-time" id="timeDivLabel">X: 50 ms / Div</div>
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <div class="scope-controls">
+                    <div class="control-group">
+                        <label>Sensibilité Verticale (Tension)</label>
+                        <select class="scope-select" id="ctrlVolts" onchange="updateScopeParameters()">
+                            <option value="0.5">0.5 V / Div</option>
+                            <option value="1">1.0 V / Div</option>
+                            <option value="2" selected>2.0 V / Div</option>
+                            <option value="5">5.0 V / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Vitesse de Balayage (Temps)</label>
+                        <select class="scope-select" id="ctrlTime" onchange="updateScopeParameters()">
+                            <option value="20">20 ms / Div</option>
+                            <option value="50" selected>50 ms / Div</option>
+                            <option value="100">100 ms / Div</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-trigger" onclick="triggerSnapThrottle()">Lancer Analyse de Synchronisation (Crank & Cam Correlation)</button>
+                </div>
+
+                <div class="instruction-box" style="margin-bottom:0;">
+                    <strong>ℹ️ Guide de lecture de la double trace :</strong><br>
+                    • <strong style="color: var(--neon-cyan);">Trace Cyan (PMH - Vilebrequin) :</strong> Signal inductif (sinusoïdal) du bas moteur. Notez la marque cyclique de la ferveur (Tooth Gap).<br>
+                    • <strong style="color: var(--neon-pink);">Trace Rose (AAC - Arbre à Cames) :</strong> Signal carré Hall du haut moteur.<br>
+                    • En mode <strong>Distribution Calée</strong>, le front montant de l'AAC doit s'aligner précisément après 14 dents de la ferveur du PMH. En cas de <strong>Défaut de Calage</strong>, l'impulsion glisse ou saute de quelques dents.
+                </div>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif (Séquentiel)
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus ou sélectionnez-les pour voir la ligne s'illuminer et visualiser le cheminement électrique entre le capteur AAC, la ligne de signal blindée et l'unité de commande moteur (ECU).
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 220" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-brown" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-pink" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- TARGET CAMSHAFT WHEEL -->
+                <circle cx="80" cy="115" r="45" fill="none" stroke="#243131" stroke-width="6" />
+                <path d="M 80,70 L 80,60" stroke="#ff33cc" stroke-width="4" />
+                <path d="M 125,115 L 135,115" stroke="#ff33cc" stroke-width="4" />
+                <text x="80" y="120" fill="#a0b2b2" font-size="8" font-weight="bold" text-anchor="middle">CIBLE AAC</text>
+
+                <!-- CAPTEUR AAC -->
+                <rect x="150" y="85" width="120" height="60" rx="6" fill="#111616" stroke="#ff33cc" stroke-width="2" />
+                <text x="210" y="120" fill="#ff33cc" font-size="10" font-weight="bold" text-anchor="middle">AAC (EFFET HALL)</text>
+
+                <!-- Terminal connector dots -->
+                <circle cx="165" cy="95" r="5" fill="#8b5a2b" />
+                <text x="165" y="110" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                <circle cx="210" cy="95" r="5" fill="#ff33cc" />
+                <text x="210" y="110" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                <circle cx="255" cy="95" r="5" fill="#ff3333" />
+                <text x="255" y="110" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">3</text>
+
+                <!-- CALCULATEUR MOTEUR (ECU) -->
+                <rect x="370" y="55" width="110" height="120" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="425" y="115" fill="#a0b2b2" font-size="10" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+
+                <!-- LIGNES DE CABLAGE -->
+                <!-- Fil 1: Pin 1 -> ECU Pin 15 (Masse commune) -->
+                <path id="wire-path-1" d="M 165,90 L 165,75 L 330,75 L 330,145 L 370,145" fill="none" stroke="#8b5a2b" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="141" fill="#8b5a2b" font-size="8" text-anchor="end">Pin 15 (Masse)</text>
+
+                <!-- Fil 2: Pin 2 -> ECU Pin 42 (Signal AAC) -->
+                <path id="wire-path-2" d="M 210,90 L 210,80 L 340,80 L 340,85 L 370,85" fill="none" stroke="#ff33cc" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="81" fill="#ff33cc" font-size="8" text-anchor="end">Pin 42 (Signal)</text>
+
+                <!-- Fil 3: Pin 3 -> ECU Pin 22 (5V Ref) -->
+                <path id="wire-path-3" d="M 255,90 L 255,85 L 320,85 L 320,115 L 370,115" fill="none" stroke="#ff3333" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="111" fill="#ff3333" font-size="8" text-anchor="end">Pin 22 (5V)</text>
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">
+                <!-- Shield/Diagnostic SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-red);" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" fill="none"/></svg>
+                Procédures de Diagnostic & Stratégies de Panne
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                <div>
+                    <span class="badge-fail">Loi Electrique : Diagnostic de la Corrélation Cam/Crank (P0016)</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        La corrélation d'arbre à cames (AAC) et de vilebrequin (PMH) est validée lorsque le calculateur vérifie la présence du front montant ou descendant du signal AAC à une position précise de la roue de cible PMH. Si la chaîne de distribution s'est détendue, ou si la courroie a sauté une seule dent, le signal de l'AAC sera décalé horizontalement de plusieurs degrés par rapport au PMH. Ce glissement produit instantanément le code <strong>P0016</strong> et provoque un fonctionnement instable du moteur ainsi qu'une limitation électronique de charge.
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: CORRELATION & VALVE TIMING CONTROL
+                        </div>
+                        <div class="live-row"><span>Engine Speed:</span><span id="live-rpm-g">0 RPM</span></div>
+                        <div class="live-row"><span>Camshaft Position Sensor Status:</span><span id="live-status-g" style="color: var(--neon-cyan);">NO SIGNAL</span></div>
+                        <div class="live-row"><span>Cam/Crank Synchronization:</span><span id="live-sync-g" style="color: var(--neon-cyan);">NO</span></div>
+                        <div class="live-row"><span>Camshaft Target Angle Offset:</span><span id="live-offset-g">0.0 deg</span></div>
+                        <div class="live-row"><span>VVT Camshaft Actual Angle:</span><span id="live-ve-g" style="color: var(--neon-amber);">0.0 deg</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez démarrer la simulation en cliquant sur <strong>"Moteur Ralenti"</strong> ou <strong>"Régime Élevé"</strong> ci-dessus pour observer le comportement dynamique du calculateur en temps réel.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Architecture configurations (ok or fail)
+        let currentArchitecture = 'ok';
+
+        // Hall AAC capteur database
+        // Pin 1: Masse, Pin 2: SIG (Square Wave), Pin 3: VCC (5V)
+        const DMM_DATABASE_AAC = {
+            off: { 1: 0.02, 2: 4.50, 3: 5.01 },  // At rest, pull-up keeps signal high
+            idle: { 1: 0.02, 2: 2.50, 3: 5.01 }, // Running averages the square wave (duty cycle -> 2.5V)
+            snap: { 1: 0.03, 2: 2.50, 3: 5.01 }  // Digital amplitude remains constant at high speed
+        };
+
+        let currentEngineState = 'off';
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+
+        function getActiveDatabase() {
+            return DMM_DATABASE_AAC;
+        }
+
+        function calculateVoltage() {
+            let refOff = getActiveDatabase()[currentEngineState];
+            let vRed = 0;
+            let vBlack = 0;
+
+            if (selectedRedPin && refOff[selectedRedPin] !== undefined) {
+                vRed = refOff[selectedRedPin];
+            }
+            if (selectedBlackPin !== 'ground') {
+                vBlack = refOff[selectedBlackPin] || 0;
+            }
+
+            let difference = vRed - vBlack;
+            if (difference < 0) difference = Math.abs(difference);
+
+            document.getElementById('dmmValue').innerText = difference.toFixed(2);
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#8b5a2b', 2: '#ff33cc', 3: '#ff3333' };
+
+            for (let i = 1; i <= 3; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-brown)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-pink)";
+                if (pinNumber === 3) activePath.style.filter = "url(#glow-red)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            document.querySelectorAll('.pin-terminal').forEach(el => { el.classList.remove('selected-red'); });
+            selectedRedPin = pinNumber;
+            document.getElementById(`pin-${pinNumber}`).classList.add('selected-red');
+
+            const names = {
+                1: 'Pin 1 (Masse électronique GND)',
+                2: 'Pin 2 (Signal carré d\'arbre à cames)',
+                3: 'Pin 3 (Alimentation +5V Référence)'
+            };
+            document.getElementById('selected-red-label').innerText = names[pinNumber];
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function changeEngineState(state) {
+            currentEngineState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-state-${state}`).classList.add('active');
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function changeArchitecture(arch) {
+            currentArchitecture = arch;
+            document.querySelectorAll('.arch-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-arch-${arch}`).classList.add('active');
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if(panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        // Live Scanner Logic
+        function updateLiveScannerData() {
+            let rpmEl = document.getElementById('live-rpm-g');
+            let statusEl = document.getElementById('live-status-g');
+            let syncEl = document.getElementById('live-sync-g');
+            let offsetEl = document.getElementById('live-offset-g');
+            let veEl = document.getElementById('live-ve-g');
+            let loadEl = document.getElementById('live-load-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!rpmEl) return;
+
+            if (currentEngineState === 'off') {
+                rpmEl.innerText = "0 RPM";
+                statusEl.innerText = "NO SIGNAL";
+                statusEl.style.color = "var(--neon-red)";
+                syncEl.innerText = "NO";
+                syncEl.style.color = "var(--neon-red)";
+                offsetEl.innerText = "0.0 deg";
+                veEl.innerText = "0.0 deg";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🔴 État: Contact ON (Moteur OFF)</strong><br><br>• <strong>Attente de rotation :</strong> Le calculateur est sous tension. La tension du capteur AAC reste bloquée à l'état haut (4.50V) car aucune cible ne défile devant la cellule Hall.<br>• <strong>Vérification d'alimentation :</strong> Validez la présence du 5.0V sur la Pin 3 et la masse sur la Pin 1.";
+            } 
+            else if (currentEngineState === 'idle') {
+                rpmEl.innerText = "750 RPM";
+                statusEl.innerText = "ACTIVE SIGNAL";
+                statusEl.style.color = "var(--neon-cyan)";
+                
+                if (currentArchitecture === 'ok') {
+                    syncEl.innerText = "YES (Synced)";
+                    syncEl.style.color = "var(--neon-cyan)";
+                    offsetEl.innerText = "1.5 deg (Normal)";
+                    veEl.innerText = "0.0 deg (Base Caling)";
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                    expEl.innerHTML = "<strong>🟢 État: Moteur au Ralenti stable (Distribution OK)</strong><br><br>• <strong>Tendance de Synchronisation :</strong> L'arbre à cames tourne à demi-vitesse du vilebrequin (375 RPM). L'ECU reçoit un signal carré net. L'offset calculé de 1.5 degré est dans la tolérance normale (généralement moins de 5.0 degrés pour une chaîne neuve).<br>• <strong>Calage de Phase :</strong> Le calage correspond exactement au repérage mécanique du moteur.";
+                } else {
+                    syncEl.innerText = "NO (Sync Fault)";
+                    syncEl.style.color = "var(--neon-red)";
+                    offsetEl.innerText = "14.8 deg (Critique)";
+                    veEl.innerText = "0.0 deg";
+                    dtcEl.innerText = "P0016 - CAM/CRANK RELATION ANGLE CORRELATION";
+                    dtcEl.style.color = "var(--neon-red)";
+                    expEl.innerHTML = "<strong>🚨 État: Moteur instable (Défaut de Corrélation P0016)</strong><br><br>• <strong>Déphasage détecté :</strong> Le calculateur détecte que l'impulsion de l'AAC arrive avec un retard critique de 14.8 degrés par rapport aux dents du PMH. C'est la preuve physique qu'une dent a sauté sur la distribution !<br>• <strong>Conséquence :</strong> Le moteur boîte, le démarrage est long et l'ECU peut interdire l'allumage par sécurité.";
+                }
+            } 
+            else if (currentEngineState === 'snap') {
+                rpmEl.innerText = "3500 RPM";
+                statusEl.innerText = "ACTIVE SIGNAL (High Frequency)";
+                statusEl.style.color = "var(--neon-cyan)";
+
+                if (currentArchitecture === 'ok') {
+                    syncEl.innerText = "YES (Synced)";
+                    syncEl.style.color = "var(--neon-cyan)";
+                    offsetEl.innerText = "1.8 deg";
+                    veEl.innerText = "28.5 deg (VVT Actuator ON)";
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                    expEl.innerHTML = "<strong>🚀 État: Régime Élevé (Pilotage VVT Actif)</strong><br><br>• <strong>Changement de Phase :</strong> À 3500 RPM, l'électrovanne de déphasage (VVT/Vanos) est activée. Elle décale hydrauliquement l'arbre à cames de 28.5 degrés pour optimiser le remplissage en air à haute vitesse.<br>• <strong>Loi de Validation :</strong> L'ECU suit ce déphasage de manière dynamique. Comme l'offset reste de 1.8 degré par rapport à la consigne dynamique de calage, la synchronisation est parfaite.";
+                } else {
+                    syncEl.innerText = "NO (Sync Fault)";
+                    syncEl.style.color = "var(--neon-red)";
+                    offsetEl.innerText = "14.5 deg";
+                    veEl.innerText = "0.0 deg (VVT Locked)";
+                    dtcEl.innerText = "P0011 - CAMSHAFT POSITION TIMING OVER-ADVANCED";
+                    dtcEl.style.color = "var(--neon-red)";
+                    expEl.innerHTML = "<strong>🚨 État: Régime Élevé (Défaut VVT / P0011)</strong><br><br>• <strong>Bloquage de Vanne :</strong> L'arbre à cames ne parvient pas à se caler à la position demandée ou est resté bloqué en position avancée. L'ECU verrouille la régulation VVT à 0.0 degré par sécurité et enregistre le code <b>P0011</b>.<br>• <strong>Analyse Mécanique :</strong> Cela est généralement causé par un manque de pression d'huile, une huile de mauvaise qualité ou une électrovanne VVT colmatée.";
+                }
+            }
+        }
+
+        // ====================================================
+        // OSCILLOSCOPE INTERACTIF
+        // ====================================================
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let voltScale = 2.0;
+        let timeScale = 50;
+        let isAnimating = false;
+        let animProgress = 0;
+        let scopeInterval = null;
+
+        function updateScopeParameters() {
+            voltScale = parseFloat(document.getElementById('ctrlVolts').value);
+            timeScale = parseInt(document.getElementById('ctrlTime').value);
+            document.getElementById('voltsDivLabel').innerText = `Y: ${voltScale.toFixed(1)} V / Div`;
+            document.getElementById('timeDivLabel').innerText = `X: ${timeScale} ms / Div`;
+            drawScope();
+        }
+
+        function drawScope() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const width = canvas.width || 500;
+            const height = canvas.height || 250;
+            const numDivsX = 10;
+            const numDivsY = 6;
+            const gridSpacingX = width / numDivsX;
+            const gridSpacingY = height / numDivsY;
+
+            ctx.strokeStyle = '#122525';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= numDivsX; i++) {
+                ctx.beginPath(); ctx.moveTo(i * gridSpacingX, 0); ctx.lineTo(i * gridSpacingX, height); ctx.stroke();
+            }
+            for (let i = 0; i <= numDivsY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, i * gridSpacingY); ctx.lineTo(width, i * gridSpacingY); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#1e4040';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+            ctx.stroke();
+
+            function voltToY(volts, offset = 0) {
+                const maxVoltsRepresented = numDivsY * voltScale;
+                return height - ((volts + offset) / maxVoltsRepresented) * height;
+            }
+
+            if (!isAnimating) {
+                // Static traces at rest
+                // Trace 1 (PMH - Sinusoidal) - Cyan
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(0, voltToY(0, 4.0)); // PMH centerline offset to upper half
+                ctx.lineTo(width, voltToY(0, 4.0));
+                ctx.stroke();
+
+                // Trace 2 (AAC - Square) - Pink
+                ctx.strokeStyle = '#ff33cc';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                let aacRest = currentEngineState === 'off' ? 4.50 : 0.00;
+                ctx.moveTo(0, voltToY(aacRest, 0.5)); // AAC centerline offset to lower half
+                ctx.lineTo(width, voltToY(aacRest, 0.5));
+                ctx.stroke();
+            } else {
+                // Dynamic dual trace sweeps
+                let samplesPMH = [];
+                let samplesAAC = [];
+                const step = 2;
+                
+                let speedFactor = currentEngineState === 'idle' ? 1.0 : 2.5;
+
+                for (let x = 0; x < width; x += step) {
+                    let tMs = (x / width) * (timeScale * numDivsX);
+                    let cyclePos = (tMs * speedFactor * 0.15) % 10; 
+
+                    // 1. Calculate PMH Inductive sine (AC)
+                    let amplitude = currentEngineState === 'idle' ? 1.2 : 2.8;
+                    let valPMH = Math.sin(cyclePos * Math.PI * 4) * amplitude; // fast frequency (crank rotates fast)
+                    
+                    // PMH Tooth Gap simulation
+                    let cycleModPMH = cyclePos % 2.5; 
+                    if (cycleModPMH > 2.2 && cycleModPMH < 2.45) {
+                        valPMH = 0.0; // gap flatline
+                    }
+
+                    // 2. Calculate AAC Hall square wave (Cam rotates half speed)
+                    let valAAC = 0.5; // low (0.5V)
+                    let shift = currentArchitecture === 'ok' ? 0.0 : 0.8; // Shift horizontal position on fail
+                    let pulseWidth = (cyclePos + shift) % 5.0; // lower frequency
+                    
+                    if (pulseWidth < 2.2) {
+                        valAAC = 4.5; // High
+                    }
+
+                    samplesPMH.push({ x: x, y: voltToY(valPMH, 4.0) });
+                    samplesAAC.push({ x: x, y: voltToY(valAAC, 0.5) });
+                }
+
+                // Render Trace 1 (Crank PMH) - Cyan Grid
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = 'rgba(0, 255, 204, 0.5)';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 2.5;
+                if (samplesPMH.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(samplesPMH[0].x, samplesPMH[0].y);
+                    for (let j = 0; j < samplesPMH.length; j++) {
+                        if (samplesPMH[j].x < animProgress) {
+                            ctx.lineTo(samplesPMH[j].x, samplesPMH[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+
+                // Render Trace 2 (Cam AAC) - Pink Grid
+                ctx.strokeStyle = '#ff33cc';
+                ctx.shadowColor = 'rgba(255, 51, 204, 0.5)';
+                ctx.lineWidth = 2.5;
+                if (samplesAAC.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(samplesAAC[0].x, samplesAAC[0].y);
+                    for (let j = 0; j < samplesAAC.length; j++) {
+                        if (samplesAAC[j].x < animProgress) {
+                            ctx.lineTo(samplesAAC[j].x, samplesAAC[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function triggerSnapThrottle() {
+            if (isAnimating) return;
+            isAnimating = true;
+            animProgress = 0;
+            changeEngineState('snap');
+
+            if (scopeInterval) clearInterval(scopeInterval);
+            const startTime = Date.now();
+            const duration = 2000;
+
+            scopeInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                animProgress = (elapsed / duration) * canvas.width;
+
+                let representedTime = (animProgress / canvas.width) * (timeScale * 10);
+                let db = getActiveDatabase();
+
+                if (representedTime < 300) {
+                    document.getElementById('dmmValue').innerText = db['off'][selectedRedPin].toFixed(2);
+                } else if (representedTime >= 300 && representedTime < 900) {
+                    document.getElementById('dmmValue').innerText = db['snap'][selectedRedPin].toFixed(2);
+                } else {
+                    document.getElementById('dmmValue').innerText = db['idle'][selectedRedPin].toFixed(2);
+                }
+
+                drawScope();
+
+                if (elapsed >= duration) {
+                    clearInterval(scopeInterval);
+                    isAnimating = false;
+                    changeEngineState('idle');
+                }
+            }, 30);
+        }
+
+        window.onload = function() {
+            canvas.width = canvas.offsetWidth || 500;
+            canvas.height = canvas.offsetHeight || 250;
+            selectPin(1);
+            updateScopeParameters();
+        };
+    </script>
+</body>
+</html>

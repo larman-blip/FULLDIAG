@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Capteur de Vitesse (VSS)</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-pink: #ff33cc;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Crisp Vector Icon SVGs */
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter CSS Representation */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 12px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 25px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CLIP LOCK';
+            position: absolute;
+            top: -10px; left: calc(50% - 35px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 38px;
+            height: 50px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-terminal.selected-black {
+            border-color: #888888;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Selectors */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .state-btn.active, .arch-btn.active {
+            background: var(--neon-cyan);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-amber);
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+        }
+
+        /* Oscilloscope Controls & Canvas */
+        .oscillo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .scope-screen-wrapper {
+            background: var(--screen-bg);
+            border: 3px solid #2a3333;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        #scopeCanvas {
+            width: 100%;
+            height: 250px;
+            background: #030808;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .scope-grid-label {
+            position: absolute;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #55c5c5;
+        }
+
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .scope-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #181d1d;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .scope-select {
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .scope-select:focus {
+            border-color: var(--neon-cyan);
+            outline: none;
+        }
+
+        .btn-trigger {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #172222, #00ffcc);
+            border: 1px solid var(--neon-cyan);
+            color: #080b0b;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-trigger:hover {
+            box-shadow: 0 0 20px var(--neon-glow);
+            transform: scale(1.02);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">
+                <!-- Speedometer SVG Icon -->
+                <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" fill="none"/><path d="M12 12l3-5M8 16a6 6 0 0 1 8 0" stroke="currentColor"/></svg>
+                Diagnostic Technique - Capteur de Vitesse Véhicule (VSS)
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module technique simule le diagnostic du capteur de vitesse du véhicule (VSS). Il permet d'étudier deux technologies de transfert d'information : le capteur physique à effet Hall monté sur la boîte de vitesses (3 fils), ou la transmission multiplexée de la vitesse via le réseau CAN Bus à partir des capteurs de roue de l'ABS.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Volt/Lightning SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" fill="none"/></svg>
+                Simulateur de Test Guidé
+            </h3>
+            
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="color: var(--neon-amber);">Étape 1 : Sélectionner la technologie système de vitesse</label>
+            </div>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-arch-hall" onclick="changeArchitecture('hall')">Capteur Boîte (Effet Hall - 3 fils)</button>
+                <button class="arch-btn" id="btn-arch-can" onclick="changeArchitecture('can')">Vitesse Réseau (ABS / CAN Multiplexé)</button>
+            </div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label>Étape 2 : Choisir la vitesse de déplacement réelle</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-off" onclick="changeEngineState('off')">Véhicule Arrêté (0 km/h)</button>
+                <button class="state-btn" id="btn-state-idle" onclick="changeEngineState('idle')">Vitesse Modérée (50 km/h)</button>
+                <button class="state-btn" id="btn-state-snap" onclick="changeEngineState('snap')">Vitesse Autoroute (130 km/h)</button>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 à 3) du connecteur ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. Sur l'architecture CAN, vous mesurerez directement les signaux différentiels du bus multiplexé !
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;" id="diagram-connector-label">Connecteur VSS (Effet Hall)</label>
+                    <div class="connector-housing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-1">GND</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-2">SIG</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-3" onclick="selectPin(3)">
+                            <span class="pin-num">3</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-3">VCC</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (Masse GND)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th id="table-th-arch1">Nature du Fil (Effet Hall)</th>
+                        <th>Valeur Théorique Attendue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td id="table-p1-desc">Masse du capteur de vitesse</td>
+                        <td id="table-p1-val">Inférieure à 0.1 V (Liaison masse dédiée)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td id="table-p2-desc">Signal carré de vitesse</td>
+                        <td id="table-p2-val">Moyenne de ~6.0 V lors de la rotation (0V à 12V)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3</strong></td>
+                        <td id="table-p3-desc">Alimentation 12V APC</td>
+                        <td id="table-p3-val">+12.0 V constant après contact (relais)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Scope/Waveform SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-cyan);" viewBox="0 0 24 24"><path d="M3 12h3l3-9 4 18 3-12h5" stroke="currentColor" fill="none"/></svg>
+                Oscilloscope de Diagnostic Virtuel
+            </h3>
+            <div class="oscillo-container">
+                
+                <div class="scope-screen-wrapper">
+                    <div class="scope-grid-label label-volts" id="voltsDivLabel">Y: 2.0 V / Div</div>
+                    <div class="scope-grid-label label-time" id="timeDivLabel">X: 50 ms / Div</div>
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <div class="scope-controls">
+                    <div class="control-group">
+                        <label>Sensibilité Verticale (Tension)</label>
+                        <select class="scope-select" id="ctrlVolts" onchange="updateScopeParameters()">
+                            <option value="0.5">0.5 V / Div</option>
+                            <option value="1">1.0 V / Div</option>
+                            <option value="2" selected>2.0 V / Div</option>
+                            <option value="5">5.0 V / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Vitesse de Balayage (Temps)</label>
+                        <select class="scope-select" id="ctrlTime" onchange="updateScopeParameters()">
+                            <option value="20">20 ms / Div</option>
+                            <option value="50" selected>50 ms / Div</option>
+                            <option value="100">100 ms / Div</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-trigger" onclick="triggerSnapThrottle()">Simuler Accélération Véhicule</button>
+                </div>
+
+                <div class="instruction-box" style="margin-bottom:0;">
+                    <strong>ℹ️ Guide d'interprétation des courbes :</strong><br>
+                    • <strong>Signal Capteur Hall :</strong> Une courbe carrée parfaite oscillant de 0V à 12V. La fréquence du signal augmente proportionnellement avec la vitesse.<br>
+                    • <strong>Signal Multiplexé (CAN Bus) :</strong> Deux lignes miroir en opposition de phase. Le CAN High (Cyan) oscille entre 2.5V et 3.5V, tandis que le CAN Low (Rose) oscille entre 2.5V et 1.5V. C'est l'épine dorsale des données de vitesse provenant de l'ABS.
+                </div>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus ou sélectionnez-les pour voir la ligne s'illuminer et visualiser le cheminement électrique entre le capteur VSS, le bloc ABS et le calculateur moteur (ECU).
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 220" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-brown" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-pink" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- RELAIS / ABS UNIT depending on mode -->
+                <g id="power-source-block">
+                    <rect x="20" y="20" width="110" height="40" rx="4" fill="#172222" stroke="#ffaa00" stroke-width="1.5" />
+                    <text id="power-source-text" x="75" y="44" fill="#ffaa00" font-size="9" font-weight="bold" text-anchor="middle">RELAIS R1 (+12V)</text>
+                </g>
+
+                <!-- CAPTEUR VSS -->
+                <rect x="180" y="100" width="120" height="60" rx="6" fill="#111616" stroke="#00ffcc" stroke-width="2" />
+                <text x="240" y="135" fill="#00ffcc" font-size="10" font-weight="bold" text-anchor="middle" id="diagram-capteur-title">CAPTEUR VSS (HALL)</text>
+
+                <!-- Terminal connector dots -->
+                <circle cx="195" cy="110" r="5" fill="#8b5a2b" id="diagram-c1" />
+                <text x="195" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                <circle cx="240" cy="110" r="5" fill="#00a8ff" id="diagram-c2" />
+                <text x="240" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                <circle cx="285" cy="110" r="5" fill="#ff3333" id="diagram-c3" />
+                <text x="285" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">3</text>
+
+                <!-- CALCULATEUR MOTEUR (ECU) -->
+                <rect x="370" y="70" width="110" height="110" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="425" y="125" fill="#a0b2b2" font-size="10" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+
+                <!-- LIGNES DE CABLAGE -->
+                <!-- Fil 1: GND / CAN-H -->
+                <path id="wire-path-1" d="M 75,60 L 75,80 L 195,80 L 195,105" fill="none" stroke="#8b5a2b" stroke-width="2" style="transition: all 0.3s ease;" />
+                
+                <!-- Fil 2: SIG / CAN-L -->
+                <path id="wire-path-2" d="M 240,105 L 240,90 L 330,90 L 330,115 L 370,115" fill="none" stroke="#00a8ff" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text id="wire-label-p2" x="365" y="111" fill="#00a8ff" font-size="8" text-anchor="end">Pin 28</text>
+
+                <!-- Fil 3: VCC / NC -->
+                <path id="wire-path-3" d="M 285,105 L 285,95 L 340,95 L 340,145 L 370,145" fill="none" stroke="#ff3333" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text id="wire-label-p3" x="365" y="141" fill="#ff3333" font-size="8" text-anchor="end">Pin 44</text>
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">
+                <!-- Shield/Diagnostic SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-red);" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" fill="none"/></svg>
+                Procédures de Diagnostic & Stratégies de Panne
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                <div>
+                    <span class="badge-fail">Diagnostic d'une coupure de ligne ou de perte communication (P0500 vs U0121)</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        Sur un système classique, le code <strong>P0500</strong> indique une absence totale de signal VSS lors du déplacement du véhicule (détecté par la charge moteur). Si le compteur de vitesse reste inerte, débranchez le capteur Hall et testez la Pin 3 (+12V après contact) et la Pin 1 (Masse). Si elles sont correctes, utilisez un stimulateur de fréquence ou une perceuse sur l'axe pour faire tourner le pignon du capteur et valider l'oscillation.<br><br>
+                        Sur un système multiplexé moderne, l'absence de vitesse est souvent liée à un défaut de communication bus CAN. Si le compteur de vitesse chute à zéro en même temps que s'allume le voyant ABS/ESP, le code enregistré sera du type <strong>U0121</strong> (Perte de communication avec le module ABS). Le test au multimètre doit alors se concentrer sur les broches CAN High (2.7V) et CAN Low (2.3V) pour valider l'intégrité physique de la ligne.
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: VEHICLE SPEED & NETWORK TIMING
+                        </div>
+                        <div class="live-row"><span>Calculated Vehicle Speed:</span><span id="live-speed-g">0 km/h</span></div>
+                        <div class="live-row"><span>VSS Sensor Frequency:</span><span id="live-freq-g">0 Hz</span></div>
+                        <div class="live-row"><span>ABS Wheel Sensors Average:</span><span id="live-abs-g">0 km/h</span></div>
+                        <div class="live-row"><span>CAN Bus VSS Message Status:</span><span id="live-can-status-g" style="color: var(--neon-cyan);">INACTIVE</span></div>
+                        <div class="live-row"><span>Fuel Cut-off Decel Status:</span><span id="live-decel-g" style="color: var(--neon-cyan);">NO</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez démarrer la simulation en cliquant sur <strong>"Vitesse Modérée"</strong> ou <strong>"Vitesse Autoroute"</strong> ci-dessus pour observer le comportement dynamique du calculateur en temps réel.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentArchitecture = 'hall';
+
+        // Pinout Databases
+        // HALL: Pin 1: Masse (GND), Pin 2: SIG, Pin 3: VCC (12V)
+        const DMM_DATABASE_HALL = {
+            off: { 1: 0.02, 2: 12.00, 3: 12.05 }, // Rests on high pull-up voltage at stopped position
+            idle: { 1: 0.02, 2: 6.00, 3: 12.05 }, // Multimeter averages the 0-12V square wave to ~6.0V
+            snap: { 1: 0.03, 2: 6.00, 3: 12.05 }  // Average remains constant despite high frequency
+        };
+
+        // CAN: Pin 1: CAN-H, Pin 2: CAN-L, Pin 3: NC (Open Loop)
+        const DMM_DATABASE_CAN = {
+            off: { 1: 2.70, 2: 2.30, 3: 0.00 },   // Dominant/Recessive state averages on CAN bus
+            idle: { 1: 2.75, 2: 2.25, 3: 0.00 },  
+            snap: { 1: 2.80, 2: 2.20, 3: 0.00 }   
+        };
+
+        let currentEngineState = 'off';
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+
+        function getActiveDatabase() {
+            return currentArchitecture === 'hall' ? DMM_DATABASE_HALL : DMM_DATABASE_CAN;
+        }
+
+        function calculateVoltage() {
+            let refOff = getActiveDatabase()[currentEngineState];
+            let vRed = 0;
+            let vBlack = 0;
+
+            if (selectedRedPin && refOff[selectedRedPin] !== undefined) {
+                vRed = refOff[selectedRedPin];
+            }
+            if (selectedBlackPin !== 'ground') {
+                vBlack = refOff[selectedBlackPin] || 0;
+            }
+
+            let difference = vRed - vBlack;
+            if (difference < 0) difference = Math.abs(difference);
+
+            document.getElementById('dmmValue').innerText = difference.toFixed(2);
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#8b5a2b', 2: '#00a8ff', 3: '#ff3333' };
+
+            for (let i = 1; i <= 3; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-brown)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-blue)";
+                if (pinNumber === 3) activePath.style.filter = "url(#glow-red)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            document.querySelectorAll('.pin-terminal').forEach(el => { el.classList.remove('selected-red'); });
+            selectedRedPin = pinNumber;
+            document.getElementById(`pin-${pinNumber}`).classList.add('selected-red');
+
+            let pinNameText = '';
+            if (currentArchitecture === 'hall') {
+                const names = {
+                    1: 'Pin 1 (Masse électronique GND)',
+                    2: 'Pin 2 (Signal carré de vitesse)',
+                    3: 'Pin 3 (Alimentation +12V Batterie)'
+                };
+                pinNameText = names[pinNumber];
+            } else {
+                const names = {
+                    1: 'Pin 1 (Ligne Réseau CAN High)',
+                    2: 'Pin 2 (Ligne Réseau CAN Low)',
+                    3: 'Pin 3 (Non Connecté - O.L)'
+                };
+                pinNameText = names[pinNumber];
+            }
+            document.getElementById('selected-red-label').innerText = pinNameText;
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function changeEngineState(state) {
+            currentEngineState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-state-${state}`).classList.add('active');
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function changeArchitecture(arch) {
+            currentArchitecture = arch;
+            document.querySelectorAll('.arch-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-arch-${arch}`).classList.add('active');
+
+            // DOM Label Updates
+            const labelP1 = document.getElementById('label-pin-1');
+            const labelP2 = document.getElementById('label-pin-2');
+            const labelP3 = document.getElementById('label-pin-3');
+
+            const tabP1Desc = document.getElementById('table-p1-desc');
+            const tabP1Val = document.getElementById('table-p1-val');
+            const tabP2Desc = document.getElementById('table-p2-desc');
+            const tabP2Val = document.getElementById('table-p2-val');
+            const tabP3Desc = document.getElementById('table-p3-desc');
+            const tabP3Val = document.getElementById('table-p3-val');
+
+            const capTitle = document.getElementById('diagram-capteur-title');
+            const powerText = document.getElementById('power-source-text');
+            const powerSourceTextGroup = document.getElementById('power-source-block');
+            
+            const wLabelP2 = document.getElementById('wire-label-p2');
+            const wLabelP3 = document.getElementById('wire-label-p3');
+            const connLabel = document.getElementById('diagram-connector-label');
+
+            if (arch === 'hall') {
+                labelP1.innerText = "GND";
+                labelP2.innerText = "SIG";
+                labelP3.innerText = "VCC";
+
+                tabP1Desc.innerText = "Masse du capteur de vitesse";
+                tabP1Val.innerText = "Inférieure à 0.1 V (Liaison masse dédiée)";
+
+                tabP2Desc.innerText = "Signal carré de vitesse";
+                tabP2Val.innerText = "Moyenne de ~6.0 V lors de la rotation (0V à 12V)";
+
+                tabP3Desc.innerText = "Alimentation 12V APC";
+                tabP3Val.innerText = "+12.0 V constant après contact (relais)";
+
+                if(capTitle) capTitle.textContent = "CAPTEUR VSS (HALL)";
+                if(powerText) {
+                    powerText.textContent = "RELAIS R1 (+12V)";
+                    powerText.style.fill = "#ffaa00";
+                }
+                if(powerSourceTextGroup) {
+                    powerSourceTextGroup.querySelector('rect').style.stroke = "#ffaa00";
+                }
+                if(wLabelP2) wLabelP2.textContent = "Pin 28";
+                if(wLabelP3) wLabelP3.textContent = "Pin 44";
+                if(connLabel) connLabel.textContent = "Connecteur VSS (Effet Hall)";
+            } else {
+                labelP1.innerText = "CAN-H";
+                labelP2.innerText = "CAN-L";
+                labelP3.innerText = "N.C";
+
+                tabP1Desc.innerText = "Ligne multiplexée CAN High";
+                tabP1Val.innerText = "Signal oscillant rapide de 2.5 V à 3.5 V";
+
+                tabP2Desc.innerText = "Ligne multiplexée CAN Low";
+                tabP2Val.innerText = "Signal oscillant rapide de 2.5 V à 1.5 V";
+
+                tabP3Desc.innerText = "Voie non connectée / libre";
+                tabP3Val.innerText = "État O.L (Résistance infinie)";
+
+                if(capTitle) capTitle.textContent = "MODULE ABS (ECU)";
+                if(powerText) {
+                    powerText.textContent = "RESEAU CAN BUS";
+                    powerText.style.fill = "#ff33cc";
+                }
+                if(powerSourceTextGroup) {
+                    powerSourceTextGroup.querySelector('rect').style.stroke = "#ff33cc";
+                }
+                if(wLabelP2) wLabelP2.textContent = "Pin 10 (CAN-L)";
+                if(wLabelP3) wLabelP3.textContent = "Pin 12 (CAN-H)";
+                if(connLabel) connLabel.textContent = "Prise Diagnostic OBD (CAN lines)";
+            }
+
+            selectPin(selectedRedPin); 
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if(panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        // Live Scanner Logic
+        function updateLiveScannerData() {
+            let speedEl = document.getElementById('live-speed-g');
+            let freqEl = document.getElementById('live-freq-g');
+            let absEl = document.getElementById('live-abs-g');
+            let canStatusEl = document.getElementById('live-can-status-g');
+            let decelEl = document.getElementById('live-decel-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!speedEl) return;
+
+            if (currentEngineState === 'off') {
+                speedEl.innerText = "0 km/h";
+                freqEl.innerText = "0 Hz";
+                absEl.innerText = "0 km/h";
+                canStatusEl.innerText = "INACTIVE (Standby)";
+                canStatusEl.style.color = "var(--neon-amber)";
+                decelEl.innerText = "NO";
+                decelEl.style.color = "var(--text-secondary)";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🔴 État: Véhicule Arrêté (0 km/h)</strong><br><br>• <strong>Phase statique :</strong> L'arbre de sortie de boîte ne tourne pas. Les capteurs ABS de roues n'enregistrent aucun défilement.<br>• <strong>Diagnostic physique :</strong> Sur le capteur Hall, la Pin 2 (Signal) affiche une tension de repos stable (généralement bloquée à 12.0V par la résistance de Pull-up de l'ECU).";
+            } 
+            else if (currentEngineState === 'idle') {
+                speedEl.innerText = "50 km/h";
+                freqEl.innerText = "35 Hz";
+                absEl.innerText = "50 km/h";
+                canStatusEl.innerText = "ACTIVE (Normal Frames)";
+                canStatusEl.style.color = "var(--neon-cyan)";
+                decelEl.innerText = "YES (Fuel cut-off idle)";
+                decelEl.style.color = "var(--neon-cyan)";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                
+                if (currentArchitecture === 'hall') {
+                    expEl.innerHTML = "<strong>🟢 État: Vitesse Modérée (50 km/h) sur Capteur Boîte</strong><br><br>• <strong>Calcul de la fréquence :</strong> Le capteur à effet Hall produit une oscillation rapide. La fréquence est de 35 Hz. Le calculateur traduit cette fréquence de manière linéaire pour afficher précisément 50 km/h au combiné d'instruments.<br>• <strong>Comportement DMM :</strong> Le multimètre filtre le signal carré et donne une valeur de tension moyenne de 6.00 V.";
+                } else {
+                    expEl.innerHTML = "<strong>🟢 État: Vitesse Modérée (50 km/h) sur Réseau Multiplexé</strong><br><br>• <strong>Flux de trames CAN Bus :</strong> Le module ABS calcule le déplacement moyen des roues (35 Hz par capteur) et injecte la trame d'ID 0x240 (Vitesse Véhicule) sur le réseau de données. Le calculateur moteur lit ce message et s'y adapte.<br>• <strong>Analyse Electrique :</strong> Les tensions moyennes de 2.75 V (CAN-H) et 2.25 V (CAN-L) confirment le bon fonctionnement de la liaison.";
+                }
+            } 
+            else if (currentEngineState === 'snap') {
+                speedEl.innerText = "130 km/h";
+                freqEl.innerText = "92 Hz";
+                absEl.innerText = "130 km/h";
+                canStatusEl.innerText = "ACTIVE (High Priority Frames)";
+                canStatusEl.style.color = "var(--neon-cyan)";
+                decelEl.innerText = "NO (High Load Acceleration)";
+                decelEl.style.color = "var(--text-secondary)";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+
+                if (currentArchitecture === 'hall') {
+                    expEl.innerHTML = "<strong>🚀 État: Vitesse Élevée (130 km/h - Autoroute)</strong><br><br>• <strong>Haute Fréquence :</strong> La cible tourne à grande vitesse. La fréquence grimpe à 92 Hz. L'ECU traite cette haute fréquence pour adapter la gestion de la charge moteur et la coupure de décélération (Fuel cut-off).<br>• <strong>Validation de Cible :</strong> La tension moyenne lue reste stable à 6.00 V. Si le signal décroche ou s'estompe à haute vitesse, suspectez une usure du pignon d'entraînement ou un entrefer trop grand.";
+                } else {
+                    expEl.innerHTML = "<strong>🚀 État: Vitesse Élevée (130 km/h - Réseau ABS/CAN)</strong><br><br>• <strong>Multiplexage Prioritaire :</strong> À haute vitesse, les données de l'ABS sont vitales pour le calcul de l'antipatinage, la direction assistée asservie et l'injection. Les trames CAN se densifient.<br>• <strong>Défaut de Ligne :</strong> Si un bruit parasite ou un court-circuit sur le réseau perturbe le signal, la vitesse chute brutalement à 0 au combiné, déclenchant le voyant ABS/ESP et le code d'erreur <b>U0121</b>.";
+                }
+            }
+        }
+
+        // ====================================================
+        // OSCILLOSCOPE INTERACTIF
+        // ====================================================
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let voltScale = 2.0;
+        let timeScale = 50;
+        let isAnimating = false;
+        let animProgress = 0;
+        let scopeInterval = null;
+
+        function updateScopeParameters() {
+            voltScale = parseFloat(document.getElementById('ctrlVolts').value);
+            timeScale = parseInt(document.getElementById('ctrlTime').value);
+            document.getElementById('voltsDivLabel').innerText = `Y: ${voltScale.toFixed(1)} V / Div`;
+            document.getElementById('timeDivLabel').innerText = `X: ${timeScale} ms / Div`;
+            drawScope();
+        }
+
+        function drawScope() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const width = canvas.width || 500;
+            const height = canvas.height || 250;
+            const numDivsX = 10;
+            const numDivsY = 6;
+            const gridSpacingX = width / numDivsX;
+            const gridSpacingY = height / numDivsY;
+
+            ctx.strokeStyle = '#122525';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= numDivsX; i++) {
+                ctx.beginPath(); ctx.moveTo(i * gridSpacingX, 0); ctx.lineTo(i * gridSpacingX, height); ctx.stroke();
+            }
+            for (let i = 0; i <= numDivsY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, i * gridSpacingY); ctx.lineTo(width, i * gridSpacingY); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#1e4040';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+            ctx.stroke();
+
+            function voltToY(volts, offset = 0) {
+                const maxVoltsRepresented = numDivsY * voltScale;
+                return height - ((volts + offset) / maxVoltsRepresented) * height;
+            }
+
+            if (!isAnimating) {
+                // Static Line Traces
+                if (currentArchitecture === 'hall') {
+                    ctx.strokeStyle = '#00ffcc';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    let val = currentEngineState === 'off' ? 12.0 : 6.0;
+                    ctx.moveTo(0, voltToY(val, 0));
+                    ctx.lineTo(width, voltToY(val, 0));
+                    ctx.stroke();
+                } else {
+                    // CAN Lines at rest
+                    ctx.strokeStyle = '#00ffcc'; // CAN-H (2.7V)
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, voltToY(2.7, 0));
+                    ctx.lineTo(width, voltToY(2.7, 0));
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#ff33cc'; // CAN-L (2.3V)
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, voltToY(2.3, 0));
+                    ctx.lineTo(width, voltToY(2.3, 0));
+                    ctx.stroke();
+                }
+            } else {
+                // Dynamic traces
+                let samples1 = [];
+                let samples2 = [];
+                const step = 2;
+                
+                let speedFactor = currentEngineState === 'idle' ? 1.0 : 2.8;
+
+                for (let x = 0; x < width; x += step) {
+                    let tMs = (x / width) * (timeScale * numDivsX);
+                    let cyclePos = (tMs * speedFactor * 0.15) % 10; 
+
+                    if (currentArchitecture === 'hall') {
+                        let val = 0.2; // Low (0.2V)
+                        let pulseWidth = cyclePos % 1.2; 
+                        if (pulseWidth < 0.6) {
+                            val = 11.8; // High (11.8V)
+                        }
+                        samples1.push({ x: x, y: voltToY(val, 0) });
+                    } else {
+                        // CAN Differential Signal Simulation
+                        let canH = 2.5;
+                        let canL = 2.5;
+                        
+                        // High speed CAN data packets
+                        let bit = Math.floor(cyclePos * 8) % 2; 
+                        if (bit === 1) {
+                            canH = 3.5; // Dominant High
+                            canL = 1.5; // Dominant Low
+                        } else {
+                            canH = 2.5; // Recessive High
+                            canL = 2.5; // Recessive Low
+                        }
+                        samples1.push({ x: x, y: voltToY(canH, 0) });
+                        samples2.push({ x: x, y: voltToY(canL, 0) });
+                    }
+                }
+
+                // Render Trace 1 (Hall or CAN-H)
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = 'rgba(0, 255, 204, 0.5)';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 2.5;
+                if (samples1.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(samples1[0].x, samples1[0].y);
+                    for (let j = 0; j < samples1.length; j++) {
+                        if (samples1[j].x < animProgress) {
+                            ctx.lineTo(samples1[j].x, samples1[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+
+                // Render Trace 2 (CAN-L if multiplexed mode)
+                if (currentArchitecture === 'can') {
+                    ctx.strokeStyle = '#ff33cc';
+                    ctx.shadowColor = 'rgba(255, 51, 204, 0.5)';
+                    ctx.lineWidth = 2.5;
+                    if (samples2.length > 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(samples2[0].x, samples2[0].y);
+                        for (let j = 0; j < samples2.length; j++) {
+                            if (samples2[j].x < animProgress) {
+                                ctx.lineTo(samples2[j].x, samples2[j].y);
+                            }
+                        }
+                        ctx.stroke();
+                    }
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function triggerSnapThrottle() {
+            if (isAnimating) return;
+            isAnimating = true;
+            animProgress = 0;
+            changeEngineState('snap');
+
+            if (scopeInterval) clearInterval(scopeInterval);
+            const startTime = Date.now();
+            const duration = 2000;
+
+            scopeInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                animProgress = (elapsed / duration) * canvas.width;
+
+                let representedTime = (animProgress / canvas.width) * (timeScale * 10);
+                let db = getActiveDatabase();
+
+                if (representedTime < 300) {
+                    document.getElementById('dmmValue').innerText = db['off'][selectedRedPin].toFixed(2);
+                } else if (representedTime >= 300 && representedTime < 900) {
+                    document.getElementById('dmmValue').innerText = db['snap'][selectedRedPin].toFixed(2);
+                } else {
+                    document.getElementById('dmmValue').innerText = db['idle'][selectedRedPin].toFixed(2);
+                }
+
+                drawScope();
+
+                if (elapsed >= duration) {
+                    clearInterval(scopeInterval);
+                    isAnimating = false;
+                    changeEngineState('idle');
+                }
+            }, 30);
+        }
+
+        window.onload = function() {
+            canvas.width = canvas.offsetWidth || 500;
+            canvas.height = canvas.offsetHeight || 250;
+            selectPin(1);
+            updateScopeParameters();
+        };
+    </script>
+</body>
+</html>

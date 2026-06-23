@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Diagnostic Injecteurs Common Rail</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-blue: #00ccff;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media (min-width: 992px) {
+            .container {
+                grid-template-columns: 1.2fr 0.8fr;
+            }
+            .header-full {
+                grid-column: span 2;
+            }
+            .bottom-full {
+                grid-column: span 2;
+            }
+        }
+
+        header {
+            background: linear-gradient(135deg, #111818 0%, #0c1010 100%);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--neon-cyan);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge {
+            background: rgba(0, 255, 204, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        /* Tabs and Controls */
+        .tech-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: #182222;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(180deg, #182e2c 0%, #0d2220 100%);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+
+        /* Test Bench Interface */
+        .bench-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            align-items: center;
+            background: #090d0d;
+            border-radius: 6px;
+            padding: 15px;
+            border: 1px dashed var(--border-color);
+        }
+
+        @media(max-width: 576px) {
+            .bench-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Eprouvettes / Return Flow Tubes */
+        .tubes-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 180px;
+            background: #060909;
+            border: 1px solid #1a2525;
+            border-radius: 6px;
+            padding: 15px 10px 5px 10px;
+            position: relative;
+        }
+
+        .tube-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 22%;
+            height: 100%;
+            justify-content: flex-end;
+        }
+
+        .tube {
+            width: 24px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid #334444;
+            border-top: none;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .fluid-level {
+            width: 100%;
+            height: 0%; /* Dynamic */
+            background: linear-gradient(to top, rgba(255, 170, 0, 0.8), rgba(255, 200, 50, 0.6));
+            position: absolute;
+            bottom: 0;
+            transition: height 0.1s linear;
+            box-shadow: 0 0 5px rgba(255, 170, 0, 0.5);
+        }
+
+        .fluid-level::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #fff;
+            opacity: 0.6;
+        }
+
+        .tube-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            font-family: monospace;
+        }
+
+        .tube-value {
+            font-size: 0.75rem;
+            color: var(--neon-amber);
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        /* Controls Panel */
+        .bench-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .action-btn {
+            background: #182222;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            border-color: var(--text-secondary);
+        }
+
+        .action-btn.active-run {
+            background: linear-gradient(135deg, #155a3b 0%, #0d3824 100%);
+            border-color: #2ecc71;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.3);
+        }
+
+        .action-btn.active-stop {
+            background: linear-gradient(135deg, #7d1c1c 0%, #4a0d0d 100%);
+            border-color: var(--neon-red);
+        }
+
+        /* Scope Area */
+        .scope-container {
+            background-color: var(--screen-bg);
+            border: 2px solid #1c2727;
+            border-radius: 6px;
+            position: relative;
+            margin-top: 15px;
+            aspect-ratio: 2 / 1;
+            overflow: hidden;
+        }
+
+        .scope-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 204, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 204, 0.05) 1px, transparent 1px);
+            background-size: 10% 10%;
+        }
+
+        .scope-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .scope-legend {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* DMM Interface */
+        .dmm-wrapper {
+            background-color: #1a0f05;
+            border: 3px solid #e67e22;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.9), 0 5px 15px rgba(0,0,0,0.6);
+            margin-top: 15px;
+        }
+
+        .dmm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ffcc80;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            border-bottom: 2px solid rgba(230, 126, 34, 0.3);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .dmm-screen {
+            background-color: #7f997a;
+            color: #0c150b;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: right;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            border: 2px solid #5a6e57;
+            position: relative;
+        }
+
+        .dmm-screen-unit {
+            position: absolute;
+            left: 10px;
+            top: 12px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .dmm-screen-val {
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .dmm-modes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .dmm-btn {
+            background: #2c1a0c;
+            border: 1px solid #e67e22;
+            color: #ffcc80;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dmm-btn:hover {
+            background: #3e2511;
+        }
+
+        .dmm-btn.active {
+            background: #e67e22;
+            color: #000;
+        }
+
+        /* Injector Pinboard */
+        .pinboard {
+            background: #090d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .pinboard-view {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 110px;
+            position: relative;
+            background: radial-gradient(circle, #111a1a 0%, #050808 100%);
+            border-radius: 6px;
+            border: 1px solid #1b2626;
+        }
+
+        .pin {
+            width: 32px;
+            height: 32px;
+            background: radial-gradient(circle, #556666 0%, #222b2b 100%);
+            border: 2px solid #445555;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .pin::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #000;
+            border-radius: 50%;
+        }
+
+        .pin.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 10px var(--neon-red);
+        }
+
+        .pin.selected-black {
+            border-color: #666;
+            box-shadow: 0 0 10px #ffffff;
+        }
+
+        .pin-label {
+            position: absolute;
+            bottom: -22px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+            white-space: nowrap;
+        }
+
+        /* Faults Grid */
+        .faults-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        @media (min-width: 576px) {
+            .faults-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .fault-card {
+            background: #151c1c;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .fault-card:hover {
+            border-color: #2b3d3d;
+        }
+
+        .fault-card.active {
+            border-color: var(--neon-amber);
+            background: linear-gradient(135deg, #1b1e16 0%, #11160a 100%);
+            box-shadow: 0 0 12px rgba(255, 170, 0, 0.15);
+        }
+
+        .fault-card.active::after {
+            content: 'PANNE ACTIVE';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            background: var(--neon-amber);
+            color: #000;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .fault-title {
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            color: #eee;
+        }
+
+        .fault-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Guide / Technical Info */
+        .tech-info {
+            background-color: #0d1212;
+            border-left: 3px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .tech-info ul {
+            margin: 8px 0 0 0;
+            padding-left: 20px;
+            color: var(--text-secondary);
+        }
+
+        .tech-info li {
+            margin-bottom: 4px;
+        }
+
+        /* Injector Selector buttons (1-4) */
+        .injector-selector {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .inj-btn {
+            flex: 1;
+            background: #141c1c;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .inj-btn.active {
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            background: rgba(0, 255, 204, 0.05);
+        }
+
+        /* Status panel */
+        .status-panel {
+            background: #090e0e;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            font-family: monospace;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--neon-red);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            box-shadow: 0 0 8px var(--neon-red);
+        }
+
+        .status-dot.active {
+            background-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header-full">
+            <h1>Module Diagnostic - Injecteurs Common Rail</h1>
+            <p class="subtitle">Diagnostic de l'étage de commande et test hydraulique dynamique (Solénoïde vs Piézoélectrique)</p>
+        </header>
+
+        <!-- Left Column: Test Bench and Oscilloscope -->
+        <div class="panel">
+            <div class="panel-title">
+                Banc d'Essai Hydraulique & Moteur
+                <span class="badge" id="tech-badge">Solénoïde</span>
+            </div>
+
+            <!-- Architecture Selection -->
+            <div class="tech-tabs">
+                <button class="tab-btn active" id="tab-solenoid" onclick="switchTech('solenoid')">Bobine Électromagnétique</button>
+                <button class="tab-btn" id="tab-piezo" onclick="switchTech('piezo')">Piézoélectrique</button>
+            </div>
+
+            <div class="bench-layout">
+                <!-- Eprouvettes Graphic -->
+                <div class="tubes-container">
+                    <div class="tube-wrapper">
+                        <div class="tube-value" id="val-t1">0 ml</div>
+                        <div class="tube">
+                            <div class="fluid-level" id="fluid-1"></div>
+                        </div>
+                        <div class="tube-label">INJ 1</div>
+                    </div>
+                    <div class="tube-wrapper">
+                        <div class="tube-value" id="val-t2">0 ml</div>
+                        <div class="tube">
+                            <div class="fluid-level" id="fluid-2"></div>
+                        </div>
+                        <div class="tube-label">INJ 2</div>
+                    </div>
+                    <div class="tube-wrapper">
+                        <div class="tube-value" id="val-t3">0 ml</div>
+                        <div class="tube">
+                            <div class="fluid-level" id="fluid-3"></div>
+                        </div>
+                        <div class="tube-label">INJ 3</div>
+                    </div>
+                    <div class="tube-wrapper">
+                        <div class="tube-value" id="val-t4">0 ml</div>
+                        <div class="tube">
+                            <div class="fluid-level" id="fluid-4"></div>
+                        </div>
+                        <div class="tube-label">INJ 4</div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="bench-controls">
+                    <button class="action-btn" id="btn-crank" onclick="toggleEngine()">
+                        ⚡ Démarreur : OFF
+                    </button>
+                    <button class="action-btn" id="btn-test-retour" onclick="runBackLeakTest()">
+                        🧪 Test de Retour (10s)
+                    </button>
+                    <button class="action-btn" onclick="resetTubes()">
+                        🔄 Réinitialiser Éprouvettes
+                    </button>
+                    <div class="status-panel">
+                        <span>Pression de Rail :</span>
+                        <span id="rail-pressure" style="color: var(--neon-amber); font-weight: bold;">0 bar</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-title" style="margin-top: 25px;">
+                Oscilloscope de Commande
+                <span class="badge" style="border-color: var(--neon-blue); color: var(--neon-blue);">Double Trace</span>
+            </div>
+
+            <!-- Real-time Oscilloscope Canvas -->
+            <div class="scope-container">
+                <div class="scope-grid"></div>
+                <canvas id="scopeCanvas" class="scope-canvas"></canvas>
+            </div>
+
+            <div class="scope-legend">
+                <div class="legend-item">
+                    <span style="display:inline-block; width:12px; height:3px; background-color: var(--neon-blue);"></span>
+                    <span style="color: var(--neon-blue);" id="scope-v-div">Trace A (Tension) : 20V/Div</span>
+                </div>
+                <div class="legend-item">
+                    <span style="display:inline-block; width:12px; height:3px; background-color: var(--neon-cyan);"></span>
+                    <span style="color: var(--neon-cyan);" id="scope-i-div">Trace B (Courant) : 10A/Div</span>
+                </div>
+                <div class="legend-item">
+                    <span style="color: var(--text-secondary);">Base de Temps : 0.5 ms/Div</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: DMM & Injector Pins -->
+        <div class="panel">
+            <div class="panel-title">Diagnostic Éléments & Mesures</div>
+
+            <!-- Injector Selector -->
+            <div class="injector-selector">
+                <button class="inj-btn active" id="inj-b1" onclick="selectInjector(1)">INJ 1</button>
+                <button class="inj-btn" id="inj-b2" onclick="selectInjector(2)">INJ 2</button>
+                <button class="inj-btn" id="inj-b3" onclick="selectInjector(3)">INJ 3</button>
+                <button class="inj-btn" id="inj-b4" onclick="selectInjector(4)">INJ 4</button>
+            </div>
+
+            <!-- Pinboard -->
+            <div class="pinboard">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; text-align: center;">
+                    Sondes du Multimètre : Cliquez sur les pins pour connecter les pointes de touche
+                </div>
+                <div class="pinboard-view">
+                    <!-- Pin 1 -->
+                    <div class="pin" id="pin-1" onclick="probePin(1)">
+                        <div class="pin-label">Pin 1 (Sign+)</div>
+                    </div>
+                    <!-- Pin 2 -->
+                    <div class="pin" id="pin-2" onclick="probePin(2)">
+                        <div class="pin-label">Pin 2 (Sign-)</div>
+                    </div>
+                    <!-- Ground Pin -->
+                    <div class="pin" id="pin-gnd" onclick="probePin('gnd')">
+                        <div class="pin-label">Masse Culasse</div>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top: 25px; font-size: 0.75rem; color: var(--text-secondary);">
+                    <div>🔴 Sonde Rouge : <span id="probe-red-status" style="color: var(--neon-red); font-weight: bold;">Non connectée</span></div>
+                    <div>⚫ Sonde Noire : <span id="probe-black-status" style="color: #fff; font-weight: bold;">Non connectée</span></div>
+                </div>
+            </div>
+
+            <!-- DMM Simulation -->
+            <div class="dmm-wrapper">
+                <div class="dmm-header">
+                    <span>Multimètre Virtuel de Précision</span>
+                    <span style="color: #2ecc71;">AUTO-RANGE</span>
+                </div>
+                <div class="dmm-screen">
+                    <div class="dmm-screen-unit" id="dmm-unit">OFF</div>
+                    <div class="dmm-screen-val" id="dmm-display">----</div>
+                </div>
+                <div class="dmm-modes">
+                    <button class="dmm-btn" id="dmm-mode-res" onclick="setDmmMode('res')">Ω (Résistance)</button>
+                    <button class="dmm-btn" id="dmm-mode-volts" onclick="setDmmMode('volts')">V (DC / Peak)</button>
+                    <button class="dmm-btn" id="dmm-mode-cap" onclick="setDmmMode('cap')">µF (Capacité)</button>
+                </div>
+            </div>
+
+            <!-- Fault Injector -->
+            <div class="panel-title" style="margin-top: 25px;">Pannes & Anomalies simulées</div>
+            <div class="faults-grid">
+                <div class="fault-card" id="f-none" onclick="selectFault('none')">
+                    <div class="fault-title">Aucun Défaut (Fonctionnement Nominal)</div>
+                    <div class="fault-desc">Le système tourne en parfait accord avec les données d'usine.</div>
+                </div>
+                <div class="fault-card" id="f-leak" onclick="selectFault('leak')">
+                    <div class="fault-title">INJ 3 - Fuite de Retour excessive</div>
+                    <div class="fault-desc">La valve de retour interne reste fuyarde. Perte de pression dans le rail au démarrage.</div>
+                </div>
+                <div class="fault-card" id="f-short" onclick="selectFault('short')">
+                    <div class="fault-title">INJ 2 - Court-circuit à la Masse</div>
+                    <div class="fault-desc">Le faisceau ou l'étage de commande interne de l'injecteur 2 est relié au châssis.</div>
+                </div>
+                <div class="fault-card" id="f-open" onclick="selectFault('open')">
+                    <div class="fault-title">INJ 1 - Enroulement Bobine Ouvert</div>
+                    <div class="fault-desc">La bobine de l'injecteur 1 est coupée. Absence de signal de courant et non-débit.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Guide -->
+        <div class="bottom-full panel">
+            <div class="panel-title">Guide Diagnostic & Spécifications du Constructeur</div>
+            <div class="tech-info">
+                <strong>Valeurs attendues selon l'architecture sélectionnée :</strong>
+                <ul>
+                    <li><strong>Injecteurs Électromagnétiques (Bobines) :</strong>
+                        <ul>
+                            <li>Résistance interne standard : <strong>0.3 Ω - 1.5 Ω</strong>.</li>
+                            <li>Tension de commande : Créneau initial de <strong>80V</strong> (Boost) pour l'ouverture rapide, suivi d'un maintien à <strong>12V</strong>.</li>
+                            <li>Capacité : Non applicable (mesure nulle ou instable).</li>
+                        </ul>
+                    </li>
+                    <li><strong>Injecteurs Piézoélectriques :</strong>
+                        <ul>
+                            <li>Résistance interne standard : Extrêmement élevée (<strong>> 150 kΩ / Circuit Ouvert</strong> sur un simple multimètre CC).</li>
+                            <li>Capacité électrique standard : Environ <strong>1.4 µF à 2.8 µF</strong> (l'élément agit comme un condensateur).</li>
+                            <li>Tension de commande : Impulsions de charge de <strong>+120V à +150V</strong> puis palier de décharge de <strong>-150V</strong> pour refermer.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Test de Retour Hydraulique (Gobelet/Éprouvettes) :</strong>
+                        <ul>
+                            <li>Le test standard s'effectue au démarreur ou au ralenti durant 10 secondes.</li>
+                            <li>Un injecteur en bon état doit rejeter <strong>&lt; 15 ml</strong> sur la période de test.</li>
+                            <li>Un injecteur défaillant (ex: INJ 3 sous panne) affiche un retour de fuite massif (ex: &gt; 45 ml), entraînant un démarrage difficile.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // System State
+        let currentTech = 'solenoid'; // solenoid, piezo
+        let engineRunning = false;
+        let selectedInjector = 1;
+        let selectedFault = 'none'; // none, leak, short, open
+        
+        // Eprouvettes Fluid state
+        let backLeakRates = [10, 10, 10, 10]; // base ml/10s values
+        let currentTubesLevel = [0, 0, 0, 0]; // state of each tube in ml
+        let maxTubeCapacity = 60; // 60ml total scale
+        let testTimer = null;
+        let testRunning = false;
+        
+        // Multimeter State
+        let dmmMode = 'res'; // res, volts, cap
+        let probeRed = null; // null, 1, 2, 'gnd'
+        let probeBlack = null; // null, 1, 2, 'gnd'
+
+        // Canvas Setup for real-time oscilloscope
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        let scopeAnimId = null;
+        let scopePhase = 0;
+
+        // Sound Generator simulator (synth context)
+        let audioCtx = null;
+        let audioOsc = null;
+        let audioGain = null;
+
+        function startEngineSound() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                
+                audioOsc = audioCtx.createOscillator();
+                audioGain = audioCtx.createGain();
+                
+                audioOsc.type = 'sawtooth';
+                audioOsc.frequency.setValueAtTime(25, audioCtx.currentTime); // Low engine diesel idle sound
+                
+                audioGain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+                
+                audioOsc.connect(audioGain);
+                audioGain.connect(audioCtx.destination);
+                audioOsc.start();
+            } catch (e) {
+                console.log("Audio not supported or blocked");
+            }
+        }
+
+        function stopEngineSound() {
+            if (audioOsc) {
+                try {
+                    audioOsc.stop();
+                    audioOsc.disconnect();
+                } catch(e){}
+                audioOsc = null;
+            }
+        }
+
+        // Setup Screen Resizing
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Switch Technology
+        function switchTech(tech) {
+            currentTech = tech;
+            document.getElementById('tab-solenoid').classList.toggle('active', tech === 'solenoid');
+            document.getElementById('tab-piezo').classList.toggle('active', tech === 'piezo');
+            document.getElementById('tech-badge').innerText = tech === 'solenoid' ? 'Solénoïde' : 'Piézo';
+            
+            // Adjust Oscilloscope Division Text labels
+            const vDiv = document.getElementById('scope-v-div');
+            if (tech === 'solenoid') {
+                vDiv.innerText = "Trace A (Tension) : 20V/Div";
+            } else {
+                vDiv.innerText = "Trace A (Tension) : 50V/Div";
+            }
+
+            updateDmm();
+            drawStaticScope();
+        }
+
+        // Toggle engine ignition
+        function toggleEngine() {
+            if (testRunning) return; // Prevent toggling while testing back leak
+            
+            engineRunning = !engineRunning;
+            const btn = document.getElementById('btn-crank');
+            
+            if (engineRunning) {
+                btn.innerText = "⚡ Moteur : EN MARCHE";
+                btn.classList.add('active-run');
+                
+                let nominalPres = selectedFault === 'leak' ? "180 bar (Fuite détectée !)" : "320 bar (Ralenti)";
+                document.getElementById('rail-pressure').innerText = nominalPres;
+                
+                startEngineSound();
+                animateScope();
+            } else {
+                btn.innerText = "⚡ Démarreur : OFF";
+                btn.classList.remove('active-run');
+                document.getElementById('rail-pressure').innerText = "0 bar";
+                stopEngineSound();
+                cancelAnimationFrame(scopeAnimId);
+                drawStaticScope();
+            }
+            updateDmm();
+        }
+
+        // Run the 10-second Leak back test
+        function runBackLeakTest() {
+            if (testRunning) return;
+            testRunning = true;
+            engineRunning = true; // Engine must turn to generate back leak
+            
+            const crankBtn = document.getElementById('btn-crank');
+            crankBtn.innerText = "⚡ Moteur (Pendant Test)";
+            crankBtn.classList.add('active-run');
+            
+            let normalPres = selectedFault === 'leak' ? "180 bar" : "320 bar";
+            document.getElementById('rail-pressure').innerText = normalPres;
+
+            startEngineSound();
+            animateScope();
+
+            const testBtn = document.getElementById('btn-test-retour');
+            testBtn.classList.add('active-stop');
+            
+            let elapsed = 0;
+            const intervalTime = 100; // update every 100ms
+            const duration = 10000; // 10s total
+
+            // Calculate leak rates based on active faults
+            let actualRates = [11, 11, 11, 11]; // default good rate (approx 11ml/10s)
+            if (selectedFault === 'leak') {
+                actualRates[2] = 48; // Inj 3 leaks massive amount
+            } else if (selectedFault === 'short') {
+                actualRates[1] = 0; // Inj 2 deactivated electrically (no return)
+            } else if (selectedFault === 'open') {
+                actualRates[0] = 0; // Inj 1 open circuit (no lift of nozzle)
+            }
+
+            testTimer = setInterval(() => {
+                elapsed += intervalTime;
+                
+                // Add proportional volume
+                for (let i = 0; i < 4; i++) {
+                    let addition = (actualRates[i] / (duration / intervalTime));
+                    currentTubesLevel[i] = Math.min(maxTubeCapacity, currentTubesLevel[i] + addition);
+                }
+                
+                updateTubesUI();
+                
+                // update button text to show countdown
+                testBtn.innerText = `🧪 Test : ${( (duration - elapsed) / 1000 ).toFixed(1)}s`;
+
+                if (elapsed >= duration) {
+                    clearInterval(testTimer);
+                    testRunning = false;
+                    testBtn.innerText = "🧪 Test de Retour (10s)";
+                    testBtn.classList.remove('active-stop');
+                    
+                    // Keep engine state
+                    engineRunning = false;
+                    crankBtn.innerText = "⚡ Démarreur : OFF";
+                    crankBtn.classList.remove('active-run');
+                    document.getElementById('rail-pressure').innerText = "0 bar";
+                    stopEngineSound();
+                    cancelAnimationFrame(scopeAnimId);
+                    drawStaticScope();
+                    updateDmm();
+                }
+            }, intervalTime);
+        }
+
+        // Reset graduates tubes
+        function resetTubes() {
+            if (testRunning) return;
+            currentTubesLevel = [0, 0, 0, 0];
+            updateTubesUI();
+        }
+
+        // Update Tubes UI Levels
+        function updateTubesUI() {
+            for (let i = 0; i < 4; i++) {
+                const val = currentTubesLevel[i];
+                const pct = (val / maxTubeCapacity) * 100;
+                document.getElementById(`fluid-${i+1}`).style.height = `${pct}%`;
+                document.getElementById(`val-t${i+1}`).innerText = `${val.toFixed(1)} ml`;
+            }
+        }
+
+        // Select active injector under test
+        function selectInjector(injNum) {
+            selectedInjector = injNum;
+            for(let i=1; i<=4; i++) {
+                document.getElementById(`inj-b${i}`).classList.toggle('active', i === injNum);
+            }
+            updateDmm();
+        }
+
+        // Select and inject simulated Fault
+        function selectFault(faultId) {
+            selectedFault = faultId;
+            document.querySelectorAll('.fault-card').forEach(card => {
+                card.classList.toggle('active', card.id === `f-${faultId}`);
+            });
+            
+            // Adjust rail pressure if running
+            if (engineRunning) {
+                let actualPres = selectedFault === 'leak' ? "180 bar (Fuite détectée !)" : "320 bar (Ralenti)";
+                document.getElementById('rail-pressure').innerText = actualPres;
+            }
+            
+            updateDmm();
+        }
+
+        // Set DMM Mode
+        function setDmmMode(mode) {
+            dmmMode = mode;
+            document.getElementById('dmm-mode-res').classList.toggle('active', mode === 'res');
+            document.getElementById('dmm-mode-volts').classList.toggle('active', mode === 'volts');
+            document.getElementById('dmm-mode-cap').classList.toggle('active', mode === 'cap');
+            updateDmm();
+        }
+
+        // Handle Probe Clicks on virtual pins
+        function probePin(pinId) {
+            // Priority: Click red first, then black.
+            // If both full, reset them.
+            if (!probeRed) {
+                probeRed = pinId;
+                document.getElementById(`pin-${pinId}`).classList.add('selected-red');
+            } else if (!probeBlack && probeRed !== pinId) {
+                probeBlack = pinId;
+                document.getElementById(`pin-${pinId}`).classList.add('selected-black');
+            } else {
+                // Clear all
+                if (probeRed) {
+                    const el = document.getElementById(`pin-${probeRed}`);
+                    if(el) el.classList.remove('selected-red');
+                }
+                if (probeBlack) {
+                    const el = document.getElementById(`pin-${probeBlack}`);
+                    if(el) el.classList.remove('selected-black');
+                }
+                probeRed = null;
+                probeBlack = null;
+            }
+
+            // Update Labels
+            document.getElementById('probe-red-status').innerText = probeRed ? `Pin ${probeRed}` : "Non connectée";
+            document.getElementById('probe-black-status').innerText = probeBlack ? `Pin ${probeBlack}` : "Non connectée";
+
+            updateDmm();
+        }
+
+        // Core Multimeter Calculations & Display update
+        function updateDmm() {
+            const screenUnit = document.getElementById('dmm-unit');
+            const screenVal = document.getElementById('dmm-display');
+
+            if (!probeRed || !probeBlack) {
+                screenUnit.innerText = "OFF";
+                screenVal.innerText = "----";
+                return;
+            }
+
+            // Validate that we have a closed circuit on the injector coil
+            const isMeasuringInjectorPins = (
+                (probeRed === 1 && probeBlack === 2) || 
+                (probeRed === 2 && probeBlack === 1)
+            );
+
+            const isMeasuringRedToGnd = (
+                (probeRed === 1 && probeBlack === 'gnd') ||
+                (probeRed === 'gnd' && probeBlack === 1)
+            );
+
+            const isMeasuringBlueToGnd = (
+                (probeRed === 2 && probeBlack === 'gnd') ||
+                (probeRed === 'gnd' && probeBlack === 2)
+            );
+
+            // 1. RESISTANCE MODE (Engine MUST be OFF for resistance measurement)
+            if (dmmMode === 'res') {
+                screenUnit.innerText = "Ω";
+                if (engineRunning) {
+                    screenVal.innerText = "ERR (U)"; // Cannot measure resistance under power
+                    return;
+                }
+
+                if (isMeasuringInjectorPins) {
+                    // Normal values based on selected tech
+                    if (currentTech === 'solenoid') {
+                        // Solenoid Resistance
+                        if (selectedInjector === 1 && selectedFault === 'open') {
+                            screenUnit.innerText = "MΩ";
+                            screenVal.innerText = "OL"; // Open circuit
+                        } else if (selectedInjector === 2 && selectedFault === 'short') {
+                            screenVal.innerText = "0.15"; // Near complete short circuit
+                        } else {
+                            screenVal.innerText = "0.92"; // Normal high accuracy electromagnetic injector
+                        }
+                    } else {
+                        // Piezo Resistance (MegaOhms standard)
+                        screenUnit.innerText = "kΩ";
+                        if (selectedInjector === 1 && selectedFault === 'open') {
+                            screenUnit.innerText = "MΩ";
+                            screenVal.innerText = "OL";
+                        } else if (selectedInjector === 2 && selectedFault === 'short') {
+                            screenVal.innerText = "0.08";
+                        } else {
+                            screenUnit.innerText = "MΩ";
+                            screenVal.innerText = "OL"; // Simple DMM cannot read such high resistance
+                        }
+                    }
+                } 
+                else if (isMeasuringRedToGnd || isMeasuringBlueToGnd) {
+                    // Insulation to Ground Test
+                    if (selectedInjector === 2 && selectedFault === 'short') {
+                        screenVal.innerText = "0.20"; // Failed insulation test
+                    } else {
+                        screenUnit.innerText = "MΩ";
+                        screenVal.innerText = "OL"; // Clean infinite isolation
+                    }
+                } 
+                else {
+                    screenVal.innerText = "OL"; // Open Air / unconnected loop
+                }
+            }
+
+            // 2. CAPACITY MODE
+            else if (dmmMode === 'cap') {
+                screenUnit.innerText = "µF";
+                if (engineRunning) {
+                    screenVal.innerText = "ERR";
+                    return;
+                }
+
+                if (isMeasuringInjectorPins) {
+                    if (currentTech === 'solenoid') {
+                        screenVal.innerText = "0.00"; // No capacitance on solenoid
+                    } else {
+                        // Piezo Cap
+                        if (selectedInjector === 1 && selectedFault === 'open') {
+                            screenVal.innerText = "0.00";
+                        } else if (selectedInjector === 2 && selectedFault === 'short') {
+                            screenVal.innerText = "0.00"; // Shorted piezo loses capacitance
+                        } else {
+                            screenVal.innerText = "1.82"; // Healthy Piezo capacitance
+                        }
+                    }
+                } else {
+                    screenVal.innerText = "0.00";
+                }
+            }
+
+            // 3. VOLTAGE MODE (Active or passive)
+            else if (dmmMode === 'volts') {
+                screenUnit.innerText = "V (DC)";
+                if (!engineRunning) {
+                    screenVal.innerText = "0.00";
+                    return;
+                }
+
+                // If engine running, read peak/mean voltages
+                if (isMeasuringInjectorPins) {
+                    if (currentTech === 'solenoid') {
+                        if (selectedInjector === 1 && selectedFault === 'open') {
+                            screenVal.innerText = "0.00";
+                        } else if (selectedInjector === 2 && selectedFault === 'short') {
+                            screenVal.innerText = "0.00";
+                        } else {
+                            screenVal.innerText = "28.5"; // average pulsing voltage measured by DMM
+                        }
+                    } else {
+                        // Piezo Voltage peak/avg
+                        if (selectedInjector === 1 && selectedFault === 'open') {
+                            screenVal.innerText = "0.00";
+                        } else if (selectedInjector === 2 && selectedFault === 'short') {
+                            screenVal.innerText = "0.00";
+                        } else {
+                            screenVal.innerText = "64.8"; // average high voltage charging cycle
+                        }
+                    }
+                } else {
+                    screenVal.innerText = "0.00";
+                }
+            }
+        }
+
+        // DRAW STATIC OSCILLOSCOPE (Baseline Grid)
+        function drawStaticScope() {
+            ctx.fillStyle = '#050a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid markers
+            ctx.strokeStyle = 'rgba(0, 255, 204, 0.1)';
+            ctx.lineWidth = 1;
+            
+            // Horizontal grid lines
+            for (let y = 0; y < canvas.height; y += canvas.height / 8) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            // Vertical grid lines
+            for (let x = 0; x < canvas.width; x += canvas.width / 10) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            // Zero lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height/2);
+            ctx.lineTo(canvas.width, canvas.height/2);
+            ctx.stroke();
+        }
+
+        // ANIMATED REAL-TIME SCOPE WITH REAL WAVEFORM PROFILES
+        function animateScope() {
+            drawStaticScope();
+            
+            ctx.lineWidth = 2.5;
+            
+            // Draw Voltage Trace (Trace A - Blue)
+            ctx.strokeStyle = '#00ccff';
+            ctx.shadowColor = '#00ccff';
+            ctx.shadowBlur = 4;
+            ctx.beginPath();
+            
+            for (let x = 0; x < canvas.width; x++) {
+                let y = getScopeValue(x, 'voltage');
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw Current Trace (Trace B - Cyan)
+            ctx.strokeStyle = '#00ffcc';
+            ctx.shadowColor = '#00ffcc';
+            ctx.shadowBlur = 4;
+            ctx.beginPath();
+            
+            for (let x = 0; x < canvas.width; x++) {
+                let y = getScopeValue(x, 'current');
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            ctx.shadowBlur = 0; // reset glow
+
+            scopePhase += 1.5; // Controls horizontal sweep speed
+            scopeAnimId = requestAnimationFrame(animateScope);
+        }
+
+        // Dynamic Waveform generators mimicking absolute engineering precision
+        function getScopeValue(x, traceType) {
+            const h = canvas.height;
+            const w = canvas.width;
+            
+            // If this selected injector has an electrical open circuit/short cut, it has flat signal
+            const isFaultyActiveInj = (
+                (selectedInjector === 1 && selectedFault === 'open') ||
+                (selectedInjector === 2 && selectedFault === 'short')
+            );
+
+            if (isFaultyActiveInj) {
+                // Return baseline flat lines
+                return traceType === 'voltage' ? h * 0.5 : h * 0.75;
+            }
+
+            // Periodic injection events simulation
+            // Standard Common Rail has: 1 Pre-Injection (short spike) + 1 Main Injection (larger window)
+            let localX = (x + scopePhase) % (w / 2); // 2 full cycles in width
+            
+            let scaleVal = 0;
+
+            if (currentTech === 'solenoid') {
+                if (traceType === 'voltage') {
+                    // Solenoid Voltage : High inductive peak on turn-off, hold phase on turn-on
+                    let baseVal = h * 0.5; // Zero reference
+                    
+                    // Pre-injection window
+                    if (localX > 40 && localX < 60) {
+                        return baseVal - 45; // peak boost phase
+                    } else if (localX >= 60 && localX < 80) {
+                        return baseVal + 75; // high flyback inductive peak
+                    }
+                    
+                    // Main injection window
+                    if (localX > 140 && localX < 240) {
+                        // Boost phase initial
+                        if (localX < 160) return baseVal - 55;
+                        // PWM Hold phase
+                        return baseVal - 15 + Math.sin(localX * 1.5) * 6;
+                    } else if (localX >= 240 && localX < 265) {
+                        return baseVal + 90; // induction clamp spike
+                    }
+                    
+                    return baseVal;
+                } else {
+                    // Solenoid Current (slow ramping and hold)
+                    let baseVal = h * 0.75; // Zero reference lower on screen
+                    
+                    if (localX >= 40 && localX < 70) {
+                        let progress = (localX - 40) / 30;
+                        return baseVal - (progress * 25); // quick ramp up
+                    } else if (localX >= 70 && localX < 80) {
+                        let progress = (80 - localX) / 10;
+                        return baseVal - (progress * 25); // discharge
+                    }
+                    
+                    if (localX >= 140 && localX < 240) {
+                        if (localX < 160) {
+                            return baseVal - ((localX - 140) / 20) * 45; // boost peak opening
+                        }
+                        return baseVal - 30 + Math.sin(localX * 1.2) * 2; // steady hold pattern
+                    } else if (localX >= 240 && localX < 255) {
+                        return baseVal - ((255 - localX) / 15) * 30;
+                    }
+                    
+                    return baseVal;
+                }
+            } else {
+                // PIEZOELECTRIC WAVEFORMS
+                if (traceType === 'voltage') {
+                    let baseVal = h * 0.5;
+                    // Piezo requires charge/voltage step to stay open, and reverse discharge step to close
+                    
+                    // Pre-injection
+                    if (localX >= 40 && localX < 45) {
+                        return baseVal - 65; // Charged positive voltage pulse
+                    } else if (localX >= 45 && localX < 70) {
+                        return baseVal - 65; // Stays charged and holds state without power!
+                    } else if (localX >= 70 && localX < 75) {
+                        return baseVal + 65; // negative discharge pulse
+                    }
+                    
+                    // Main-injection
+                    if (localX >= 140 && localX < 145) {
+                        return baseVal - 85; // Massive charge step
+                    } else if (localX >= 145 && localX < 240) {
+                        return baseVal - 85; // Keeps state
+                    } else if (localX >= 240 && localX < 245) {
+                        return baseVal + 85; // Discharging step
+                    }
+                    
+                    return baseVal;
+                } else {
+                    // Piezo Current (Extremely short charging spikes, otherwise zero current!)
+                    let baseVal = h * 0.75;
+                    
+                    // Pre-injection pulses
+                    if (localX >= 40 && localX < 44) {
+                        return baseVal - 45; // Positive charge spike
+                    } else if (localX >= 70 && localX < 74) {
+                        return baseVal + 45; // Negative discharge spike
+                    }
+                    
+                    // Main-injection pulses
+                    if (localX >= 140 && localX < 144) {
+                        return baseVal - 55;
+                    } else if (localX >= 240 && localX < 244) {
+                        return baseVal + 55;
+                    }
+                    
+                    return baseVal;
+                }
+            }
+        }
+
+        // Initialize display
+        window.onload = function() {
+            drawStaticScope();
+            updateTubesUI();
+        }
+    </script>
+</body>
+</html>

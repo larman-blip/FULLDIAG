@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Pulseur d'Air Habitacle</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-pink: #ff33cc;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        /* Interactive Blower Fan Simulation */
+        .blower-sim-container {
+            background: #172222;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Spinning SVG Blower Wheel */
+        .blower-wheel-svg {
+            width: 110px;
+            height: 110px;
+            transform-origin: center center;
+            transition: transform 0.1s linear;
+        }
+
+        .wind-particles {
+            position: absolute;
+            font-size: 11px;
+            color: var(--neon-cyan);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            font-weight: bold;
+        }
+
+        /* Control Shifter */
+        .control-box {
+            background: #181d1d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .speed-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            width: 100%;
+        }
+
+        .speed-btn {
+            background: #202b2b;
+            border: 1.5px solid #3c4a4a;
+            color: var(--text-secondary);
+            font-weight: 800;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .speed-btn:hover {
+            border-color: var(--neon-cyan);
+            color: #fff;
+        }
+
+        .speed-btn.active {
+            background: var(--neon-cyan);
+            color: #000;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        /* Multimeter Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 10px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CONNECTEUR VARIATEUR (4 VOIES)';
+            position: absolute;
+            top: -10px; left: calc(50% - 85px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 38px;
+            height: 50px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* FAZET TRICKS CONTROL PANEL */
+        .tricks-selector-title {
+            font-size: 12px;
+            color: var(--neon-amber);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .tricks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .trick-btn {
+            background: #192222;
+            border: 1px dashed var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .trick-btn:hover {
+            border-color: var(--neon-amber);
+            color: #fff;
+        }
+
+        .trick-btn.active {
+            background: var(--neon-amber);
+            color: #000;
+            border-color: var(--neon-amber);
+            border-style: solid;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">🌀 Diagnostic Technique - Pulseur d'Air Habitacle</h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module interactif simule le diagnostic d'un pulseur d'air habitacle (soufflerie). Basculez entre la climatisation manuelle (avec علبة المقاومات Résistance) et la climatisation automatique (avec variateur électronique à transistor MOSFET). Utilisez les commandes et examinez les tensions d'alimentation.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">🌀 Commande de Ventilation & Rotation</h3>
+
+            <!-- WINDSHIELD GRAPHICAL SIMULATION -->
+            <div class="blower-sim-container">
+                <div class="wind-particles" id="windText">WIND FLOW</div>
+                
+                <!-- Blower fan graphic -->
+                <svg class="blower-wheel-svg" id="blowerWheel" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#252b2b" stroke-width="4" />
+                    <circle cx="50" cy="50" r="8" fill="var(--neon-cyan)" />
+                    <!-- Fan Blades -->
+                    <path d="M 50,50 L 50,10 M 50,50 L 50,90 M 50,50 L 10,50 M 50,50 L 90,50" stroke="#3c4a4a" stroke-width="6" stroke-linecap="round" />
+                    <path d="M 50,50 L 22,22 M 50,50 L 78,78 M 50,50 L 22,78 M 50,50 L 78,22" stroke="#3c4a4a" stroke-width="4" stroke-linecap="round" />
+                </svg>
+            </div>
+            
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="color: var(--neon-amber);">Étape 1 : Sélectionner l'architecture de climatisation</label>
+            </div>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-arch-manual" onclick="changeArchitecture('manual')">Clim Manuelle (Résistance + Fusible Thermique)</button>
+                <button class="arch-btn" id="btn-arch-auto" onclick="changeArchitecture('auto')">Clim Auto (Variateur MOSFET PWM)</button>
+            </div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label>Étape 2 : Sélectionner la vitesse de soufflerie</label>
+            </div>
+            <div class="control-box">
+                <div class="speed-grid">
+                    <button class="speed-btn active" id="speed-0" onclick="selectSpeed(0)">OFF</button>
+                    <button class="speed-btn" id="speed-1" onclick="selectSpeed(1)">1</button>
+                    <button class="speed-btn" id="speed-2" onclick="selectSpeed(2)">2</button>
+                    <button class="speed-btn" id="speed-3" onclick="selectSpeed(3)">3</button>
+                    <button class="speed-btn" id="speed-4" onclick="selectSpeed(4)">4 (Max)</button>
+                </div>
+                <div style="margin-top:10px; font-size:11px; font-weight:bold; color:var(--text-secondary);" id="speedStatus">Position : Éteint (0)</div>
+            </div>
+
+            <!-- INTERACTIVE TRICKS & SECRETS SECTION -->
+            <div class="tricks-wrapper" style="margin-top: 15px;">
+                <div class="tricks-selector-title">Secrets et Astuces du Métier (Diagnostics) :</div>
+                <div class="tricks-grid">
+                    <button class="trick-btn" id="btn-trick-unplug" onclick="toggleTrick('unplug')">Débrancher la fiche</button>
+                    <button class="trick-btn" id="btn-trick-stuck" onclick="toggleTrick('stuck')">Fusible Thermique Grillé</button>
+                    <button class="trick-btn" id="btn-trick-short" onclick="toggleTrick('short')">MOSFET en Court-circuit</button>
+                </div>
+            </div>
+
+            <div class="instruction-box" id="diagnosticGuidance">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 à 4) du connecteur ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. La Pin 4 correspond à la commande de vitesse variable issue de la résistance ou du variateur.
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;">Fiche de Résistance</label>
+                    <div class="connector-housing" id="connectorHousing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);" id="lbl-pin1">VCC_12V</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);" id="lbl-pin2">GND_M</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-3" onclick="selectPin(3)">
+                            <span class="pin-num">3</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);" id="lbl-pin3">MOT(+)</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-4" onclick="selectPin(4)">
+                            <span class="pin-num">4</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);" id="lbl-pin4">MOT(-)</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (+12V Relais)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th id="th-pin-desc">Nature du Fil (Clim Manuelle)</th>
+                        <th>Valeur Attendue en Vitesse 2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td id="lbl-t1">Alimentation principale (+12V Relais)</td>
+                        <td>+14.10 V (Moteur tournant)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td id="lbl-t2">Masse châssis principale (GND)</td>
+                        <td>Inférieure à 0.05 V (Masse directe solide)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3</strong></td>
+                        <td id="lbl-t3">Sortie vers moteur Pin (+)</td>
+                        <td>+14.10 V constant (Le moteur est alimenté en positif)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>4</strong></td>
+                        <td id="lbl-t4">Retour de masse moteur (-)</td>
+                        <td id="lbl-t4-val">~6.50 V (Chute de tension à travers les résistances)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif (Variateur & Pulseur)
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus ou sélectionnez-les pour observer le passage du courant. Notez que la vitesse du ventilateur est gérée par régulation de masse (Masse flottante).
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 240" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-brown" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-pink" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-amber" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- POWER RELAY (Relais Soufflerie) -->
+                <g id="power-source-block">
+                    <rect x="20" y="20" width="100" height="35" rx="4" fill="#172222" stroke="#ff3333" stroke-width="1.5" />
+                    <text x="70" y="41" fill="#ff3333" font-size="8" font-weight="bold" text-anchor="middle">RELAIS MOTEUR (+12V)</text>
+                </g>
+
+                <!-- MODULE RÉSISTANCE / VARIATEUR -->
+                <rect x="180" y="40" width="140" height="150" rx="8" fill="#111616" stroke="#00ffcc" stroke-width="2" />
+                <text x="250" y="130" fill="#00ffcc" font-size="10" font-weight="bold" text-anchor="middle" id="schem-res-title">RÉSISTANCE EGR</text>
+
+                <!-- Terminals inside switch block -->
+                <circle cx="200" cy="60" r="5" fill="#ff3333" id="circ-p1" />
+                <text x="215" y="63" fill="#fff" font-size="7" font-weight="bold">Pin 1 (VCC)</text>
+
+                <circle cx="200" cy="90" r="5" fill="#8b5a2b" id="circ-p2" />
+                <text x="215" y="93" fill="#fff" font-size="7" font-weight="bold">Pin 2 (GND)</text>
+
+                <circle cx="200" cy="120" r="5" fill="#ffaa00" id="circ-p3" />
+                <text x="215" y="123" fill="#fff" font-size="7" font-weight="bold" id="txt-circ-p3">Pin 3 (M+)</text>
+
+                <circle cx="300" cy="90" r="5" fill="#00a8ff" id="circ-p4" />
+                <text x="285" y="93" fill="#fff" font-size="7" font-weight="bold" text-anchor="end" id="txt-circ-p4">Pin 4 (M-)</text>
+
+                <!-- Right Column: The Blower Motor (Pulseur) -->
+                <rect x="390" y="75" width="90" height="85" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="435" y="120" fill="#a0b2b2" font-size="9" font-weight="bold" text-anchor="middle">PULSEUR D'AIR</text>
+                <text x="435" y="135" fill="#888" font-size="8" text-anchor="middle">(2 FILS)</text>
+
+                <!-- INPUT LIGNES DE CABLAGE -->
+                <!-- Fil 1: Relais -> Pin 1 -->
+                <path id="wire-path-1" d="M 120,37 L 155,37 L 155,60 L 195,60" fill="none" stroke="#ff3333" stroke-width="2" style="transition: all 0.3s ease;" />
+                
+                <!-- Fil 2: Ground -> Pin 2 -->
+                <path id="wire-path-2" d="M 60,60 L 60,85 L 140,85 L 140,190" fill="none" stroke="#8b5a2b" stroke-width="2" style="transition: all 0.3s ease;" />
+                <path d="M 130,190 L 150,190 M 134,194 L 146,194 M 138,198 L 142,198" stroke="#8b5a2b" stroke-width="2" />
+
+                <!-- OUTPUT LIGNES DE CABLAGE (Switch to Motor) -->
+                <!-- Fil 3: Pin 3 -> Motor + -->
+                <path id="wire-path-3" d="M 205,120 L 355,120 L 355,100 L 390,100" fill="none" stroke="#ffaa00" stroke-width="2" style="transition: all 0.3s ease;" />
+
+                <!-- Fil 4: Pin 4 -> Motor - -->
+                <path id="wire-path-4" d="M 305,90 L 345,90 L 345,135 L 390,135" fill="none" stroke="#00a8ff" stroke-width="2" style="transition: all 0.3s ease;" />
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">🛡️ Procédures de Diagnostic & Stratégies de Panne</h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                
+                <div>
+                    <span class="badge-fail">Loi Electrique : Pourquoi la vitesse 4 fonctionne-t-elle toujours ?</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        Sur une climatisation manuelle, si vous perdez les vitesses 1، 2، و 3، le coupable est à **100% le fusible thermique mico-soudé** sur le bloc de résistances. Ce fusible fond (à environ 110°C) si le filtre d'habitacle est bouché (ce qui réduit le flux d'air de refroidissement du bloc) ou si le moteur peine. La vitesse 4 continue de fonctionner car elle est pilotée directement en 12V d'alimentation par un relais dédié sans traverser les résistances ni le fusible thermique !
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: CLIMATISATION CONTROL MODULE (ATC)
+                        </div>
+                        <div class="live-row"><span>Blower Command Switch:</span><span id="live-switch-g">SPEED 0</span></div>
+                        <div class="live-row"><span>Blower Power Relais Status:</span><span id="live-relay-g" style="color: var(--neon-cyan);">ACTIVE (12V)</span></div>
+                        <div class="live-row"><span>Variateur Pulseur PWM (Auto):</span><span id="live-pwm-g">0 %</span></div>
+                        <div class="live-row"><span>Blower Motor Current Draw:</span><span id="live-amp-g">0.00 A</span></div>
+                        <div class="live-row"><span>Plafonnier Fan Speed (RPM):</span><span id="live-fan-g">0 RPM</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez actionner les boutons "1" à "4" ou choisir une des astuces de diagnostic pour observer les comportements électriques.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentArchitecture = 'manual'; // 'manual' or 'auto'
+        let currentSpeed = 0; // 0, 1, 2, 3, 4
+        let activeTrick = 'none'; // 'none', 'unplug', 'stuck', 'short'
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+        let fanRotationAngle = 0;
+        let fanAnimationId = null;
+
+        // Databases for measurements (at running engine level ~14.10V)
+        // Manual database: Pin 1: VCC 12V, Pin 2: Masse, Pin 3: Motor (+), Pin 4: Motor (-)
+        const DMM_DATABASE_MANUAL = {
+            0: { 1: 14.10, 2: 0.02, 3: 0.00, 4: 0.00 },
+            1: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 9.50 }, // high resistance: low speed, high volt drop
+            2: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 6.50 },
+            3: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 3.50 },
+            4: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 0.05 }  // direct ground bypass: max speed
+        };
+
+        const DMM_DATABASE_AUTO = {
+            0: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 12.00 }, // MOSFET open, pulls high, no ground loop
+            1: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 9.80 },  // average voltage modulated
+            2: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 7.20 },
+            3: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 4.10 },
+            4: { 1: 14.10, 2: 0.02, 3: 14.10, 4: 0.05 }
+        };
+
+        function getActiveDatabase() {
+            return currentArchitecture === 'manual' ? DMM_DATABASE_MANUAL : DMM_DATABASE_AUTO;
+        }
+
+        // Toggles interactive tricks
+        function toggleTrick(trickName) {
+            if (activeTrick === trickName) {
+                activeTrick = 'none';
+            } else {
+                activeTrick = trickName;
+            }
+
+            // Sync visual active states
+            document.querySelectorAll('.trick-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (activeTrick !== 'none') {
+                const targetBtn = document.getElementById(`btn-trick-${activeTrick}`);
+                if (targetBtn) targetBtn.classList.add('active');
+            }
+
+            // Unplugged connector visual shift
+            const housing = document.getElementById('connectorHousing');
+            if (activeTrick === 'unplug') {
+                if (housing) housing.style.opacity = '0.35';
+            } else {
+                if (housing) housing.style.opacity = '1';
+            }
+
+            calculateVoltage();
+            updateLiveScannerData();
+            startFanMovement();
+        }
+
+        function calculateVoltage() {
+            let volt = 0.00;
+
+            if (activeTrick === 'unplug') {
+                // Pin 1 and 3 still have Relais power from harness side
+                if (selectedRedPin === 1 || selectedRedPin === 3) volt = 14.10;
+                const dmmValEl = document.getElementById('dmmValue');
+                if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+                return;
+            }
+
+            if (activeTrick === 'stuck' && currentArchitecture === 'manual') {
+                // Thermal Fuse Blown: Speeds 1,2,3 completely dead (GND is cut, Pin 4 remains float high 14.1V)
+                // Speed 4 bypasses fuse, so it remains functional!
+                if (currentSpeed < 4) {
+                    if (selectedRedPin === 1 || selectedRedPin === 3 || selectedRedPin === 4) volt = 14.10;
+                    if (selectedRedPin === 2) volt = 0.02;
+                } else {
+                    volt = DMM_DATABASE_MANUAL[4][selectedRedPin];
+                }
+                const dmmValEl = document.getElementById('dmmValue');
+                if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+                return;
+            }
+
+            if (activeTrick === 'short' && currentArchitecture === 'auto') {
+                // MOSFET Short-circuit: pulls Motor (-) Pin 4 directly to GND (0.05V) at all speeds (even OFF!)
+                if (selectedRedPin === 1 || selectedRedPin === 3) volt = 14.10;
+                if (selectedRedPin === 4) volt = 0.05;
+                if (selectedRedPin === 2) volt = 0.02;
+                const dmmValEl = document.getElementById('dmmValue');
+                if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+                return;
+            }
+
+            let refValues = getActiveDatabase()[currentSpeed];
+            if (refValues && refValues[selectedRedPin] !== undefined) {
+                volt = refValues[selectedRedPin];
+            }
+
+            const dmmValEl = document.getElementById('dmmValue');
+            if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+        }
+
+        function selectSpeed(speed) {
+            currentSpeed = speed;
+
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const targetBtn = document.getElementById(`speed-${speed}`);
+            if (targetBtn) targetBtn.classList.add('active');
+
+            const speedText = {
+                0: 'Éteint (OFF)',
+                1: 'Vitesse 1 (Basse)',
+                2: 'Vitesse 2 (Moyenne-Basse)',
+                3: 'Vitesse 3 (Moyenne-Haute)',
+                4: 'Vitesse 4 (Maximale - direct)'
+            };
+            const speedStatus = document.getElementById('speedStatus');
+            if (speedStatus) speedStatus.innerText = `Position : ${speedText[speed]}`;
+
+            calculateVoltage();
+            updateLiveScannerData();
+            startFanMovement();
+        }
+
+        function changeArchitecture(arch) {
+            currentArchitecture = arch;
+            document.querySelectorAll('.arch-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const targetBtn = document.getElementById(`btn-arch-${arch}`);
+            if (targetBtn) targetBtn.classList.add('active');
+
+            // DOM Label Updates
+            const thDesc = document.getElementById('th-pin-desc');
+            const lblPin1 = document.getElementById('lbl-pin1');
+            const lblPin2 = document.getElementById('lbl-pin2');
+            const lblPin3 = document.getElementById('lbl-pin3');
+            const lblPin4 = document.getElementById('lbl-pin4');
+
+            const lblT1 = document.getElementById('lbl-t1');
+            const lblT2 = document.getElementById('lbl-t2');
+            const lblT3 = document.getElementById('lbl-t3');
+            const lblT4 = document.getElementById('lbl-t4');
+            const lblT4Val = document.getElementById('lbl-t4-val');
+
+            const schemResTitle = document.getElementById('schem-res-title');
+            const txtP3 = document.getElementById('txt-circ-p3');
+            const txtP4 = document.getElementById('txt-circ-p4');
+
+            if (arch === 'manual') {
+                if (thDesc) thDesc.innerText = "Nature du Fil (Clim Manuelle)";
+                if (lblPin1) lblPin1.innerText = "VCC_12V";
+                if (lblPin2) lblPin2.innerText = "GND_M";
+                if (lblPin3) lblPin3.innerText = "MOT(+)";
+                if (lblPin4) lblPin4.innerText = "MOT(-)";
+                
+                if (lblT1) lblT1.innerText = "Alimentation principale (+12V Relais)";
+                if (lblT2) lblT2.innerText = "Masse châssis principale (GND)";
+                if (lblT3) lblT3.innerText = "Sortie vers moteur Pin (+)";
+                if (lblT4) lblT4.innerText = "Retour de masse moteur (-)";
+                if (lblT4Val) lblT4Val.innerText = "~6.50 V (Chute de tension)";
+
+                if (schemResTitle) schemResTitle.textContent = "RÉSISTANCE (4 VIT.)";
+                if (txtP3) txtP3.textContent = "Pin 3 (M+)";
+                if (txtP4) txtP4.textContent = "Pin 4 (M-)";
+
+                // hide/show conflicting tricks
+                document.getElementById('btn-trick-stuck').style.display = 'block';
+                document.getElementById('btn-trick-short').style.display = 'none';
+            } else {
+                if (thDesc) thDesc.innerText = "Nature du Fil (Clim Auto)";
+                if (lblPin1) lblPin1.innerText = "VCC_BAT";
+                if (lblPin2) lblPin2.innerText = "GND_M";
+                if (lblPin3) lblPin3.innerText = "LIN_BUS";
+                if (lblPin4) lblPin4.innerText = "GATE(-)";
+                
+                if (lblT1) lblT1.innerText = "Alimentation +12V batterie permanente";
+                if (lblT2) lblT2.innerText = "Masse de puissance transistor (GND)";
+                if (lblT3) lblT3.innerText = "Signal LIN Bus / Commande Clim Auto";
+                if (lblT4) lblT4.innerText = "Régulation masse hachée moteur (-)";
+                if (lblT4Val) lblT4Val.innerText = "Modulé en PWM par MOSFET";
+
+                if (schemResTitle) schemResTitle.textContent = "VARIATEUR MOSFET";
+                if (txtP3) txtP3.textContent = "Pin 3 (LIN)";
+                if (txtP4) txtP4.textContent = "Pin 4 (Gate-)";
+
+                document.getElementById('btn-trick-stuck').style.display = 'none';
+                document.getElementById('btn-trick-short').style.display = 'block';
+            }
+
+            // reset tricks
+            activeTrick = 'none';
+            document.querySelectorAll('.trick-btn').forEach(btn => btn.classList.remove('active'));
+            const housing = document.getElementById('connectorHousing');
+            if (housing) housing.style.opacity = '1';
+
+            selectSpeed(0);
+            selectPin(1);
+        }
+
+        function startFanMovement() {
+            if (fanAnimationId) {
+                cancelAnimationFrame(fanAnimationId);
+                fanAnimationId = null;
+            }
+
+            let calculatedSpeed = currentSpeed;
+
+            // Apply tricks
+            if (activeTrick === 'unplug') {
+                calculatedSpeed = 0;
+            }
+            else if (activeTrick === 'stuck' && currentArchitecture === 'manual') {
+                // thermal fuse blown: Speeds 1,2,3 are dead. 4 works!
+                calculatedSpeed = currentSpeed === 4 ? 4 : 0;
+            }
+            else if (activeTrick === 'short' && currentArchitecture === 'auto') {
+                // MOSFET short circuit forces max speed continuously
+                calculatedSpeed = 4;
+            }
+
+            if (calculatedSpeed === 0) {
+                const windText = document.getElementById('windText');
+                if (windText) windText.style.opacity = '0';
+                return;
+            }
+
+            // Animation speeds
+            const rotationSteps = { 1: 4, 2: 8, 3: 15, 4: 25 };
+            const windOpacity = { 1: '0.2', 2: '0.4', 3: '0.7', 4: '1' };
+            const step = rotationSteps[calculatedSpeed];
+
+            const windText = document.getElementById('windText');
+            if (windText) {
+                windText.style.opacity = windOpacity[calculatedSpeed];
+                // slight jitter
+                windText.style.transform = `translate(${(Math.random()-0.5)*5}px, ${(Math.random()-0.5)*5}px)`;
+            }
+
+            function animateFan() {
+                fanRotationAngle = (fanRotationAngle + step) % 360;
+                const blowerWheel = document.getElementById('blowerWheel');
+                if (blowerWheel) {
+                    blowerWheel.style.transform = `rotate(${fanRotationAngle}deg)`;
+                }
+                fanAnimationId = requestAnimationFrame(animateFan);
+            }
+
+            fanAnimationId = requestAnimationFrame(animateFan);
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#ff3333', 2: '#8b5a2b', 3: '#ffaa00', 4: '#00a8ff' };
+
+            for (let i = 1; i <= 4; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-red)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-brown)";
+                if (pinNumber === 3) activePath.style.filter = "url(#glow-amber)";
+                if (pinNumber === 4) activePath.style.filter = "url(#glow-blue)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            selectedRedPin = pinNumber;
+            document.querySelectorAll('.pin-terminal').forEach(el => {
+                el.classList.remove('selected-red');
+            });
+            const targetPin = document.getElementById(`pin-${pinNumber}`);
+            if (targetPin) targetPin.classList.add('selected-red');
+
+            let names = {};
+            if (currentArchitecture === 'manual') {
+                names = {
+                    1: 'Pin 1 (+12V Relais de puissance)',
+                    2: 'Pin 2 (Masse châssis principale GND)',
+                    3: 'Pin 3 (Alimentation moteur positive MOT+)',
+                    4: 'Pin 4 (Régulation vitesse masse MOT-)'
+                };
+            } else {
+                names = {
+                    1: 'Pin 1 (+12V Permanent Batterie)',
+                    2: 'Pin 2 (Masse de puissance GND)',
+                    3: 'Pin 3 (Ligne de communication LIN Bus)',
+                    4: 'Pin 4 (Sortie masse hachée MOSFET)'
+                };
+            }
+
+            const selectedRedLabel = document.getElementById('selected-red-label');
+            if (selectedRedLabel) selectedRedLabel.innerText = names[pinNumber];
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if (!panel) return;
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        // Live Scanner Data BCM Control
+        function updateLiveScannerData() {
+            let switchEl = document.getElementById('live-switch-g');
+            let relayEl = document.getElementById('live-relay-g');
+            let pwmEl = document.getElementById('live-pwm-g');
+            let ampEl = document.getElementById('live-amp-g');
+            let fanEl = document.getElementById('live-fan-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!switchEl) return;
+
+            let isRunning = currentSpeed > 0;
+            let currentAmps = { 0: '0.00 A', 1: '2.50 A', 2: '5.20 A', 3: '9.40 A', 4: '18.50 A' };
+            let currentRPM = { 0: '0 RPM', 1: '800 RPM', 2: '1600 RPM', 3: '2400 RPM', 4: '3500 RPM' };
+            let currentPWM = { 0: '0 %', 1: '25 %', 2: '50 %', 3: '75 %', 4: '100 %' };
+
+            // Applied Trick logic
+            if (activeTrick === 'unplug') {
+                switchEl.innerText = `SPEED ${currentSpeed}`;
+                relayEl.innerText = "ACTIVE (12V)";
+                pwmEl.innerText = currentArchitecture === 'manual' ? "N/A" : currentPWM[currentSpeed];
+                ampEl.innerText = "0.00 A";
+                fanEl.innerText = "0 RPM";
+                if (dtcEl) {
+                    dtcEl.innerText = "B102C - BLOWER MOTOR ELECTRICAL OPEN CIRCUIT";
+                    dtcEl.style.color = "var(--neon-red)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🚨 État : Pulseur débranché / Faisceau coupé (Défaut B102C)</strong><br><br>• <strong>Anomalie :</strong> Le calculateur de clim ATC (Automatic Temp Control) commande le variateur, mais n'enregistre aucune consommation d'intensité sur la ligne. La soufflerie est inerte.";
+                return;
+            }
+
+            if (activeTrick === 'stuck' && currentArchitecture === 'manual') {
+                if (currentSpeed < 4) {
+                    switchEl.innerText = `SPEED ${currentSpeed}`;
+                    relayEl.innerText = "ACTIVE (12V)";
+                    pwmEl.innerText = "N/A";
+                    ampEl.innerText = "0.00 A";
+                    fanEl.innerText = "0 RPM";
+                    if (dtcEl) {
+                        dtcEl.innerText = "B10A4 - THERMAL FUSE BLOWN / RESISTOR PACK OPEN";
+                        dtcEl.style.color = "var(--neon-red)";
+                    }
+                    if (expEl) expEl.innerHTML = "<strong>🔑 Secrets du Métier : Fusible thermique d'EGR grillé</strong><br><br>• <strong>Analyse d'allumage :</strong> Les vitesses 1, 2, et 3 sont complètement coupées (0A) car le fusible thermique soudé sur le bloc de résistance est ouvert. Dès que vous commutez sur la vitesse 4 (Max), le pulseur démarre d'un coup à fond (18.50A), prouvant que la résistance est hors service.";
+                } else {
+                    switchEl.innerText = "SPEED 4 (Max)";
+                    relayEl.innerText = "ACTIVE (12V)";
+                    pwmEl.innerText = "N/A";
+                    ampEl.innerText = "18.50 A";
+                    fanEl.innerText = "3500 RPM";
+                    if (dtcEl) {
+                        dtcEl.innerText = "B10A4 - THERMAL FUSE OPEN (Speed 4 Bypass)";
+                        dtcEl.style.color = "var(--neon-amber)";
+                    }
+                    if (expEl) expEl.innerHTML = "<strong>🔑 Secrets du Métier : Fonctionnement en déviation (Vitesse 4 active)</strong><br><br>• <strong>Note de diagnostic :</strong> Le relais de vitesse maximale alimente le pulseur directement sans traverser la résistance.";
+                }
+                return;
+            }
+
+            if (activeTrick === 'short' && currentArchitecture === 'auto') {
+                switchEl.innerText = `SPEED ${currentSpeed} (MOSFET Short-circuit)`;
+                relayEl.innerText = "ACTIVE (12V)";
+                pwmEl.innerText = "100 % (Hard Short)";
+                ampEl.innerText = "18.50 A";
+                fanEl.innerText = "3500 RPM";
+                if (dtcEl) {
+                    dtcEl.innerText = "B102E - BLOWER MOTOR MOSFET SHORT-CIRCUIT TO GROUND";
+                    dtcEl.style.color = "var(--neon-red)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🔑 Secrets du Métier : Variateur MOSFET en court-circuit</strong><br><br>• <strong>Symptôme :</strong> Le pulseur tourne à sa vitesse maximale (3500 RPM) continuellement, même si la commande est désactivée (OFF). Le transistor de puissance interne s'est mis en court-circuit franc, reliant le moteur en permanence à la masse.";
+                return;
+            }
+
+            // Normal operation states
+            switchEl.innerText = `SPEED ${currentSpeed}`;
+            relayEl.innerText = isRunning ? "ACTIVE (12V)" : "INACTIVE (0V)";
+            pwmEl.innerText = currentArchitecture === 'manual' ? "N/A" : currentPWM[currentSpeed];
+            ampEl.innerText = currentAmps[currentSpeed];
+            fanEl.innerText = currentRPM[currentSpeed];
+            if (dtcEl) {
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+            }
+
+            if (currentSpeed === 0) {
+                if (expEl) expEl.innerHTML = "<strong>🟢 État : Ventilation Éteinte</strong><br><br>• Le pulseur est à l'arrêt. La consommation de courant est de 0.00A.";
+            } else {
+                if (expEl) expEl.innerHTML = `<strong>🟢 État : Ventilation active en Vitesse ${currentSpeed}</strong><br><br>• <strong>Analyse de boucle :</strong> Le pulseur consomme ${currentAmps[currentSpeed]}. La tension de retour est régulée à la baisse pour stabiliser la vitesse mécanique.`;
+            }
+        }
+
+        window.onload = function() {
+            canvas = document.getElementById('scopeCanvas');
+            if (canvas) {
+                ctx = canvas.getContext('2d');
+            }
+            selectPin(1);
+            changeArchitecture('manual');
+        };
+    </script>
+</body>
+</html>

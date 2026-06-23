@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Capteur MAP</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Crisp Vector Icon SVGs */
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter CSS Representation */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 12px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 25px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CLIP LOCK';
+            position: absolute;
+            top: -10px; left: calc(50% - 35px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 38px;
+            height: 50px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-terminal.selected-black {
+            border-color: #888888;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Selectors */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .state-btn.active, .arch-btn.active {
+            background: var(--neon-cyan);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-amber);
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+        }
+
+        /* Oscilloscope Controls & Canvas */
+        .oscillo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .scope-screen-wrapper {
+            background: var(--screen-bg);
+            border: 3px solid #2a3333;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        #scopeCanvas {
+            width: 100%;
+            height: 250px;
+            background: #030808;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .scope-grid-label {
+            position: absolute;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #55c5c5;
+        }
+
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .scope-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #181d1d;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .scope-select {
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .scope-select:focus {
+            border-color: var(--neon-cyan);
+            outline: none;
+        }
+
+        .btn-trigger {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #172222, #00ffcc);
+            border: 1px solid var(--neon-cyan);
+            color: #080b0b;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-trigger:hover {
+            box-shadow: 0 0 20px var(--neon-glow);
+            transform: scale(1.02);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">
+                <!-- Wind SVG Icon -->
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M9.5 8.5h10.5a2.5 2.5 0 1 1 0 5H17M4 12h11.5M6 15.5h6.5a1.5 1.5 0 1 0 0-3H10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                Diagnostic Technique - Capteur de Pression Absolue (MAP)
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module technique simule le diagnostic d'un capteur MAP à 4 fils avec sonde de température d'air intégrée (IAT). Sélectionnez le type de motorisation (Atmosphérique ou Turbo), l'état opérationnel du moteur, et utilisez le multimètre virtuel pour tester les broches et observer le schéma électrique ainsi que l'oscilloscope.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Volt/Lightning SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" fill="none"/></svg>
+                Simulateur de Test Guidé
+            </h3>
+            
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="color: var(--neon-amber);">Étape 1 : Sélectionner le type de motorisation</label>
+            </div>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-arch-atmo" onclick="changeArchitecture('atmo')">Moteur Atmo (Standard)</button>
+                <button class="arch-btn" id="btn-arch-turbo" onclick="changeArchitecture('turbo')">Moteur Turbo (Suralimenté)</button>
+            </div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label>Étape 2 : Choisir l'état opérationnel du moteur</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-off" onclick="changeEngineState('off')">Contact ON (Moteur OFF)</button>
+                <button class="state-btn" id="btn-state-idle" onclick="changeEngineState('idle')">Moteur Ralenti</button>
+                <button class="state-btn" id="btn-state-snap" onclick="changeEngineState('snap')">Régime Élevé</button>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 à 4) du connecteur ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. Observez l'impact direct du type de moteur sur le signal de pression à la Pin 4.
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;">Connecteur MAP (Côté Faisceau)</label>
+                    <div class="connector-housing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">GND</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">IAT</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-3" onclick="selectPin(3)">
+                            <span class="pin-num">3</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">VCC</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-4" onclick="selectPin(4)">
+                            <span class="pin-num">4</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">SIG</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (Masse GND)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th>Nature du Fil</th>
+                        <th>Rôle Fonctionnel</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td>Masse (GND)</td>
+                        <td>Masse électronique de retour dédiée vers le calculateur moteur</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td>Température (IAT)</td>
+                        <td>Signal de résistance CTN du capteur de température d'air intégré</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3</strong></td>
+                        <td>Alimentation (VCC)</td>
+                        <td>Alimentation stabilisée +5.0V provenant de l'ECU</td>
+                    </tr>
+                    <tr>
+                        <td><strong>4</strong></td>
+                        <td>Signal (SIG)</td>
+                        <td id="pin4-desc">Signal analogique de pression du collecteur (Volts proportionnels aux mbars)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Scope/Waveform SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-cyan);" viewBox="0 0 24 24"><path d="M3 12h3l3-9 4 18 3-12h5" stroke="currentColor" fill="none"/></svg>
+                Oscilloscope de Diagnostic Virtuel
+            </h3>
+            <div class="oscillo-container">
+                
+                <div class="scope-screen-wrapper">
+                    <div class="scope-grid-label label-volts" id="voltsDivLabel">Y: 1.0 V / Div</div>
+                    <div class="scope-grid-label label-time" id="timeDivLabel">X: 200 ms / Div</div>
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <div class="scope-controls">
+                    <div class="control-group">
+                        <label>Sensibilité Verticale (Tension)</label>
+                        <select class="scope-select" id="ctrlVolts" onchange="updateScopeParameters()">
+                            <option value="0.5">0.5 V / Div</option>
+                            <option value="1" selected>1.0 V / Div</option>
+                            <option value="2">2.0 V / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Vitesse de Balayage (Temps)</label>
+                        <select class="scope-select" id="ctrlTime" onchange="updateScopeParameters()">
+                            <option value="100">100 ms / Div</option>
+                            <option value="200" selected>200 ms / Div</option>
+                            <option value="500">500 ms / Div</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-trigger" onclick="triggerSnapThrottle()">Simuler Accélération (Snap Throttle)</button>
+                </div>
+
+                <div class="instruction-box" style="margin-bottom:0;">
+                    <strong>ℹ️ Guide d'interprétation de la courbe :</strong><br>
+                    • <strong>Différence Atmo vs Turbo :</strong> Un moteur Turbo montera au-dessus de sa pression atmosphérique initiale (phase de boost positive), tandis qu'un moteur Atmo plafonnera précisément à la pression atmosphérique ambiante (0 bar relatif).
+                </div>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus ou sélectionnez-les pour voir la ligne s'illuminer et visualiser le cheminement électrique entre le système d'alimentation, le capteur MAP, le point de masse châssis et l'unité de commande moteur (ECU).
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 220" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-brown" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-green" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- EXPLICIT MASSE DE REFERENCE -->
+                <g id="power-source-block">
+                    <rect x="20" y="20" width="110" height="40" rx="4" fill="#172222" stroke="#8b5a2b" stroke-width="1.5" />
+                    <text id="power-source-text" x="75" y="44" fill="#8b5a2b" font-size="9" font-weight="bold" text-anchor="middle">MASSE CHASSIS</text>
+                </g>
+
+                <!-- CAPTEUR MAP -->
+                <rect x="180" y="100" width="120" height="60" rx="6" fill="#111616" stroke="#00ffcc" stroke-width="2" />
+                <text x="240" y="135" fill="#00ffcc" font-size="11" font-weight="bold" text-anchor="middle">CAPTEUR MAP</text>
+
+                <!-- Terminal connector dots -->
+                <circle cx="195" cy="110" r="5" fill="#8b5a2b" />
+                <text x="195" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                <circle cx="225" cy="110" r="5" fill="#00ff66" />
+                <text x="225" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                <circle cx="255" cy="110" r="5" fill="#ff3333" />
+                <text x="255" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">3</text>
+
+                <circle cx="285" cy="110" r="5" fill="#00a8ff" />
+                <text x="285" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">4</text>
+
+                <!-- CALCULATEUR MOTEUR (ECU) -->
+                <rect x="370" y="70" width="110" height="110" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="425" y="125" fill="#a0b2b2" font-size="10" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+
+                <!-- LIGNES DE CABLAGE -->
+                <path id="wire-path-1" d="M 75,60 L 75,80 L 195,80 L 195,105" fill="none" stroke="#8b5a2b" stroke-width="2" style="transition: all 0.3s ease;" />
+                <path id="wire-path-2" d="M 225,105 L 225,85 L 340,85 L 340,95 L 370,95" fill="none" stroke="#00ff66" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="91" fill="#00ff66" font-size="8" text-anchor="end">Pin 56</text>
+                <path id="wire-path-3" d="M 255,105 L 255,90 L 330,90 L 330,115 L 370,115" fill="none" stroke="#ff3333" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="111" fill="#ff3333" font-size="8" text-anchor="end">Pin 12 (5V)</text>
+                <path id="wire-path-4" d="M 285,105 L 285,95 L 350,95 L 350,145 L 370,145" fill="none" stroke="#00a8ff" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="141" fill="#00a8ff" font-size="8" text-anchor="end">Pin 64</text>
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">
+                <!-- Shield/Diagnostic SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-red);" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" fill="none"/></svg>
+                Procédures de Diagnostic & Stratégies de Panne
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                <div>
+                    <span class="badge-fail">Diagnostic d'une dérive de calage (Jumped Cam Timing)</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        Si au ralenti à chaud, la valeur de pression collecteur (MAP) est anormalement élevée (ex: 550 mbar au lieu de 300 mbar) alors que le moteur ne subit aucune charge externe, suspectez immédiatement un calage de distribution décalé (jumped tooth). Le manque de dépression généré par la mauvaise synchronisation des soupapes se traduit directement par une tension de signal d'admission anormalement haute au ralenti.
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: MANIFOLD PRESSURE & CHARGE CONTROL
+                        </div>
+                        <div class="live-row"><span>Engine Speed:</span><span id="live-rpm-g">0 RPM</span></div>
+                        <div class="live-row"><span>Manifold Pressure (MAP):</span><span id="live-map-g">0 mbar</span></div>
+                        <div class="live-row"><span>Short Term Fuel Trim (STFT):</span><span id="live-stft-g">0.0 %</span></div>
+                        <div class="live-row"><span>Long Term Fuel Trim (LTFT):</span><span id="live-ltft-g">0.0 %</span></div>
+                        <div class="live-row"><span>Intake Air Temp (IAT):</span><span id="live-iat-g">25 °C</span></div>
+                        <div class="live-row"><span>Volumetric Efficiency (VE %):</span><span id="live-ve-g" style="color: var(--neon-amber);">0 %</span></div>
+                        <div class="live-row"><span>Engine Load calculation:</span><span id="live-load-g" style="color: var(--neon-amber);">0 %</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez démarrer la simulation en cliquant sur <strong>"Moteur Ralenti"</strong> ou <strong>"Régime Élevé"</strong> ci-dessus pour observer le comportement dynamique du calculateur en temps réel.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Architecture configurations (atmo or turbo)
+        let currentArchitecture = 'atmo';
+
+        // Dynamic Simulation Database based on Engine state and Architecture
+        // Pin 1: GND, Pin 2: IAT, Pin 3: 5V, Pin 4: Signal
+        const DMM_DATABASE_ATMO = {
+            off: { 1: 0.01, 2: 3.20, 3: 5.01, 4: 4.00 },   // 1013 mbar -> ~4.00V
+            idle: { 1: 0.02, 2: 2.80, 3: 5.00, 4: 1.20 },  // 300 mbar -> ~1.20V
+            snap: { 1: 0.03, 2: 2.60, 3: 5.01, 4: 3.95 }   // 1000 mbar -> ~3.95V
+        };
+
+        const DMM_DATABASE_TURBO = {
+            off: { 1: 0.01, 2: 3.20, 3: 5.02, 4: 1.90 },   // 1013 mbar -> ~1.90V on 2.5 Bar sensor
+            idle: { 1: 0.02, 2: 2.80, 3: 5.00, 4: 0.60 },  // 300 mbar -> ~0.60V
+            snap: { 1: 0.03, 2: 2.60, 3: 5.01, 4: 4.20 }   // 2200 mbar -> ~4.20V
+        };
+
+        let currentEngineState = 'off';
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+
+        function getActiveDatabase() {
+            return currentArchitecture === 'atmo' ? DMM_DATABASE_ATMO : DMM_DATABASE_TURBO;
+        }
+
+        function calculateVoltage() {
+            let refOff = getActiveDatabase()[currentEngineState];
+            let vRed = 0;
+            let vBlack = 0;
+
+            if (selectedRedPin && refOff[selectedRedPin] !== undefined) {
+                vRed = refOff[selectedRedPin];
+            }
+            if (selectedBlackPin !== 'ground') {
+                vBlack = refOff[selectedBlackPin] || 0;
+            }
+
+            let difference = vRed - vBlack;
+            if (difference < 0) difference = Math.abs(difference);
+
+            document.getElementById('dmmValue').innerText = difference.toFixed(2);
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#8b5a2b', 2: '#00ff66', 3: '#ff3333', 4: '#00a8ff' };
+
+            for (let i = 1; i <= 4; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-brown)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-green)";
+                if (pinNumber === 3) activePath.style.filter = "url(#glow-red)";
+                if (pinNumber === 4) activePath.style.filter = "url(#glow-blue)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            document.querySelectorAll('.pin-terminal').forEach(el => { el.classList.remove('selected-red'); });
+            selectedRedPin = pinNumber;
+            document.getElementById(`pin-${pinNumber}`).classList.add('selected-red');
+
+            const pinNames = {
+                1: 'Pin 1 (Masse électronique GND)',
+                2: 'Pin 2 (Signal IAT Température)',
+                3: 'Pin 3 (Alimentation 5V Référence)',
+                4: 'Pin 4 (Signal MAP Pression Absolue)'
+            };
+            document.getElementById('selected-red-label').innerText = pinNames[pinNumber];
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function changeEngineState(state) {
+            currentEngineState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-state-${state}`).classList.add('active');
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function changeArchitecture(arch) {
+            currentArchitecture = arch;
+            document.querySelectorAll('.arch-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-arch-${arch}`).classList.add('active');
+
+            const pin4Desc = document.getElementById('pin4-desc');
+            
+            if (arch === 'atmo') {
+                pin4Desc.innerHTML = "Signal analogique de pression du collecteur (1.2V au ralenti, 4.0V à pression atmosphérique max)";
+            } else {
+                pin4Desc.innerHTML = "Signal analogique de pression turbo (0.6V au ralenti, monte à 4.2V lors de la phase de boost positive)";
+            }
+
+            calculateVoltage();
+            updateLiveScannerData();
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if(panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        // Live Scanner Data Core Engine
+        function updateLiveScannerData() {
+            let rpmEl = document.getElementById('live-rpm-g');
+            let mapEl = document.getElementById('live-map-g');
+            let stftEl = document.getElementById('live-stft-g');
+            let ltftEl = document.getElementById('live-ltft-g');
+            let iatEl = document.getElementById('live-iat-g');
+            let veEl = document.getElementById('live-ve-g');
+            let loadEl = document.getElementById('live-load-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!rpmEl) return;
+
+            if (currentEngineState === 'off') {
+                rpmEl.innerText = "0 RPM";
+                mapEl.innerText = "1013 mbar";
+                stftEl.innerText = "0.0 %";
+                ltftEl.innerText = "0.0 %";
+                iatEl.innerText = "25 °C";
+                veEl.innerText = "0 %";
+                loadEl.innerText = "0 %";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🔴 État: Contact ON (Moteur OFF)</strong><br><br>• <strong>Étalonnage de Référence :</strong> Le moteur est complètement éteint. Le collecteur d'admission est donc exposé à la pression atmosphérique locale qui est de 1013 mbar.<br>• <strong>Interprétation du Signal :</strong> Sur un moteur Atmo, ce niveau de pression produit un signal stable de 4.00V. Sur un moteur Turbo, le capteur est calibré sur une échelle plus large (2.5 ou 3.0 Bar) pour pouvoir mesurer la suralimentation ; son signal au repos est donc plus bas (~1.90V).<br><br><span style='color: var(--neon-red); font-weight: bold;'>⚠️ RÈGLE DE CALIBRATION : Si la tension mesurée à la Pin 4 à l'arrêt dévie de ces valeurs de référence (ex: > 4.2V en Atmo ou > 2.1V en Turbo), le capteur est décalibré d'usine ou défectueux. Il transmettra des données de charge fausses au calculateur et perturbera l'injection !</span>";
+            } 
+            else if (currentEngineState === 'idle') {
+                rpmEl.innerText = "750 RPM";
+                mapEl.innerText = "320 mbar";
+                stftEl.innerText = "+0.5 %";
+                ltftEl.innerText = "+1.0 %";
+                iatEl.innerText = "38 °C";
+                veEl.innerText = "82 % (Normal)";
+                loadEl.innerText = "18 %";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🟢 État: Moteur au Ralenti stable</strong><br><br>• <strong>Création du Vide :</strong> Les pistons aspirent de l'air contre le papillon d'admission fermé, créant un vide important dans le collecteur (pression absolue basse de 320 mbar).<br>• <strong>Comportement Électrique :</strong> La tension du signal s'écroule (1.2V pour Atmo et 0.6V pour Turbo).<br><br><span style='color: var(--neon-amber); font-weight: bold;'>⚠️ NOTE DIAGNOSTIQUE : Si au ralenti la pression est trop haute (ex: 550 mbar), cela indique soit une prise d'air majeure après le papillon, soit un décalage de distribution (cam timing jumped), soit un problème d'étanchéité des soupapes !</span>";
+            } 
+            else if (currentEngineState === 'snap') {
+                if (currentArchitecture === 'atmo') {
+                    rpmEl.innerText = "4800 RPM";
+                    mapEl.innerText = "990 mbar";
+                    stftEl.innerText = "0.0 % (Open Loop)";
+                    ltftEl.innerText = "+1.0 %";
+                    iatEl.innerText = "35 °C";
+                    veEl.innerText = "85 %";
+                    loadEl.innerText = "98 %";
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                    expEl.innerHTML = "<strong>🚀 État: Pleine Charge (Moteur Atmo)</strong><br><br>• <strong>Effondrement du Vide :</strong> Papillon ouvert à fond (WOT), le vide s'estompe et la pression absolue remonte presque au niveau de la pression atmosphérique extérieure (990 mbar, soit ~3.95V).<br>• <strong>Limitation Physique :</strong> Sans assistance de suralimentation, un moteur atmosphérique ne peut jamais franchir la barre de la pression atmosphérique externe.";
+                } else {
+                    rpmEl.innerText = "5200 RPM";
+                    mapEl.innerText = "2250 mbar";
+                    stftEl.innerText = "0.0 % (Open Loop)";
+                    ltftEl.innerText = "+1.0 %";
+                    iatEl.innerText = "45 °C";
+                    veEl.innerText = "88 %";
+                    loadEl.innerText = "185 %";
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                    expEl.innerHTML = "<strong>🚀 État: Suralimentation Maximale (Moteur Turbo Boost)</strong><br><br>• <strong>Phase de Suralimentation :</strong> Le turbo est pleinement actif et comprime l'air admis. La pression absolue grimpe à 2250 mbar (soit +1.25 bar de pression relative de suralimentation).<br>• <strong>Vérification du Signal :</strong> La tension atteint 4.2V. Si en pleine charge la pression stagne sous 1000 mbar, cela indique une fuite d'air majeure dans l'échangeur/durites ou un problème de wastegate (DTC P0299 - Underboost).";
+                }
+            }
+        }
+
+        // ====================================================
+        // OSCILLOSCOPE INTERACTIF
+        // ====================================================
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let voltScale = 1.0;
+        let timeScale = 200;
+        let isAnimating = false;
+        let animProgress = 0;
+        let scopeInterval = null;
+
+        function updateScopeParameters() {
+            voltScale = parseFloat(document.getElementById('ctrlVolts').value);
+            timeScale = parseInt(document.getElementById('ctrlTime').value);
+            document.getElementById('voltsDivLabel').innerText = `Y: ${voltScale.toFixed(1)} V / Div`;
+            document.getElementById('timeDivLabel').innerText = `X: ${timeScale} ms / Div`;
+            drawScope();
+        }
+
+        function drawScope() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const width = canvas.width || 500;
+            const height = canvas.height || 250;
+            const numDivsX = 10;
+            const numDivsY = 6;
+            const gridSpacingX = width / numDivsX;
+            const gridSpacingY = height / numDivsY;
+
+            ctx.strokeStyle = '#122525';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= numDivsX; i++) {
+                ctx.beginPath(); ctx.moveTo(i * gridSpacingX, 0); ctx.lineTo(i * gridSpacingX, height); ctx.stroke();
+            }
+            for (let i = 0; i <= numDivsY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, i * gridSpacingY); ctx.lineTo(width, i * gridSpacingY); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#1e4040';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+            ctx.stroke();
+
+            function voltToY(volts) {
+                const maxVoltsRepresented = numDivsY * voltScale;
+                return height - (volts / maxVoltsRepresented) * height;
+            }
+
+            if (!isAnimating) {
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = 'rgba(0, 255, 204, 0.4)';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                let currentBaseSignal = getActiveDatabase()[currentEngineState][4];
+                let lineY = voltToY(currentBaseSignal);
+                ctx.moveTo(0, lineY); ctx.lineTo(width, lineY);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = 'rgba(0, 255, 204, 0.6)';
+                ctx.shadowBlur = 10;
+                ctx.lineWidth = 3;
+
+                let samples = [];
+                const step = 2;
+                for (let x = 0; x < width; x += step) {
+                    let voltValue = currentArchitecture === 'atmo' ? 1.20 : 0.60;
+                    let tMs = (x / width) * (timeScale * numDivsX);
+
+                    if (tMs >= 300) {
+                        let dt = tMs - 300;
+                        if (currentArchitecture === 'atmo') {
+                            if (dt < 40) { voltValue = 1.20 + (2.75 * (dt / 40)); }
+                            else if (dt >= 40 && dt < 450) { voltValue = 3.95 + Math.sin(dt * 0.08) * 0.1; }
+                            else if (dt >= 450 && dt < 750) { let decProgress = (dt - 450) / 300; voltValue = 3.95 - (3.6 * decProgress); }
+                            else if (dt >= 750 && dt < 1300) { let recoverProgress = (dt - 750) / 550; voltValue = 0.35 + (0.85 * recoverProgress); }
+                            else { voltValue = 1.20; }
+                        } else {
+                            if (dt < 50) { voltValue = 0.60 + (3.60 * (dt / 50)); }
+                            else if (dt >= 50 && dt < 500) { voltValue = 4.20 + Math.sin(dt * 0.05) * 0.15; }
+                            else if (dt >= 500 && dt < 850) { let decProgress = (dt - 500) / 350; voltValue = 4.20 - (3.9 * decProgress); }
+                            else if (dt >= 850 && dt < 1400) { let recoverProgress = (dt - 850) / 550; voltValue = 0.30 + (0.30 * recoverProgress); }
+                            else { voltValue = 0.60; }
+                        }
+                    }
+                    samples.push({ x: x, y: voltToY(voltValue) });
+                }
+
+                if (samples.length > 0) {
+                    ctx.beginPath(); ctx.moveTo(samples[0].x, samples[0].y);
+                    for (let j = 0; j < samples.length; j++) {
+                        if (samples[j].x < animProgress) { ctx.lineTo(samples[j].x, samples[j].y); }
+                    }
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function triggerSnapThrottle() {
+            if (isAnimating) return;
+            isAnimating = true;
+            animProgress = 0;
+            changeEngineState('snap');
+
+            if (scopeInterval) clearInterval(scopeInterval);
+            const startTime = Date.now();
+            const duration = 2000;
+
+            scopeInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                animProgress = (elapsed / duration) * canvas.width;
+
+                let representedTime = (animProgress / canvas.width) * (timeScale * 10);
+                if (representedTime > 300 && representedTime < 350) { 
+                    document.getElementById('dmmValue').innerText = currentArchitecture === 'atmo' ? "3.92" : "4.15"; 
+                }
+                else if (representedTime >= 350 && representedTime < 800) { 
+                    document.getElementById('dmmValue').innerText = currentArchitecture === 'atmo' ? (3.8 + Math.random()*0.1).toFixed(2) : (4.1 + Math.random()*0.1).toFixed(2); 
+                }
+                else if (representedTime >= 800 && representedTime < 1100) { 
+                    document.getElementById('dmmValue').innerText = currentArchitecture === 'atmo' ? "0.38" : "0.32"; 
+                }
+                else { 
+                    document.getElementById('dmmValue').innerText = currentArchitecture === 'atmo' ? "1.20" : "0.60"; 
+                }
+
+                drawScope();
+
+                if (elapsed >= duration) {
+                    clearInterval(scopeInterval);
+                    isAnimating = false;
+                    changeEngineState('idle');
+                }
+            }, 30);
+        }
+
+        window.onload = function() {
+            canvas.width = canvas.offsetWidth || 500;
+            canvas.height = canvas.offsetHeight || 250;
+            selectPin(1);
+            updateScopeParameters();
+        };
+    </script>
+</body>
+</html>

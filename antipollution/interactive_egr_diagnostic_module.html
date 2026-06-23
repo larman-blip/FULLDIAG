@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Vanne EGR</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-pink: #ff33cc;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Crisp Vector Icon SVGs */
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter CSS Representation */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 12px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 25px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CLIP LOCK';
+            position: absolute;
+            top: -10px; left: calc(50% - 35px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 38px;
+            height: 50px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-terminal.selected-black {
+            border-color: #888888;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Selectors */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .state-btn.active, .arch-btn.active {
+            background: var(--neon-cyan);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-amber);
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+        }
+
+        /* Oscilloscope Controls & Canvas */
+        .oscillo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .scope-screen-wrapper {
+            background: var(--screen-bg);
+            border: 3px solid #2a3333;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        #scopeCanvas {
+            width: 100%;
+            height: 250px;
+            background: #030808;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .scope-grid-label {
+            position: absolute;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #55c5c5;
+        }
+
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .scope-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #181d1d;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .scope-select {
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .scope-select:focus {
+            border-color: var(--neon-cyan);
+            outline: none;
+        }
+
+        .btn-trigger {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #172222, #00ffcc);
+            border: 1px solid var(--neon-cyan);
+            color: #080b0b;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-trigger:hover {
+            box-shadow: 0 0 20px var(--neon-glow);
+            transform: scale(1.02);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">
+                <!-- Ecology/Antipollution SVG Icon -->
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.8l7.5 15H4.5L12 5.8zM12 9v4M12 17h.01" stroke="currentColor" fill="none"/></svg>
+                Diagnostic Technique - Vanne EGR Electrique (5 Fils)
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module technique simule le diagnostic d'une vanne de recirculation des gaz d'échappement (EGR) à 5 fils. Elle intègre un solénoïde de commande de débit géré en PWM (RCO) ainsi qu'un potentiomètre de recopie de position réelle. Sélectionnez l'état de propreté du clapet, le mode moteur et observez les réactions des capteurs et de l'admission d'air.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Volt/Lightning SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" fill="none"/></svg>
+                Simulateur de Test Guidé
+            </h3>
+            
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="color: var(--neon-amber);">Étape 1 : Sélectionner l'état physique du clapet EGR</label>
+            </div>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-arch-ok" onclick="changeArchitecture('ok')">Vanne EGR Propre (OK)</button>
+                <button class="arch-btn" id="btn-arch-fail" onclick="changeArchitecture('fail')">Vanne EGR Colmatée / Calamine (H.S.)</button>
+            </div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label>Étape 2 : Choisir l'état opérationnel du moteur</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-off" onclick="changeEngineState('off')">Contact ON (Moteur OFF)</button>
+                <button class="state-btn" id="btn-state-idle" onclick="changeEngineState('idle')">Ralenti (À chaud - EGR Active)</button>
+                <button class="state-btn" id="btn-state-snap" onclick="changeEngineState('snap')">Pleine Charge (EGR fermée)</button>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 à 5) du connecteur ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. La Pin 2 correspond à la recopie de position réelle. Elle varie proportionnellement à l'ouverture physique du clapet.
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;">Connecteur EGR (5 Voies)</label>
+                    <div class="connector-housing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">GND</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">SIG</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-3" onclick="selectPin(3)">
+                            <span class="pin-num">3</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">VCC</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-4" onclick="selectPin(4)">
+                            <span class="pin-num">4</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">M(-)</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-5" onclick="selectPin(5)">
+                            <span class="pin-num">5</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">M(+)</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (Masse potentiomètre)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th>Nature du Fil (EGR Électrique)</th>
+                        <th>Valeur Théorique Attendue (Vanne Ouverte)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td>Masse du potentiomètre (GND)</td>
+                        <td>Inférieure à 0.05 V (Masse de référence du calculateur)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td>Signal de recopie de position (SIG)</td>
+                        <td>Varie de 1.0 V (Fermée) à 4.0 V (Pleine ouverture)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3</strong></td>
+                        <td>Alimentation potentiomètre (VCC)</td>
+                        <td>+5.0 V constant régulé par l'ECU</td>
+                    </tr>
+                    <tr>
+                        <td><strong>4</strong></td>
+                        <td>Commande négative moteur (M-)</td>
+                        <td>Signal carré PWM à la masse (RCO géré par l'ECU)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>5</strong></td>
+                        <td>Alimentation positive moteur (M+)</td>
+                        <td>+12.0 V de puissance issu du relais principal</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Scope/Waveform SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-cyan);" viewBox="0 0 24 24"><path d="M3 12h3l3-9 4 18 3-12h5" stroke="currentColor" fill="none"/></svg>
+                Oscilloscope de Diagnostic à Double Trace (Recopie / Commande Bobine)
+            </h3>
+            <div class="oscillo-container">
+                
+                <div class="scope-screen-wrapper">
+                    <div class="scope-grid-label label-volts" id="voltsDivLabel">Y: 1.0 V / Div</div>
+                    <div class="scope-grid-label label-time" id="timeDivLabel">X: 500 ms / Div</div>
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <div class="scope-controls">
+                    <div class="control-group">
+                        <label>Sensibilité Verticale (Tension)</label>
+                        <select class="scope-select" id="ctrlVolts" onchange="updateScopeParameters()">
+                            <option value="0.5">0.5 V / Div</option>
+                            <option value="1" selected>1.0 V / Div</option>
+                            <option value="2">2.0 V / Div</option>
+                            <option value="5">5.0 V / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Vitesse de Balayage (Temps)</label>
+                        <select class="scope-select" id="ctrlTime" onchange="updateScopeParameters()">
+                            <option value="200">200 ms / Div</option>
+                            <option value="500" selected>500 ms / Div</option>
+                            <option value="1000">1000 ms / Div</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-trigger" onclick="triggerSnapThrottle()">Simuler cycle d'ouverture (EGR Test)</button>
+                </div>
+
+                <div class="instruction-box" style="margin-bottom:0;">
+                    <strong>ℹ️ Guide de lecture de la double trace :</strong><br>
+                    • <strong style="color: var(--neon-cyan);">Trace Cyan (Recopie Position Pin 2) :</strong> Doit afficher une hausse linéaire stable lors de l'activation (1.0V à 4.0V). Si la trace reste plate alors que la bobine est pilotée, la vanne est physiquement bloquée.<br>
+                    • <strong style="color: var(--neon-pink);">Trace Rose (Commande Bobine Pin 4) :</strong> Signal d'impulsions à la masse (12V à 0V). Le rapport cyclique (Duty Cycle) augmente pour forcer l'ouverture du clapet.
+                </div>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus ou sélectionnez-les pour voir la ligne s'illuminer et visualiser le cheminement électrique entre le système de commande, la vanne EGR électrique, le point de masse châssis et l'unité de commande moteur (ECU).
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 240" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-brown" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-amber" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-pink" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- RELAIS PRINCIPAL (+12V) -->
+                <g id="power-source-block">
+                    <rect x="20" y="20" width="110" height="40" rx="4" fill="#172222" stroke="#ff3333" stroke-width="1.5" />
+                    <text id="power-source-text" x="75" y="44" fill="#ff3333" font-size="9" font-weight="bold" text-anchor="middle">RELAIS R2 (+12V)</text>
+                </g>
+
+                <!-- VANNE EGR -->
+                <rect x="180" y="100" width="140" height="80" rx="6" fill="#111616" stroke="#00ffcc" stroke-width="2" />
+                <text x="250" y="150" fill="#00ffcc" font-size="11" font-weight="bold" text-anchor="middle">VANNE EGR</text>
+
+                <!-- Terminal connector dots -->
+                <circle cx="195" cy="110" r="5" fill="#8b5a2b" />
+                <text x="195" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                <circle cx="220" cy="110" r="5" fill="#00a8ff" />
+                <text x="220" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                <circle cx="245" cy="110" r="5" fill="#ffaa00" />
+                <text x="245" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">3</text>
+
+                <circle cx="270" cy="110" r="5" fill="#ff33cc" />
+                <text x="270" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">4</text>
+
+                <circle cx="295" cy="110" r="5" fill="#ff3333" />
+                <text x="295" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">5</text>
+
+                <!-- CALCULATEUR MOTEUR (ECU) -->
+                <rect x="380" y="50" width="100" height="150" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="430" y="130" fill="#a0b2b2" font-size="10" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+
+                <!-- LIGNES DE CABLAGE -->
+                <!-- Fil 1: Pin 1 -> ECU Pin 22 (Masse capteur) -->
+                <path id="wire-path-1" d="M 195,110 L 195,85 L 340,85 L 340,75 L 380,75" fill="none" stroke="#8b5a2b" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="375" y="71" fill="#8b5a2b" font-size="7" text-anchor="end">Pin 22</text>
+
+                <!-- Fil 2: Pin 2 -> ECU Pin 34 (Signal Recopie) -->
+                <path id="wire-path-2" d="M 220,110 L 220,90 L 350,90 L 350,105 L 380,105" fill="none" stroke="#00a8ff" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="375" y="101" fill="#00a8ff" font-size="7" text-anchor="end">Pin 34</text>
+
+                <!-- Fil 3: Pin 3 -> ECU Pin 12 (5V Ref) -->
+                <path id="wire-path-3" d="M 245,110 L 245,95 L 330,95 L 330,135 L 380,135" fill="none" stroke="#ffaa00" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="375" y="131" fill="#ffaa00" font-size="7" text-anchor="end">Pin 12</text>
+
+                <!-- Fil 4: Pin 4 -> ECU Pin 48 (Commande PWM Bobine) -->
+                <path id="wire-path-4" d="M 270,110 L 270,90 L 360,90 L 360,165 L 380,165" fill="none" stroke="#ff33cc" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="375" y="161" fill="#ff33cc" font-size="7" text-anchor="end">Pin 48</text>
+
+                <!-- Fil 5: Relais R2 -> Pin 5 (+12V de puissance) -->
+                <path id="wire-path-5" d="M 75,60 L 75,80 L 295,80 L 295,105" fill="none" stroke="#ff3333" stroke-width="2" style="transition: all 0.3s ease;" />
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">
+                <!-- Shield/Diagnostic SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-red);" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" fill="none"/></svg>
+                Procédures de Diagnostic & Stratégies de Panne
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                <div>
+                    <span class="badge-fail">Loi d'or de Dépannage EGR : Corrélation Recopie et Débit d'Air (MAF)</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        La vanne EGR recycle une partie des gaz brûlés pour faire baisser la température de combustion et réduire les oxydes d'azote (NOx). Lorsque le calculateur augmente le RCO (PWM) de commande pour ouvrir la vanne, <b>le débit d'air frais mesuré par le débitmètre (MAF) doit chuter de 15% à 20%</b>. Si l'ECU pilote l'EGR mais que le signal de recopie reste bloqué ou que la valeur MAF ne baisse pas, cela confirme l'étanchéité défectueuse ou le blocage mécanique du clapet par de la calamine (DTC <strong>P0401</strong>).
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: EGR CONTROL & AIR FLOW RELATIVE SENSORS
+                        </div>
+                        <div class="live-row"><span>Engine Speed:</span><span id="live-rpm-g">0 RPM</span></div>
+                        <div class="live-row"><span>EGR Target Valve Opening:</span><span id="live-target-g">0 %</span></div>
+                        <div class="live-row"><span>EGR Valve Recopie Position:</span><span id="live-pos-g">1.00 V</span></div>
+                        <div class="live-row"><span>Fresh Air Flow (MAF Sensor):</span><span id="live-maf-g" style="color: var(--neon-cyan);">0.00 g/s</span></div>
+                        <div class="live-row"><span>EGR Solenoid Control Duty Cycle:</span><span id="live-pwm-g" style="color: var(--neon-amber);">0 %</span></div>
+                        <div class="live-row"><span>Clapet EGR Physical Status:</span><span id="live-status-g" style="color:var(--neon-cyan);">CLOSED</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez démarrer la simulation en cliquant sur <strong>"Moteur Ralenti"</strong> ou <strong>"Pleine Charge"</strong> ci-dessus pour observer le comportement dynamique du calculateur en temps réel.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Architecture configurations (ok or fail)
+        let currentArchitecture = 'ok';
+
+        // Pinout Database
+        // Pin 1: GND, Pin 2: SIG Recopie, Pin 3: 5V Ref, Pin 4: Commande PWM (-), Pin 5: +12V alimentation bobine
+        const DMM_DATABASE_OK = {
+            off: { 1: 0.02, 2: 1.00, 3: 5.01, 4: 12.00, 5: 12.05 },   // Valve closed, bias recopie ~1.0V, PWM high (recessive)
+            idle: { 1: 0.02, 2: 2.80, 3: 5.01, 4: 4.50, 5: 14.10 },   // Valve partially open (45% open), recopie ~2.80V, PWM active
+            snap: { 1: 0.03, 2: 1.00, 3: 5.01, 4: 13.90, 5: 13.95 }   // Valve closed in snap/full load for maximum fresh air (MAF)
+        };
+
+        const DMM_DATABASE_FAIL = {
+            off: { 1: 0.02, 2: 1.00, 3: 5.01, 4: 12.00, 5: 12.05 },
+            idle: { 1: 0.02, 2: 1.05, 3: 5.01, 4: 1.80, 5: 14.10 },   // Valve stuck closed by carbon. Recopie stuck low, PWM max active (1.8V average -> 80% duty)
+            snap: { 1: 0.03, 2: 1.05, 3: 5.01, 4: 13.90, 5: 13.95 }
+        };
+
+        let currentEngineState = 'off';
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+
+        function getActiveDatabase() {
+            return currentArchitecture === 'ok' ? DMM_DATABASE_OK : DMM_DATABASE_FAIL;
+        }
+
+        function calculateVoltage() {
+            let refOff = getActiveDatabase()[currentEngineState];
+            let vRed = 0;
+            let vBlack = 0;
+
+            if (selectedRedPin && refOff[selectedRedPin] !== undefined) {
+                vRed = refOff[selectedRedPin];
+            }
+            if (selectedBlackPin !== 'ground') {
+                vBlack = refOff[selectedBlackPin] || 0;
+            }
+
+            let difference = vRed - vBlack;
+            if (difference < 0) difference = Math.abs(difference);
+
+            document.getElementById('dmmValue').innerText = difference.toFixed(2);
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#8b5a2b', 2: '#00a8ff', 3: '#ffaa00', 4: '#ff33cc', 5: '#ff3333' };
+
+            for (let i = 1; i <= 5; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-brown)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-blue)";
+                if (pinNumber === 3) activePath.style.filter = "url(#glow-amber)";
+                if (pinNumber === 4) activePath.style.filter = "url(#glow-pink)";
+                if (pinNumber === 5) activePath.style.filter = "url(#glow-red)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            document.querySelectorAll('.pin-terminal').forEach(el => { el.classList.remove('selected-red'); });
+            selectedRedPin = pinNumber;
+            document.getElementById(`pin-${pinNumber}`).classList.add('selected-red');
+
+            const names = {
+                1: 'Pin 1 (Masse GND Potentiomètre)',
+                2: 'Pin 2 (Signal de recopie de position réelle)',
+                3: 'Pin 3 (Alimentation +5.0V Référence)',
+                4: 'Pin 4 (Commande masse bobine - PWM RCO)',
+                5: 'Pin 5 (Alimentation puissance solénoïde +12V)'
+            };
+            document.getElementById('selected-red-label').innerText = names[pinNumber];
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function changeEngineState(state) {
+            currentEngineState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-state-${state}`).classList.add('active');
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function changeArchitecture(arch) {
+            currentArchitecture = arch;
+            document.querySelectorAll('.arch-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-arch-${arch}`).classList.add('active');
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if(panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        // Live Scanner Logic - EGR vs MAF Correlation (Danner Standard)
+        function updateLiveScannerData() {
+            let rpmEl = document.getElementById('live-rpm-g');
+            let targetEl = document.getElementById('live-target-g');
+            let posEl = document.getElementById('live-pos-g');
+            let mafEl = document.getElementById('live-maf-g');
+            let pwmEl = document.getElementById('live-pwm-g');
+            let statusEl = document.getElementById('live-status-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!rpmEl) return;
+
+            if (currentEngineState === 'off') {
+                rpmEl.innerText = "0 RPM";
+                targetEl.innerText = "0 %";
+                posEl.innerText = "1.00 V";
+                mafEl.innerText = "0.00 g/s";
+                pwmEl.innerText = "0 %";
+                statusEl.innerText = "CLOSED";
+                statusEl.style.color = "var(--text-secondary)";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🔴 État: Contact ON (Moteur OFF)</strong><br><br>• <strong>Calibration Zéro :</strong> Le moteur est arrêté. La recopie position Pin 2 lit 1.00V. C'est la tension d'apprentissage minimale.<br><br><span style='color: var(--neon-red); font-weight: bold;'>⚠️ NOTE CONFORME : Si la recopie à l'arrêt dépasse 1.30V sans commande, la vanne est gommée et ne se referme pas étanchement, causant un raté d'allumage ou des fumées noires au démarrage !</span>";
+            } 
+            else if (currentEngineState === 'idle') {
+                rpmEl.innerText = "750 RPM";
+                
+                if (currentArchitecture === 'ok') {
+                    targetEl.innerText = "45 %";
+                    posEl.innerText = "2.80 V";
+                    mafEl.innerText = "2.10 g/s (Réduit)"; // Normal 2.5L should be 2.7g/s but drops because EGR is recycling gases!
+                    pwmEl.innerText = "45 %";
+                    statusEl.innerText = "PARTIALLY OPEN";
+                    statusEl.style.color = "var(--neon-cyan)";
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                    expEl.innerHTML = "<strong>🟢 État: Ralenti stable à chaud (Recirculation Active)</strong><br><br>• <strong>Impact sur le Débitmètre (MAF) :</strong> À 750 RPM sur ce moteur de 2.5L, le MAF normal devrait lire environ $2.70\\text{ g/s}$. Grâce à l'EGR ouverte à 45% (Recopie à 2.80V), le MAF chute à $2.10\\text{ g/s}$ (une réduction conforme d'environ 20%). L'admission d'air est diluée, ce qui fait chuter la température de combustion.<br>• <strong>Loi de Corrélation :</strong> Le calculateur valide que la consigne correspond à la position mesurée.";
+                } else {
+                    targetEl.innerText = "45 %";
+                    posEl.innerText = "1.05 V (Erreur)";
+                    mafEl.innerText = "2.70 g/s (Inerte)"; // Flow doesn't drop because valve is blocked by carbon!
+                    pwmEl.innerText = "85 % (Forcé)"; // ECU drives PWM hard to force it open
+                    statusEl.innerText = "BLOCKED CLOSED";
+                    statusEl.style.color = "var(--neon-red)";
+                    dtcEl.innerText = "P0401 - EGR FLOW INSUFFICIENT DETECTED";
+                    dtcEl.style.color = "var(--neon-red)";
+                    expEl.innerHTML = "<strong>🚨 État: Moteur sous Panne (EGR Bloquée / Calamine)</strong><br><br>• <strong>Preuve Diagnostique :</strong> Le calculateur ordonne une ouverture EGR de 45%, mais le signal de recopie reste inerte à 1.05V. Pire, la valeur de débit d'air frais (MAF) reste élevée à $2.70\\text{ g/s}$ (aucune dilution par gaz recyclés).<br>• <strong>Action du Calculateur :</strong> Face à ce décalage, l'ECU pilote le signal PWM à son maximum de 85% pour forcer le mouvement, puis enregistre le code de panne <b>P0401</b>.";
+                }
+            } 
+            else if (currentEngineState === 'snap') {
+                rpmEl.innerText = "4200 RPM";
+                targetEl.innerText = "0 %";
+                posEl.innerText = "1.00 V";
+                mafEl.innerText = "112.00 g/s"; // EGR closes immediately under full load
+                pwmEl.innerText = "0 %";
+                statusEl.innerText = "CLOSED (Full Load Protection)";
+                statusEl.style.color = "var(--neon-cyan)";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🚀 État: Accélération / Pleine Charge (EGR fermée)</strong><br><br>• <strong>Stratégie de Puissance :</strong> Lors d'une forte accélération, l'ECU coupe instantanément l'EGR (Duty Cycle = 0%) pour isoler le collecteur des gaz d'échappement. Le moteur doit aspirer 100% d'oxygène pur ($112.00\\text{ g/s}$) pour libérer toute sa puissance. La recopie position se verrouille à 1.00V.";
+            }
+        }
+
+        // ====================================================
+        // OSCILLOSCOPE INTERACTIF
+        // ====================================================
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let voltScale = 1.0;
+        let timeScale = 500;
+        let isAnimating = false;
+        let animProgress = 0;
+        let scopeInterval = null;
+
+        function updateScopeParameters() {
+            voltScale = parseFloat(document.getElementById('ctrlVolts').value);
+            timeScale = parseInt(document.getElementById('ctrlTime').value);
+            document.getElementById('voltsDivLabel').innerText = `Y: ${voltScale.toFixed(1)} V / Div`;
+            document.getElementById('timeDivLabel').innerText = `X: ${timeScale} ms / Div`;
+            drawScope();
+        }
+
+        function drawScope() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const width = canvas.width || 500;
+            const height = canvas.height || 250;
+            const numDivsX = 10;
+            const numDivsY = 6;
+            const gridSpacingX = width / numDivsX;
+            const gridSpacingY = height / numDivsY;
+
+            ctx.strokeStyle = '#122525';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= numDivsX; i++) {
+                ctx.beginPath(); ctx.moveTo(i * gridSpacingX, 0); ctx.lineTo(i * gridSpacingX, height); ctx.stroke();
+            }
+            for (let i = 0; i <= numDivsY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, i * gridSpacingY); ctx.lineTo(width, i * gridSpacingY); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#1e4040';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+            ctx.stroke();
+
+            function voltToY(volts, offset = 0) {
+                const maxVoltsRepresented = numDivsY * voltScale;
+                return height - ((volts + offset) / maxVoltsRepresented) * height;
+            }
+
+            if (!isAnimating) {
+                // Static traces at rest
+                let db = getActiveDatabase()[currentEngineState];
+                let recopieVal = db[2];
+
+                // Trace 1 (Recopie - Cyan)
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(0, voltToY(recopieVal, 0));
+                ctx.lineTo(width, voltToY(recopieVal, 0));
+                ctx.stroke();
+
+                // Trace 2 (Solenoid PWM - Pink)
+                ctx.strokeStyle = '#ff33cc';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                let pwmRest = currentEngineState === 'off' ? 12.00 : 4.50; // Average level DC equivalent
+                ctx.moveTo(0, voltToY(pwmRest / 4.0, 1.0)); // Scale down to upper grid area
+                ctx.lineTo(width, voltToY(pwmRest / 4.0, 1.0));
+                ctx.stroke();
+            } else {
+                // Dynamic traces
+                let samplesSIG = [];
+                let samplesPWM = [];
+                const step = 2;
+                
+                let speedFactor = currentEngineState === 'idle' ? 1.0 : 2.5;
+
+                for (let x = 0; x < width; x += step) {
+                    let tMs = (x / width) * (timeScale * numDivsX);
+                    let cyclePos = (tMs * speedFactor * 0.001) % 10; 
+
+                    let valSIG = 1.00; // Valve closed baseline
+                    let dutyLimit = 0.0; // Closed duty cycle
+
+                    if (currentEngineState === 'idle') {
+                        if (currentArchitecture === 'ok') {
+                            // EGR smoothly cycles to 45%
+                            valSIG = 1.00 + (1.80 * (0.5 + Math.sin(cyclePos * Math.PI * 0.5) * 0.5));
+                            dutyLimit = 0.45;
+                        } else {
+                            // Valve stuck, recopie voltage doesn't rise
+                            valSIG = 1.05;
+                            dutyLimit = 0.85; // ECU drives full power to unlock it
+                        }
+                    } else if (currentEngineState === 'snap') {
+                        // EGR remains closed in snap/power phase
+                        valSIG = 1.00;
+                        dutyLimit = 0.0;
+                    }
+
+                    // Calculate PWM signal pulses
+                    let valPWM = 12.0; 
+                    let pulsePos = (tMs * 0.03) % 1.0; // Fast PWM frequency pulse
+                    if (pulsePos < dutyLimit) {
+                        valPWM = 0.2; // Transistor ON (pulled to ground)
+                    } else {
+                        valPWM = 12.0; // Transistor OFF
+                    }
+
+                    if (currentEngineState === 'off') {
+                        valPWM = 12.0;
+                    }
+
+                    samplesSIG.push({ x: x, y: voltToY(valSIG, 0) });
+                    samplesPWM.push({ x: x, y: voltToY(valPWM / 4.0, 1.0) });
+                }
+
+                // Render Trace 1 (Recopie) - Cyan
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = 'rgba(0, 255, 204, 0.5)';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 2.5;
+                if (samplesSIG.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(samplesSIG[0].x, samplesSIG[0].y);
+                    for (let j = 0; j < samplesSIG.length; j++) {
+                        if (samplesSIG[j].x < animProgress) {
+                            ctx.lineTo(samplesSIG[j].x, samplesSIG[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+
+                // Render Trace 2 (Bobine PWM) - Pink
+                ctx.strokeStyle = '#ff33cc';
+                ctx.shadowColor = 'rgba(255, 51, 204, 0.5)';
+                ctx.lineWidth = 2.0;
+                if (samplesPWM.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(samplesPWM[0].x, samplesPWM[0].y);
+                    for (let j = 0; j < samplesPWM.length; j++) {
+                        if (samplesPWM[j].x < animProgress) {
+                            ctx.lineTo(samplesPWM[j].x, samplesPWM[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function triggerSnapThrottle() {
+            if (isAnimating) return;
+            isAnimating = true;
+            animProgress = 0;
+            changeEngineState('snap');
+
+            if (scopeInterval) clearInterval(scopeInterval);
+            const startTime = Date.now();
+            const duration = 2000;
+
+            scopeInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                animProgress = (elapsed / duration) * canvas.width;
+
+                let representedTime = (animProgress / canvas.width) * (timeScale * 10);
+                let db = getActiveDatabase();
+
+                if (representedTime < 300) {
+                    document.getElementById('dmmValue').innerText = db['off'][selectedRedPin].toFixed(2);
+                } else if (representedTime >= 300 && representedTime < 1300) {
+                    document.getElementById('dmmValue').innerText = db['snap'][selectedRedPin].toFixed(2);
+                } else {
+                    document.getElementById('dmmValue').innerText = db['idle'][selectedRedPin].toFixed(2);
+                }
+
+                drawScope();
+
+                if (elapsed >= duration) {
+                    clearInterval(scopeInterval);
+                    isAnimating = false;
+                    changeEngineState('idle');
+                }
+            }, 30);
+        }
+
+        window.onload = function() {
+            canvas.width = canvas.offsetWidth || 500;
+            canvas.height = canvas.offsetHeight || 250;
+            selectPin(1);
+            updateScopeParameters();
+        };
+    </script>
+</body>
+</html>

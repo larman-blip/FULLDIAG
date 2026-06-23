@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Capteur Pression Turbo (T-MAP)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #060909;
+            --panel-bg: #0f1414;
+            --border-color: #1a2525;
+            --neon-blue: #00d9ff;
+            --neon-glow-blue: rgba(0, 217, 255, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #9cb1b1;
+            --screen-bg: #030707;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        /* Tech Panels styling */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-blue);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-blue);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Multimeter styling */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ffaa00;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 12px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 25px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CLIP VERROU';
+            position: absolute;
+            top: -10px; left: calc(50% - 40px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 48px;
+            height: 52px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px var(--neon-glow-blue);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Selectors and Control Styles */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .state-btn.active {
+            background: var(--neon-blue);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow-blue);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-amber);
+            color: #080b0b;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+        }
+
+        /* Oscilloscope Layout */
+        .scope-screen-wrapper {
+            background: var(--screen-bg);
+            border: 3px solid #1e2e2e;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        #scopeCanvas {
+            width: 100%;
+            height: 250px;
+            background: #020606;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .scope-grid-label {
+            position: absolute;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #55c5c5;
+        }
+
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .scope-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #181d1d;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .scope-select {
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .scope-select:focus {
+            border-color: var(--neon-blue);
+            outline: none;
+        }
+
+        /* Tech table */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #121d1d;
+            color: var(--neon-blue);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 217, 255, 0.02);
+        }
+
+        .instruction-box {
+            background: #101616;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* Gauge & Turb Visual Elements */
+        .gauge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #0a0e0e;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .gauge-svg {
+            width: 120px;
+            height: 120px;
+        }
+
+        .gauge-needle {
+            transform-origin: 60px 60px;
+            transition: transform 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-[1200px] mx-auto">
+        
+        <!-- INTRO PANEL (FULL WIDTH) -->
+        <div class="panel col-span-1 lg:col-span-2">
+            <h3 class="panel-title">🌀 Diagnostic Interactif - Capteur Pression Turbocompresseur (T-MAP)</h3>
+            <p class="m-0 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                Maîtrisez le diagnostic du capteur de pression d'admission et suralimentation (MAP / T-MAP à 4 fils avec sonde de température d'air d'admission intégrée). Utilisez le multimètre et l'oscilloscope virtuel interactif pour détecter les pannes de pression d'air, fuites d'admission ou les chutes de tension selon la méthode de Paul Danner (ScannerDanner).
+            </p>
+        </div>
+
+        <!-- SCENARIOS SELECTOR -->
+        <div class="panel col-span-1 lg:col-span-2 panel-amber">
+            <h3 class="panel-title panel-title-amber"><span class="text-[--neon-amber]">🛠️</span> Sélectionner l'État du Circuit d'Admission / Diagnostic</h3>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-scen-normal" onclick="selectScenario('normal')">1. Système Conforme (OK - Pas de panne)</button>
+                <button class="arch-btn" id="btn-scen-leak" onclick="selectScenario('leak')">2. Fuite d'Air Comprimé (Boost Leak)</button>
+                <button class="arch-btn" id="btn-scen-worn" onclick="selectScenario('worn')">3. Turbo fatigué / Wastegate bloquée</button>
+                <button class="arch-btn" id="btn-scen-ground" onclick="selectScenario('ground')">4. Chute de Tension Masse Capteur (0.8V)</button>
+            </div>
+        </div>
+
+        <!-- LEFT COLUMN: DIAGNOSTIC BENCH & MULTIMETER -->
+        <div class="panel">
+            <h3 class="panel-title"><span class="text-[--neon-amber]">⚡</span> Banc de Test et Multimètre</h3>
+            
+            <!-- Step 1: Simulated System State -->
+            <div class="control-group mb-2">
+                <label style="color: var(--neon-amber);">Étape 1 : Choisir l'état du moteur (Contact / Charge)</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-koeo" onclick="changeState('koeo')">Contact ON (KOEO)</button>
+                <button class="state-btn" id="btn-state-idle" onclick="changeState('idle')">Moteur au Ralenti</button>
+                <button class="state-btn" id="btn-state-load" onclick="changeState('load')">Pleine Charge (En Roulage)</button>
+            </div>
+
+            <!-- Trigger Snap Throttle Button (Only active in load/idle) -->
+            <div class="mb-4" id="throttleTriggerContainer">
+                <button class="w-full bg-[#172222] border border-[#00d9ff] hover:bg-[#1a2e2e] text-[#00d9ff] text-xs font-bold py-2 rounded-lg uppercase transition duration-200 animate-pulse" id="btnThrottle" onclick="triggerSnapThrottle()">
+                    🏎️ Lancer un test d'accélération (Snap Throttle)
+                </button>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de test :</strong> Cliquez sur une des broches du connecteur du <b>capteur de suralimentation (T-MAP)</b> pour brancher la sonde rouge (+) du multimètre. La sonde noire (-) reste branchée à la masse carrosserie.
+            </div>
+
+            <!-- Multimeter & Connector layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                
+                <!-- Multimeter UI -->
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial" id="dmmDial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <!-- T-MAP Assembly Connector & Pressure Gauge -->
+                <div class="flex flex-col items-center gap-4 w-full">
+                    <div class="wiring-diagram w-full">
+                        <label class="text-[10px] font-bold uppercase mb-4 text-[#9cb1b1]" id="connectorLabel">Connecteur Capteur T-MAP</label>
+                        <div class="connector-housing" id="connectorHousing">
+                            <!-- Pins generated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Visual Boost Gauge Indicator -->
+                    <div class="gauge-container">
+                        <span class="text-[10px] font-bold text-[#9cb1b1] mb-2 uppercase">Manomètre de Pression Turbo</span>
+                        <svg class="gauge-svg" viewBox="0 0 120 120">
+                            <!-- Background scale -->
+                            <path d="M 20 100 A 50 50 0 1 1 100 100" fill="none" stroke="#223030" stroke-width="8" stroke-linecap="round"/>
+                            <!-- Colored warning zones -->
+                            <path d="M 20 100 A 50 50 0 0 1 70 42" fill="none" stroke="#00d9ff" stroke-width="8"/>
+                            <path d="M 70 42 A 50 50 0 0 1 95 62" fill="none" stroke="#00ffaa" stroke-width="8"/>
+                            <path d="M 95 62 A 50 50 0 0 1 100 100" fill="none" stroke="#ff3333" stroke-width="8"/>
+                            
+                            <!-- Pointer Needle -->
+                            <g class="gauge-needle" id="gaugeNeedle" style="transform: rotate(-120deg);">
+                                <polygon points="58,60 62,60 60,15" fill="#ff5500"/>
+                                <circle cx="60" cy="60" r="6" fill="#ffaa00"/>
+                            </g>
+                            <text x="60" y="85" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" id="gaugeValueText">1.0 Bar Abs</text>
+                            <text x="60" y="100" fill="#9cb1b1" font-size="8" text-anchor="middle" id="relativeBoostText">0.0 Bar Rel</text>
+                        </svg>
+                        <span class="text-[10px] font-bold mt-2 text-[--neon-blue]" id="boostStateLabel">TURBO: ATMO</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Pinout Specifications Table -->
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Pin</th>
+                        <th style="width: 45%;">Rôle du Fil</th>
+                        <th style="width: 40%;">Valeur attendue (OK)</th>
+                    </tr>
+                </thead>
+                <tbody id="tablePinoutBody">
+                    <!-- Loaded dynamically depending on scenario -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- RIGHT COLUMN: OSCILLOSCOPE & DYNAMIC SIGNAL DISPLAY -->
+        <div class="panel">
+            <h3 class="panel-title"><span class="text-[--neon-blue]">📊</span> Oscilloscope Virtuel de Diagnostic</h3>
+            
+            <div class="flex flex-col gap-4">
+                
+                <div class="scope-screen-wrapper">
+                    <div class="scope-grid-label label-volts" id="scopeVoltsLabel">Y: 1.0 V / Div</div>
+                    <div class="scope-grid-label label-time" id="scopeTimeLabel">X: 500 ms / Div</div>
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <div class="scope-controls">
+                    <div class="control-group">
+                        <label>Sensibilité (Tension Y)</label>
+                        <select class="scope-select" id="scopeVolts" onchange="adjustScopeSettings()">
+                            <option value="0.5">0.5 V / Div</option>
+                            <option value="1.0" selected>1.0 V / Div</option>
+                            <option value="2.0">2.0 V / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Base de Temps (Balayage X)</label>
+                        <select class="scope-select" id="scopeTime" onchange="adjustScopeSettings()">
+                            <option value="200">200 ms / Div</option>
+                            <option value="500" selected>500 ms / Div</option>
+                            <option value="1000">1000 ms / Div</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="instruction-box mt-2" id="scopeExplanationBox">
+                    <!-- Updated dynamically based on state -->
+                </div>
+            </div>
+        </div>
+
+        <!-- INTERACTIVE WIRING DIAGRAM PANEL -->
+        <div class="panel col-span-1 lg:col-span-2">
+            <h3 class="panel-title" style="color: var(--neon-amber);">🔌 Schéma Électrique Interactif (Toyota/Bosch EWD Style)</h3>
+            <p class="m-0 mb-4 text-xs" style="color: var(--text-secondary);">
+                Suivez le trajet du courant de référence 5V et des retours de signaux vers le calculateur moteur (ECU). Les câbles s'illuminent en fonction du Pin sélectionné et de la panne injectée sur le faisceau.
+            </p>
+
+            <svg id="wiringSvg" viewBox="0 0 500 240" class="w-full h-auto bg-[#050707] border border-[#172222] rounded-lg block">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#0e1414" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-green" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- 1. SYSTEM BLOCK -->
+                <g id="layout-tmap">
+                    <!-- ENGINE ECU -->
+                    <rect x="360" y="30" width="120" height="180" rx="4" fill="#131a1a" stroke="#a0b2b2" stroke-width="1.5" />
+                    <text x="420" y="50" fill="#a0b2b2" font-size="9" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+                    <text x="420" y="65" fill="#00d9ff" font-size="7" text-anchor="middle">Ref: 5.00V</text>
+
+                    <!-- CAPTEUR T-MAP ON MANIFOLD -->
+                    <rect x="150" y="60" width="130" height="120" rx="6" fill="#0d1212" stroke="#00d9ff" stroke-width="2" />
+                    <text x="215" y="110" fill="#00d9ff" font-size="10" font-weight="bold" text-anchor="middle">CAPTEUR T-MAP</text>
+                    <text x="215" y="125" fill="#a0b2b2" font-size="7" text-anchor="middle">(Pression + Température)</text>
+
+                    <!-- TURBO COMPRESSEUR ICON -->
+                    <circle cx="65" cy="120" r="30" fill="#152020" stroke="#ffaa00" stroke-width="1.5" />
+                    <text x="65" y="123" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">TURBO</text>
+
+                    <!-- TERMINAL PINS DOTS -->
+                    <circle cx="165" cy="70" r="4" fill="#ff3333" id="svg-pin-1" />
+                    <text x="165" y="82" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                    <circle cx="195" cy="70" r="4" fill="#7a5230" id="svg-pin-2" />
+                    <text x="195" y="82" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                    <circle cx="225" cy="70" r="4" fill="#00ffaa" id="svg-pin-3" />
+                    <text x="225" y="82" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">3</text>
+
+                    <circle cx="255" cy="70" r="4" fill="#bb33ff" id="svg-pin-4" />
+                    <text x="255" y="82" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">4</text>
+
+                    <!-- WIRES PATHWAYS -->
+                    <!-- Wire 1: Reference 5V from ECU -->
+                    <path id="wire-1" d="M 360,85 L 290,85 L 290,55 L 165,55 L 165,66" fill="none" stroke="#ff3333" stroke-width="2" />
+                    <text x="350" y="80" fill="#ff3333" font-size="7" text-anchor="end">Ref 5V</text>
+
+                    <!-- Wire 2: Ground Sensor Ground (ECU Ground) -->
+                    <path id="wire-2" d="M 195,66 L 195,50 L 120,50 L 120,210" fill="none" stroke="#7a5230" stroke-width="2" />
+                    <!-- Ground symbol -->
+                    <path d="M 110,210 L 130,210 M 114,214 L 126,214 M 118,218 L 122,218" stroke="#7a5230" stroke-width="1.5" />
+                    <text x="120" y="230" fill="#7a5230" font-size="8" font-weight="bold" text-anchor="middle">MASSE</text>
+
+                    <!-- Wire 3: MAP Signal to ECU -->
+                    <path id="wire-3" d="M 225,66 L 225,45 L 310,45 L 310,120 L 360,120" fill="none" stroke="#00ffaa" stroke-width="2" />
+                    <text x="350" y="115" fill="#00ffaa" font-size="7" text-anchor="end">Signal MAP</text>
+
+                    <!-- Wire 4: IAT Temperature Signal to ECU -->
+                    <path id="wire-4" d="M 255,66 L 255,40 L 320,40 L 320,155 L 360,155" fill="none" stroke="#bb33ff" stroke-width="2" />
+                    <text x="350" y="150" fill="#bb33ff" font-size="7" text-anchor="end">Signal IAT</text>
+
+                    <!-- Turbo Duct pipe to Manifold -->
+                    <path d="M 95,120 L 150,120" stroke="#ffaa00" stroke-width="4" stroke-dasharray="3,3" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- ADVICE & TROUBLESHOOTING GUIDE -->
+        <div class="panel col-span-1 lg:col-span-2 panel-red">
+            <h3 class="panel-title panel-title-red">🛑 Stratégies Avancées de Diagnostic Suralimentation (ScannerDanner Mindset)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm leading-relaxed" id="adviceContainer">
+                <!-- Injected dynamically via JS depending on scenario -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentScenario = 'normal'; // normal, leak, worn, ground
+        let currentState = 'koeo'; // koeo, idle, load
+        let selectedPin = 1;
+        let isThrottleActive = false;
+        let throttleTimer = null;
+        let throttleProgress = 0;
+
+        // DATABASE: Modern Turbo Diesel T-MAP Sensor (4 pins)
+        // 1: Power (5V), 2: Ground, 3: MAP Signal (V), 4: IAT Signal (V)
+        const DB_NORMAL = {
+            koeo:        { 1: 5.00, 2: 0.01, 3: 1.60, 4: 2.80, pressure: 1.0, relPressure: 0.0 }, // 1.0 Bar Abs (Atmospheric)
+            idle:        { 1: 5.00, 2: 0.02, 3: 1.62, 4: 2.50, pressure: 1.0, relPressure: 0.0 }, // 1.0 Bar Abs (Idle Boost)
+            load:        { 1: 5.00, 2: 0.05, 3: 4.20, 4: 2.10, pressure: 2.4, relPressure: 1.4 }  // 2.4 Bar Abs (Full Boost)
+        };
+
+        const DB_LEAK = {
+            koeo:        { 1: 5.00, 2: 0.01, 3: 1.60, 4: 2.80, pressure: 1.0, relPressure: 0.0 },
+            idle:        { 1: 5.00, 2: 0.02, 3: 1.61, 4: 2.50, pressure: 1.0, relPressure: 0.0 },
+            load:        { 1: 5.00, 2: 0.05, 3: 2.00, 4: 2.30, pressure: 1.2, relPressure: 0.2 }  // Pressure drops due to boost leak!
+        };
+
+        const DB_WORN = {
+            koeo:        { 1: 5.00, 2: 0.01, 3: 1.60, 4: 2.80, pressure: 1.0, relPressure: 0.0 },
+            idle:        { 1: 5.00, 2: 0.02, 3: 1.61, 4: 2.50, pressure: 1.0, relPressure: 0.0 },
+            load:        { 1: 5.00, 2: 0.05, 3: 2.80, 4: 2.20, pressure: 1.6, relPressure: 0.6 }  // Slowly reaches 1.6 Bar max
+        };
+
+        const DB_GROUND_FAULT = {
+            // High Ground Offset (+0.8V). Pulls reading upwards!
+            koeo:        { 1: 5.00, 2: 0.80, 3: 2.40, 4: 3.50, pressure: 1.0, relPressure: 0.0 }, // Reads false boost at KOEO!
+            idle:        { 1: 5.00, 2: 0.82, 3: 2.42, 4: 3.20, pressure: 1.0, relPressure: 0.0 },
+            load:        { 1: 5.00, 2: 0.85, 3: 4.80, 4: 2.80, pressure: 2.4, relPressure: 1.4 }  // Voltage offset limit reached
+        };
+
+        // ====================================================
+        // SCENARIO SELECTION HANDLER
+        // ====================================================
+        function selectScenario(scenario) {
+            currentScenario = scenario;
+            selectedPin = 1;
+            isThrottleActive = false;
+            if (throttleTimer) clearInterval(throttleTimer);
+
+            // Toggle active state on Scenario buttons
+            document.getElementById('btn-scen-normal').classList.toggle('active', scenario === 'normal');
+            document.getElementById('btn-scen-leak').classList.toggle('active', scenario === 'leak');
+            document.getElementById('btn-scen-worn').classList.toggle('active', scenario === 'worn');
+            document.getElementById('btn-scen-ground').classList.toggle('active', scenario === 'ground');
+
+            injectPinsUI();
+            injectTableContent();
+            injectDynamicExpls();
+            updateSimulation();
+        }
+
+        function injectPinsUI() {
+            const connectorLabel = document.getElementById('connectorLabel');
+            const housing = document.getElementById('connectorHousing');
+
+            connectorLabel.innerText = "Connecteur Capteur T-MAP (Faisceau)";
+            housing.innerHTML = `
+                <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                    <span class="pin-num">1</span>
+                    <div class="pin-hole"></div>
+                    <span class="text-[8px] opacity-40">5V_REF</span>
+                </div>
+                <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                    <span class="pin-num">2</span>
+                    <div class="pin-hole"></div>
+                    <span class="text-[8px] opacity-40">S_GND</span>
+                </div>
+                <div class="pin-terminal" id="pin-3" onclick="selectPin(3)">
+                    <span class="pin-num">3</span>
+                    <div class="pin-hole"></div>
+                    <span class="text-[8px] opacity-40">SIG_MAP</span>
+                </div>
+                <div class="pin-terminal" id="pin-4" onclick="selectPin(4)">
+                    <span class="pin-num">4</span>
+                    <div class="pin-hole"></div>
+                    <span class="text-[8px] opacity-40">SIG_IAT</span>
+                </div>
+            `;
+        }
+
+        function injectTableContent() {
+            const tableBody = document.getElementById('tablePinoutBody');
+            tableBody.innerHTML = `
+                <tr>
+                    <td><strong>1</strong></td>
+                    <td>Alimentation Capteur (+5.0V de référence fourni par l'ECU)[cite: 1]</td>
+                    <td>5.00 V (Stable dans toutes les conditions)</td>
+                </tr>
+                <tr>
+                    <td><strong>2</strong></td>
+                    <td>Ligne de masse de référence retour vers l'ECU</td>
+                    <td>&lt; 0.05 V (Proche de la masse absolue si le fil est parfait)</td>
+                </tr>
+                <tr>
+                    <td><strong>3</strong></td>
+                    <td>Signal analogique de pression absolue (Boost Signal)</td>
+                    <td>~1.60 V (Ralenti/Contact ON) et monte à ~4.20 V sous forte charge (Suralimentation)[cite: 1]</td>
+                </tr>
+                <tr>
+                    <td><strong>4</strong></td>
+                    <td>Signal de température d'air d'admission (Sonde CTN IAT intégrée)</td>
+                    <td>Varie inversement avec la température de l'air de suralimentation (2.80V à froid, descend à chaud)</td>
+                </tr>
+            `;
+        }
+
+        function injectDynamicExpls() {
+            const scopeExp = document.getElementById('scopeExplanationBox');
+            const adviceContainer = document.getElementById('adviceContainer');
+
+            scopeExp.innerHTML = `
+                <strong>💡 Interprétation de l'Oscilloscope :</strong><br>
+                • Sur le <b>Pin 3 (MAP)</b> : Lors d'un test "Snap Throttle", le signal doit réagir instantanément et monter vers une crête (Peak) supérieure à **4.0V** (en système OK).<br>
+                • Sur le <b>Pin 2 (Masse)</b> : Toute valeur au-dessus de **0.1V** trahit un problème de câblage ou un point de masse rouillé dans le compartiment moteur (Chute de tension).
+            `;
+
+            if (currentScenario === 'normal') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">ScannerDanner : Le "Boost Peak Test"</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Principe clé :</b> Moteur en charge sur route (ou un snap throttle violent), la tension du capteur de pression d'admission absolue doit grimper proportionnellement à l'effort du moteur. Un turbo moderne s'enclenche de façon agressive. Vous devez enregistrer une crête nette de 4.2V minimum (pression de suralimentation à 1.4 Bar relative).
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Pourquoi 1.6V au contact ?</span>
+                        <p style="color: var(--text-secondary);">
+                            Le capteur MAP mesure la pression absolue. Moteur arrêté (KOEO), il est soumis à la pression atmosphérique ambiante (environ 1.0 Bar / 100 kPa)[cite: 1]. C'est pourquoi sa tension de repos est calibrée à ~1.60V[cite: 1]. Si le signal affichait 0V, l'ECU interpréterait une altitude absurde ou un capteur coupé en court-circuit.
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'leak') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">Fuite d'air après le Turbo (Boost Leak)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Symptôme flagrant :</b> Lors d'une charge, le signal MAF (débitmètre d'air) s'effondre ou devient anormalement haut tandis que le signal du capteur Boost (T-MAP) refuse de monter au-delà de **2.0V** (tension plafonnée). L'air s'échappe de la durite percée ou de l'échangeur de suralimentation (Intercooler). L'ECU génère un code défaut "P0299 - Sous-pression de suralimentation".
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Astuce de diagnostic pratique</span>
+                        <p style="color: var(--text-secondary);">
+                            Moteur tournant avec un assistant qui accélère, écoutez attentivement le compartiment moteur. Un sifflement prononcé ou bruit de souffle indique une fuite sous pression. Vous pouvez également pressuriser le circuit d'admission à l'arrêt avec une machine à fumée (Smoke Machine) pour visualiser instantanément la fuite.
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'worn') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">Diagnostiquer un Turbo ou Wastegate Usés</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Symptôme :</b> Lors de l'accélération, la pression monte, mais de manière très "molle" (Spool paresseux). Sur l'oscilloscope, la courbe montre une pente douce au lieu d'un pic rapide. Cela peut être dû à un axe de turbine usé, des ailettes de géométrie variable calaminées ou une soupape de décharge (Wastegate) grippée et entrouverte.
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Analyse des Paramètres en Roulage</span>
+                        <p style="color: var(--text-secondary);">
+                            Comparez la consigne de pression suralimentation calculée par l'ECU avec la valeur réelle mesurée par le capteur Boost. S'il y a un décalage persistant (par exemple consigne à 2.2 Bar et réel bloqué à 1.6 Bar de manière progressive), le turbo ou son système de régulation pneumatique (électrovanne N75) est en cause.
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'ground') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">La Chute de Tension dévastatrice (GND Offset)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Panne sournoise :</b> La masse du capteur a une résistance élevée (+0.8V mesuré sur le Pin 2). Cela décale artificiellement tout le signal MAP vers le haut ! Au contact (KOEO), le capteur transmet un signal de **2.40V** au lieu de 1.60V[cite: 1]. L'ECU croit que le turbo souffle déjà à 1.4 Bar alors que le moteur est éteint !
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Incohérence Capteur Pression vs Atmosphérique</span>
+                        <p style="color: var(--text-secondary);">
+                            À la mise du contact, le calculateur moteur compare le capteur MAP au capteur barométrique interne de l'ECU. S'il détecte un écart significatif (comme 1.0 Bar barométrique vs 1.4 Bar MAP), il verrouille immédiatement le système en mode dégradé (Limp Home) et enregistre un défaut de corrélation.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // ====================================================
+        // INTERACTIVE STATE CONTROLS
+        // ====================================================
+        function selectPin(pinNum) {
+            selectedPin = pinNum;
+            document.querySelectorAll('.pin-terminal').forEach(el => {
+                el.classList.remove('selected-red');
+            });
+            document.getElementById(`pin-${pinNum}`).classList.add('selected-red');
+            
+            // Dial rotation visual effect
+            const rotation = [0, 45, -45, 90, 135][pinNum];
+            document.getElementById('dmmDial').style.transform = `rotate(${rotation}deg)`;
+            
+            updateSimulation();
+        }
+
+        function changeState(state) {
+            currentState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => {
+                if(btn.id.startsWith('btn-state-')) btn.classList.remove('active');
+            });
+            document.getElementById(`btn-state-${state}`).classList.add('active');
+
+            if (state !== 'load') {
+                if (throttleTimer) clearInterval(throttleTimer);
+                isThrottleActive = false;
+                updateSimulation();
+            } else {
+                updateSimulation();
+            }
+        }
+
+        // ====================================================
+        // SNAP THROTTLE SIMULATION (AUTOMATIC ROAD TEST)
+        // ====================================================
+        function triggerSnapThrottle() {
+            if (isThrottleActive) return;
+            isThrottleActive = true;
+            throttleProgress = 0;
+            changeState('load');
+
+            if (throttleTimer) clearInterval(throttleTimer);
+
+            const duration = 2500; // 2.5 seconds test sweep
+            const intervalStep = 50; 
+            const totalSteps = duration / intervalStep;
+
+            throttleTimer = setInterval(() => {
+                throttleProgress += (1 / totalSteps);
+                updateSimulation();
+
+                if (throttleProgress >= 1) {
+                    clearInterval(throttleTimer);
+                    isThrottleActive = false;
+                    throttleProgress = 0;
+                    changeState('idle'); // Settles back to idle
+                }
+            }, intervalStep);
+        }
+
+        // ====================================================
+        // UPDATE SIMULATION ENGINE
+        // ====================================================
+        function updateSimulation() {
+            let activeDb = DB_NORMAL;
+            if (currentScenario === 'leak') activeDb = DB_LEAK;
+            else if (currentScenario === 'worn') activeDb = DB_WORN;
+            else if (currentScenario === 'ground') activeDb = DB_GROUND_FAULT;
+
+            let voltage = 0.00;
+            let pressure = 1.0;
+            let relPressure = 0.0;
+
+            if (isThrottleActive) {
+                // Dynamic interpolation during acceleration sweep
+                let baseIdle = activeDb['idle'];
+                let baseLoad = activeDb['load'];
+
+                let mapVal = 1.62;
+                let refVal = 5.00;
+                let gndVal = 0.02;
+                let iatVal = 2.50;
+                let pressVal = 1.0;
+                let relPressVal = 0.0;
+
+                let p = throttleProgress;
+
+                if (p < 0.3) {
+                    let factor = p / 0.3;
+                    if (currentScenario === 'worn') factor = Math.pow(factor, 2); // Lazy response curve (quadratic delay)
+                    
+                    mapVal = baseIdle[3] + (baseLoad[3] - baseIdle[3]) * factor;
+                    pressVal = baseIdle.pressure + (baseLoad.pressure - baseIdle.pressure) * factor;
+                    relPressVal = baseIdle.relPressure + (baseLoad.relPressure - baseIdle.relPressure) * factor;
+                } else if (p < 0.6) {
+                    // Stable high boost
+                    mapVal = baseLoad[3];
+                    pressVal = baseLoad.pressure;
+                    relPressVal = baseLoad.relPressure;
+                } else {
+                    // Deceleration drop
+                    let factor = (p - 0.6) / 0.4;
+                    mapVal = baseLoad[3] - (baseLoad[3] - baseIdle[3]) * factor;
+                    pressVal = baseLoad.pressure - (baseLoad.pressure - baseIdle.pressure) * factor;
+                    relPressVal = baseLoad.relPressure - (baseLoad.relPressure - baseIdle.relPressure) * factor;
+                }
+
+                refVal = baseIdle[1];
+                gndVal = baseIdle[2];
+                iatVal = baseIdle[4] - (baseIdle[4] - baseLoad[4]) * Math.min(p * 1.5, 1);
+
+                if (selectedPin === 1) voltage = refVal;
+                else if (selectedPin === 2) voltage = gndVal;
+                else if (selectedPin === 3) voltage = mapVal;
+                else if (selectedPin === 4) voltage = iatVal;
+
+                pressure = pressVal;
+                relPressure = relPressVal;
+
+            } else {
+                voltage = activeDb[currentState][selectedPin];
+                pressure = activeDb[currentState].pressure;
+                relPressure = activeDb[currentState].relPressure;
+            }
+
+            // Update DMM
+            document.getElementById('dmmValue').innerText = voltage.toFixed(2);
+
+            // Update Physical Gauge
+            const needle = document.getElementById('gaugeNeedle');
+            const needleRotation = -120 + (pressure * 75); // Range absolute 0.0 to 3.0 Bar maps to rotation
+            needle.style.transform = `rotate(${needleRotation}deg)`;
+            document.getElementById('gaugeValueText').innerText = `${pressure.toFixed(2)} Bar Abs`;
+            document.getElementById('relativeBoostText').innerText = `${relPressure.toFixed(1)} Bar Rel`;
+
+            // State indicators
+            const boostStateLabel = document.getElementById('boostStateLabel');
+            if (pressure > 2.0) {
+                boostStateLabel.innerText = "STATUT: SURALIMENTATION ACTIVE (OK)";
+                boostStateLabel.style.color = "#00ff33";
+            } else if (currentScenario === 'leak' && currentState === 'load') {
+                boostStateLabel.innerText = "STATUT: PRESSION LIMITÉE (FUITE ADMISSION)";
+                boostStateLabel.style.color = "var(--neon-red)";
+            } else if (currentScenario === 'worn' && currentState === 'load') {
+                boostStateLabel.innerText = "STATUT: PRESSION FAIBLE (TURBO PARESSEUX)";
+                boostStateLabel.style.color = "var(--neon-amber)";
+            } else if (pressure > 1.0) {
+                boostStateLabel.innerText = "STATUT: SURALIMENTATION FAIBLE";
+                boostStateLabel.style.color = "var(--neon-amber)";
+            } else {
+                boostStateLabel.innerText = "STATUT: PRESSION ATMOSPHÉRIQUE (PAS DE CHARGE)";
+                boostStateLabel.style.color = "var(--neon-blue)";
+            }
+
+            updateWiringHighlight();
+            drawScope();
+        }
+
+        // ====================================================
+        // SCHEMATIC WIRE HIGHLIGHTS (SVG)
+        // ====================================================
+        function updateWiringHighlight() {
+            const wires = ['wire-1', 'wire-2', 'wire-3', 'wire-4'];
+
+            wires.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.opacity = '0.35';
+                    el.style.strokeWidth = '2';
+                    el.style.filter = 'none';
+                }
+            });
+
+            const activeId = `wire-${selectedPin}`;
+            const activeEl = document.getElementById(activeId);
+            if (activeEl) {
+                activeEl.style.opacity = '1';
+                activeEl.style.strokeWidth = '4.5';
+                if (selectedPin === 1) activeEl.style.filter = 'url(#glow-red)';
+                else if (selectedPin === 2) activeEl.style.filter = 'url(#glow-blue)';
+                else if (selectedPin === 3) activeEl.style.filter = 'url(#glow-green)';
+            }
+        }
+
+        // ====================================================
+        // OSCILLOSCOPE GRAPHICS CANVAS ENGINE (SAFE LAZY LOADER)
+        // ====================================================
+        let voltScale = 1.0; 
+        let timeScale = 500; 
+
+        function adjustScopeSettings() {
+            voltScale = parseFloat(document.getElementById('scopeVolts').value);
+            timeScale = parseInt(document.getElementById('scopeTime').value);
+            document.getElementById('scopeVoltsLabel').innerText = `Y: ${voltScale.toFixed(1)} V / Div`;
+            document.getElementById('scopeTimeLabel').innerText = `X: ${timeScale} ms / Div`;
+            drawScope();
+        }
+
+        function drawScope() {
+            const canvasEl = document.getElementById('scopeCanvas');
+            if (!canvasEl) return; // Prevent crashes if element hasn't mounted in the DOM yet
+            
+            const context = canvasEl.getContext('2d');
+            if (!context) return;
+
+            context.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            const w = canvasEl.width || 500;
+            const h = canvasEl.height || 250;
+            const divisionsX = 10;
+            const divisionsY = 6;
+            const stepX = w / divisionsX;
+            const stepY = h / divisionsY;
+
+            // Background Grid Lines
+            context.strokeStyle = '#102222';
+            context.lineWidth = 1;
+            for (let i = 0; i <= divisionsX; i++) {
+                context.beginPath(); context.moveTo(i * stepX, 0); context.lineTo(i * stepX, h); context.stroke();
+            }
+            for (let i = 0; i <= divisionsY; i++) {
+                context.beginPath(); context.moveTo(0, i * stepY); context.lineTo(w, i * stepY); context.stroke();
+            }
+
+            // Center lines markers
+            context.strokeStyle = '#1a3333';
+            context.beginPath();
+            context.moveTo(0, h / 2); context.lineTo(w, h / 2);
+            context.moveTo(w / 2, 0); context.lineTo(w / 2, h);
+            context.stroke();
+
+            function scaleY(v) {
+                const totalVolts = divisionsY * voltScale;
+                return h - (v / totalVolts) * h;
+            }
+
+            context.lineWidth = 2.5;
+            context.shadowBlur = 6;
+            context.shadowColor = 'rgba(0, 217, 255, 0.5)';
+
+            let activeDb = DB_NORMAL;
+            if (currentScenario === 'leak') activeDb = DB_LEAK;
+            else if (currentScenario === 'worn') activeDb = DB_WORN;
+            else if (currentScenario === 'ground') activeDb = DB_GROUND_FAULT;
+
+            if (selectedPin === 1) { // 5V Power Reference
+                context.strokeStyle = '#ff3333';
+                context.beginPath(); context.moveTo(0, scaleY(5.00)); context.lineTo(w, scaleY(5.00)); context.stroke();
+            } 
+            else if (selectedPin === 2) { // Ground
+                context.strokeStyle = '#7a5230';
+                let volt = activeDb[currentState][2];
+                context.beginPath(); context.moveTo(0, scaleY(volt)); context.lineTo(w, scaleY(volt)); context.stroke();
+            }
+            else if (selectedPin === 3) { // MAP Signal (Boost Waveform)
+                context.strokeStyle = '#00ffaa';
+                context.beginPath();
+
+                if (!isThrottleActive) {
+                    let volt = activeDb[currentState][3];
+                    context.moveTo(0, scaleY(volt)); context.lineTo(w, scaleY(volt));
+                } else {
+                    // Draw full dynamic road test simulation wave based on progress
+                    let started = false;
+                    for (let x = 0; x < w * throttleProgress; x += 2) {
+                        let pLocal = x / w;
+                        let mapVal = 1.62;
+
+                        if (pLocal < 0.3) {
+                            let factor = pLocal / 0.3;
+                            if (currentScenario === 'worn') factor = Math.pow(factor, 2);
+                            mapVal = activeDb['idle'][3] + (activeDb['load'][3] - activeDb['idle'][3]) * factor;
+                        } else if (pLocal < 0.6) {
+                            mapVal = activeDb['load'][3];
+                        } else {
+                            let factor = (pLocal - 0.6) / 0.4;
+                            mapVal = activeDb['load'][3] - (activeDb['load'][3] - activeDb['idle'][3]) * factor;
+                        }
+
+                        if (!started) { context.moveTo(x, scaleY(mapVal)); started = true; }
+                        else context.lineTo(x, scaleY(mapVal));
+                    }
+                }
+                context.stroke();
+            }
+            else if (selectedPin === 4) { // IAT Temperature Analog Signal
+                context.strokeStyle = '#bb33ff';
+                context.beginPath();
+                if (!isThrottleActive) {
+                    let volt = activeDb[currentState][4];
+                    context.moveTo(0, scaleY(volt)); context.lineTo(w, scaleY(volt));
+                } else {
+                    let started = false;
+                    for (let x = 0; x < w * throttleProgress; x += 2) {
+                        let pLocal = x / w;
+                        let iatVal = activeDb['idle'][4] - (activeDb['idle'][4] - activeDb['load'][4]) * Math.min(pLocal * 1.5, 1);
+                        if (!started) { context.moveTo(x, scaleY(iatVal)); started = true; }
+                        else context.lineTo(x, scaleY(iatVal));
+                    }
+                }
+                context.stroke();
+            }
+
+            context.shadowBlur = 0; // reset
+        }
+
+        // ====================================================
+        // BOOTSTRAP INITIALIZATION WITH SAFETY HANDLERS
+        // ====================================================
+        window.onload = function() {
+            const canvasEl = document.getElementById('scopeCanvas');
+            if (canvasEl) {
+                canvasEl.width = canvasEl.offsetWidth || 500;
+                canvasEl.height = canvasEl.offsetHeight || 250;
+            }
+            selectScenario('normal');
+        };
+
+        // Window resize dynamic handling
+        window.addEventListener('resize', function() {
+            const canvasEl = document.getElementById('scopeCanvas');
+            if (canvasEl) {
+                canvasEl.width = canvasEl.offsetWidth || 500;
+                canvasEl.height = canvasEl.offsetHeight || 250;
+                drawScope();
+            }
+        });
+    </script>
+</body>
+</html>

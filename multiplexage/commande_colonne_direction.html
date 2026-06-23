@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Capteur de Couple EPS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #060909;
+            --panel-bg: #0f1414;
+            --border-color: #1a2626;
+            --neon-green: #39ff14;
+            --neon-blue: #00e5ff;
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #9cb5b5;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        /* Tech Panels styling */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-blue);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        /* Steer Wheel styles */
+        .wheel-outer {
+            transition: transform 0.1s ease-out;
+            cursor: grab;
+            touch-action: none;
+        }
+        .wheel-outer:active {
+            cursor: grabbing;
+        }
+
+        /* Oscilloscope Screen glow */
+        .scope-screen {
+            background: #030707;
+            border: 2px solid #1f2d2d;
+            border-radius: 8px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+        }
+
+        /* Multimeter graphics styling */
+        .multimeter {
+            background: #1c2121;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+        }
+
+        .dmm-screen {
+            background: #1d261e;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.9);
+        }
+
+        /* Pin interactive design */
+        .pin-btn {
+            background: #121818;
+            border: 2px solid #293d3d;
+            transition: all 0.2s ease;
+        }
+        .pin-btn:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+        }
+        .pin-btn.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.5);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        /* Custom styles for glowing wires */
+        .glow-wire {
+            filter: drop-shadow(0px 0px 4px var(--neon-blue));
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- MODULE HEADER / BANNER -->
+        <header class="panel p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="text-xs font-bold tracking-wider uppercase text-[#00e5ff] bg-cyan-950/40 px-3 py-1 rounded border border-cyan-850">Diagnostic Avancé - EPS Volant</span>
+                <h1 class="text-2xl md:text-3xl font-extrabold mt-2 text-white">Capteur de Couple de Colonne de Direction</h1>
+                <p class="text-sm text-[#9cb5b5] mt-1">Étude et diagnostic d'un capteur de couple double signal analogique (Redondance croisée en opposition).</p>
+            </div>
+            <div class="flex items-center gap-3 bg-zinc-900/60 p-3 rounded-lg border border-zinc-800">
+                <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse" id="statusLed"></div>
+                <div class="text-xs font-mono">
+                    <span class="text-zinc-400">SYSTÈME ASSISTANCE :</span><br>
+                    <span id="assistanceStatusText" class="text-green-400 font-bold">100% ACTIF</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- TWO COLUMN WORKSPACE -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- LEFT PANEL: STEERING COLUMN WORKSTATION -->
+            <section class="panel lg:col-span-7 p-6 space-y-6">
+                <div class="border-b border-zinc-800 pb-3 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-[#00e5ff]">🕹️</span> Poste de Pilotage et Torsion de Colonne
+                    </h2>
+                    <span class="text-xs bg-[#1f2d2d] px-2 py-1 rounded text-[#9cb5b5]" id="torqueDisplay">Couple : 0.00 Nm</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <!-- Interactive Visual Steering Wheel -->
+                    <div class="flex flex-col items-center space-y-4">
+                        <span class="text-xs font-semibold text-[#9cb5b5] uppercase">Glisser/Tourner le Volant (Effort)</span>
+                        
+                        <div class="relative w-64 h-64 flex items-center justify-center bg-zinc-950 rounded-full border border-zinc-800 shadow-inner">
+                            <!-- Rotatable Steering Wheel SVG -->
+                            <svg id="steeringWheel" class="w-56 h-56 wheel-outer" viewBox="0 0 100 100">
+                                <!-- Outer grip -->
+                                <circle cx="50" cy="50" r="44" fill="none" stroke="#222" stroke-width="8" />
+                                <circle cx="50" cy="50" r="41" fill="none" stroke="#333" stroke-width="2" />
+                                <!-- Leather stitching details -->
+                                <circle cx="50" cy="50" r="46" fill="none" stroke="#111" stroke-dasharray="1 1" />
+                                <!-- Inner spoke structure -->
+                                <path d="M 50,50 L 50,15" stroke="#333" stroke-width="8" stroke-linecap="round" />
+                                <path d="M 50,50 L 15,65" stroke="#333" stroke-width="8" stroke-linecap="round" />
+                                <path d="M 50,50 L 85,65" stroke="#333" stroke-width="8" stroke-linecap="round" />
+                                <!-- Center horn pad -->
+                                <circle cx="50" cy="50" r="16" fill="#151515" stroke="#444" stroke-width="2" />
+                                <path d="M 46,47 L 54,47 M 46,50 L 54,50 M 48,53 L 52,53" stroke="#666" stroke-width="1.5" /> <!-- Horn icon placeholder -->
+                                <!-- Neutral Position Indicator (Red Top Stripe) -->
+                                <rect x="48" y="4" width="4" height="6" fill="#ff3333" rx="1" />
+                            </svg>
+                            <!-- Visual Direction Arrow Markers -->
+                            <div class="absolute left-2 text-xs text-zinc-500 font-mono">◀ GAUCHE</div>
+                            <div class="absolute right-2 text-xs text-zinc-500 font-mono">DROITE ▶</div>
+                        </div>
+
+                        <!-- Manual Slide Controller fallback for touch/desktop accessibility -->
+                        <div class="w-full px-4">
+                            <input type="range" id="torqueSlider" min="-8" max="8" step="0.1" value="0" 
+                                   class="w-full accent-[#00e5ff] bg-zinc-900 rounded-lg cursor-pointer h-2"
+                                   oninput="updateTorqueFromSlider(this.value)">
+                            <div class="flex justify-between text-xs text-zinc-500 mt-1 font-mono">
+                                <span>-8 Nm (Force G)</span>
+                                <span class="text-[#00e5ff] font-bold">Relâché (0 Nm)</span>
+                                <span>+8 Nm (Force D)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Guide HaynesPro style instructions -->
+                    <div class="space-y-4">
+                        <div class="p-4 bg-[#141b1b] border border-[#1e2f2f] rounded-lg text-sm text-[#9cb5b5] space-y-2">
+                            <span class="text-xs font-bold text-[#ffaa00] uppercase block">📖 Guide Technique du Système</span>
+                            <p class="leading-relaxed">
+                                Pour des raisons de haute sécurité (normes ASIL-D), ce capteur de couple utilise **deux pistes analogiques inversées**.
+                            </p>
+                            <ul class="list-disc list-inside space-y-1 text-xs text-zinc-300">
+                                <li><strong>SIG 1 :</strong> Variable de <span class="text-[#ffaa00]">2.5 V à 4.5 V</span> (tournant à droite).</li>
+                                <li><strong>SIG 2 :</strong> Variable de <span class="text-[#00e5ff]">2.5 V à 0.5 V</span> (tournant à droite).</li>
+                                <li><strong>Règle de Surveillance :</strong> <code class="bg-black/40 px-1 py-0.5 text-white">SIG 1 + SIG 2 = 5.0 V</code> constant à ±0.2V près.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Quick Action Calibrations -->
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="resetToNeutral()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs rounded transition flex-1">
+                                🔄 Recentrer Volant
+                            </button>
+                            <button onclick="simulateDTCRelearn()" class="px-3 py-2 bg-[#ffaa00]/10 hover:bg-[#ffaa00]/20 border border-[#ffaa00]/30 text-[#ffaa00] font-semibold text-xs rounded transition flex-1">
+                                🛠️ Calibrage Point Zéro
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DIGITAL MULTIMETER AND PINOUT GRID -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 pt-4 border-t border-zinc-800">
+                    
+                    <!-- CS Multimeter representation -->
+                    <div class="md:col-span-6 flex flex-col items-center">
+                        <div class="multimeter w-full max-w-[260px] p-4 space-y-3">
+                            <div class="dmm-screen p-3 text-right font-mono relative rounded border-2 border-black">
+                                <span class="absolute top-1 left-2 text-[10px] text-zinc-500 font-bold" id="dmmModeLabel">V DC ⎓</span>
+                                <div class="text-3xl text-green-400 font-extrabold tracking-wider" id="dmmScreenValue">0.00</div>
+                            </div>
+                            <!-- Static dial representing voltmeter setting -->
+                            <div class="flex justify-center my-1">
+                                <div class="w-14 h-14 bg-zinc-800 rounded-full border-4 border-zinc-950 relative shadow">
+                                    <div class="w-1.5 h-7 bg-[#ff5500] absolute top-1 left-[21px] rounded-full origin-bottom" style="transform: rotate(30deg);"></div>
+                                    <div class="absolute bottom-1 text-[8px] text-center w-full font-bold text-zinc-400">VDC 20</div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between px-4 border-t border-zinc-700/60 pt-3 text-[10px] font-mono text-zinc-400">
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-zinc-900 border border-zinc-500 rounded-full inline-block"></span> COM (-)</span>
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-red-600 rounded-full inline-block"></span> V/Ω (+)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connecteur de Colonne Pinout -->
+                    <div class="md:col-span-6 space-y-4">
+                        <span class="text-xs font-bold text-[#9cb5b5] uppercase block">Connecteur Capteur Couple (Faisceau Colonne)</span>
+                        
+                        <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex flex-col items-center gap-4">
+                            <!-- Harness housing layout -->
+                            <div class="flex gap-2 p-3 bg-zinc-850 border-4 border-zinc-700 rounded-lg shadow-inner relative pt-6">
+                                <div class="absolute top-1 left-1/2 -translate-x-1/2 bg-zinc-700 text-[8px] px-2 py-0.5 rounded text-white font-bold tracking-widest uppercase">CLIP</div>
+                                
+                                <button class="pin-btn w-9 h-12 rounded flex flex-col justify-between items-center py-2 text-xs font-mono font-bold text-zinc-300" id="pin-1" onclick="probePin(1)">
+                                    <span>1</span>
+                                    <div class="w-3 h-3 bg-yellow-600 rounded-sm"></div>
+                                </button>
+                                <button class="pin-btn w-9 h-12 rounded flex flex-col justify-between items-center py-2 text-xs font-mono font-bold text-zinc-300" id="pin-2" onclick="probePin(2)">
+                                    <span>2</span>
+                                    <div class="w-3 h-3 bg-yellow-600 rounded-sm"></div>
+                                </button>
+                                <button class="pin-btn w-9 h-12 rounded flex flex-col justify-between items-center py-2 text-xs font-mono font-bold text-zinc-300" id="pin-3" onclick="probePin(3)">
+                                    <span>3</span>
+                                    <div class="w-3 h-3 bg-yellow-600 rounded-sm"></div>
+                                </button>
+                                <button class="pin-btn w-9 h-12 rounded flex flex-col justify-between items-center py-2 text-xs font-mono font-bold text-zinc-300" id="pin-4" onclick="probePin(4)">
+                                    <span>4</span>
+                                    <div class="w-3 h-3 bg-yellow-600 rounded-sm"></div>
+                                </button>
+                                <button class="pin-btn w-9 h-12 rounded flex flex-col justify-between items-center py-2 text-xs font-mono font-bold text-zinc-300" id="pin-5" onclick="probePin(5)">
+                                    <span>5</span>
+                                    <div class="w-3 h-3 bg-yellow-600 rounded-sm"></div>
+                                </button>
+                                <button class="pin-btn w-9 h-12 rounded flex flex-col justify-between items-center py-2 text-xs font-mono font-bold text-zinc-300" id="pin-6" onclick="probePin(6)">
+                                    <span>6</span>
+                                    <div class="w-3 h-3 bg-yellow-600 rounded-sm"></div>
+                                </button>
+                            </div>
+
+                            <!-- Diagnostic readings output for pins -->
+                            <div class="w-full text-xs space-y-1 bg-[#101414] p-3 rounded-lg border border-zinc-800">
+                                <div class="flex justify-between">
+                                    <span class="text-zinc-500">🔴 Sonde active :</span>
+                                    <span id="activeProbeLabel" class="text-red-400 font-bold">Sélectionner une broche...</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-zinc-500">⚫ Sonde de masse :</span>
+                                    <span class="text-zinc-400 font-semibold">Masse Carrosserie G102</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- RIGHT PANEL: DUAL OSCILLOSCOPE & CIRCUIT WIRING -->
+            <section class="lg:col-span-5 space-y-6">
+                
+                <!-- DUAL CHANNEL OSCILLOSCOPE -->
+                <div class="panel p-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span class="text-[#39ff14]">📊</span> Oscilloscope Double Traces (CH1 & CH2)
+                        </h2>
+                        <!-- Legend indicators -->
+                        <div class="flex gap-3 text-[10px] font-bold">
+                            <span class="text-[#ffaa00]">● CH1 (SIG 1)</span>
+                            <span class="text-[#00e5ff]">● CH2 (SIG 2)</span>
+                        </div>
+                    </div>
+
+                    <div class="scope-screen p-2 relative">
+                        <canvas id="scopeCanvas" class="w-full h-56 block"></canvas>
+                        <!-- Grid legends -->
+                        <div class="absolute top-4 left-4 bg-zinc-900/80 px-2 py-0.5 rounded text-[9px] font-mono text-[#39ff14]">CH1/CH2: 1.0 V / Div</div>
+                        <div class="absolute bottom-4 right-4 bg-zinc-900/80 px-2 py-0.5 rounded text-[9px] font-mono text-[#39ff14]">Base temps: 200 ms</div>
+                    </div>
+
+                    <p class="text-xs text-zinc-500 italic mt-2 text-center">Faites tourner le volant de gauche à droite pour voir les deux traces réagir en opposition.</p>
+                </div>
+
+                <!-- WIRING SCHEMATIC -->
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                        <span class="text-[#ffaa00]">🔌</span> Schéma Électrique Interactif
+                    </h2>
+                    
+                    <div class="bg-black border border-zinc-800 rounded-lg overflow-hidden p-2">
+                        <svg id="wiringSvg" viewBox="0 0 400 180" class="w-full h-auto">
+                            <!-- Background Grid -->
+                            <rect width="100%" height="100%" fill="#040606"/>
+                            
+                            <!-- EPS ECU Node -->
+                            <rect x="10" y="20" width="80" height="140" rx="4" fill="#131919" stroke="#527070" stroke-width="1.5"/>
+                            <text x="50" y="90" fill="#a0bfa0" font-size="10" font-weight="bold" text-anchor="middle">ECU EPS</text>
+                            
+                            <!-- Sensor Housing Node -->
+                            <rect x="290" y="20" width="100" height="140" rx="4" fill="#181e1e" stroke="#00e5ff" stroke-width="1.5"/>
+                            <text x="340" y="90" fill="#00e5ff" font-size="10" font-weight="bold" text-anchor="middle">CAPTEUR</text>
+                            
+                            <!-- Connective Wires (Interactive paths) -->
+                            <!-- Wire 1: 5V VCC -->
+                            <path id="sch-wire-1" d="M 90,40 L 290,40" fill="none" stroke="#ff3333" stroke-width="1.5" class="glow-wire" style="transition: stroke-width 0.2s;" />
+                            <text x="190" y="35" fill="#ff3333" font-size="7" font-family="mono" text-anchor="middle">1. Alimentation 5V Ref</text>
+                            
+                            <!-- Wire 2: Sensor Ground -->
+                            <path id="sch-wire-2" d="M 90,64 L 290,64" fill="none" stroke="#7c532e" stroke-width="1.5" style="transition: stroke-width 0.2s;" />
+                            <text x="190" y="59" fill="#7c532e" font-size="7" font-family="mono" text-anchor="middle">2. Masse Capteur</text>
+
+                            <!-- Wire 3: Torque SIG 1 -->
+                            <path id="sch-wire-3" d="M 90,88 L 290,88" fill="none" stroke="#ffaa00" stroke-width="1.5" style="transition: stroke-width 0.2s;" />
+                            <text x="190" y="83" fill="#ffaa00" font-size="7" font-family="mono" text-anchor="middle">3. Signal de Couple 1</text>
+
+                            <!-- Wire 4: Torque SIG 2 -->
+                            <path id="sch-wire-4" d="M 90,112 L 290,112" fill="none" stroke="#00e5ff" stroke-width="1.5" style="transition: stroke-width 0.2s;" />
+                            <text x="190" y="107" fill="#00e5ff" font-size="7" font-family="mono" text-anchor="middle">4. Signal de Couple 2</text>
+
+                            <!-- Wire 5: Index/Position (Aux) -->
+                            <path id="sch-wire-5" d="M 90,136 L 290,136" fill="none" stroke="#b0c4de" stroke-width="1" stroke-dasharray="2 2" />
+                            <text x="190" y="131" fill="#b0c4de" font-size="7" font-family="mono" text-anchor="middle">5. Index Point Neutre</text>
+                        </svg>
+                    </div>
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- LOWER SECTION: DIAGNOSTIC FAULTS SIMULATION -->
+        <footer class="panel panel-red p-6 space-y-4">
+            <h3 class="text-lg font-bold text-[#ff3333] flex items-center gap-2 border-b border-zinc-800 pb-3">
+                <span>🛑</span> Simulation et Analyse de Pannes Électriques (Mode Diagnostics)
+            </h3>
+            
+            <p class="text-sm text-[#9cb5b5]">
+                Activez l'un des scénarios d'erreurs ci-dessous. Observez l'impact immédiat sur les tensions mesurées au multimètre, l'allure des deux traces sur l'oscilloscope virtuel, et la réaction d'assistance du calculateur EPS.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- SCENARIO 1: NORMAL STATE -->
+                <button onclick="setFaultScenario('normal')" id="btn-fault-normal" class="p-4 bg-zinc-900 border-2 border-green-600/30 text-left rounded-xl hover:border-green-500/80 transition flex flex-col justify-between h-full relative overflow-hidden group">
+                    <div class="absolute top-2 right-2 text-xs font-bold text-green-500">ÉTAT OK</div>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-white group-hover:text-[#00e5ff]">Fonctionnement Normal</h4>
+                        <p class="text-xs text-zinc-400">Le signal principal et le signal de secours s'opposent parfaitement. Somme de contrôle = 5.0 Volts.</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-zinc-500 mt-3 block">Pas de code défaut enregistré</span>
+                </button>
+
+                <!-- SCENARIO 2: BROKEN SIG 2 OPEN CIRCUIT -->
+                <button onclick="setFaultScenario('open-sig2')" id="btn-fault-open-sig2" class="p-4 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-red-500/50 transition flex flex-col justify-between h-full relative overflow-hidden group">
+                    <div class="absolute top-2 right-2 text-xs font-bold text-red-500">PANNE</div>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-white group-hover:text-red-400">SIG 2 - Circuit Ouvert</h4>
+                        <p class="text-xs text-zinc-400">Le fil de retour Signal 2 est coupé. Le signal chute à 0.0V. L'ECU détecte une incohérence de somme.</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-[#ff3333] mt-3 block">DTC C1A37 / C1290 (Assistance coupée)</span>
+                </button>
+
+                <!-- SCENARIO 3: SENSOR OFFSET DRIFT -->
+                <button onclick="setFaultScenario('drift')" id="btn-fault-drift" class="p-4 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-[#ffaa00]/50 transition flex flex-col justify-between h-full relative overflow-hidden group">
+                    <div class="absolute top-2 right-2 text-xs font-bold text-[#ffaa00]">DÉRIVE</div>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-white group-hover:text-[#ffaa00]">Dérive du Zéro / "Volant Fantôme"</h4>
+                        <p class="text-xs text-zinc-400">Le capteur est décalé (SIG 1 à 2.9V au repos). L'assistance pousse à droite toute seule sans couple conducteur.</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-[#ffaa00] mt-3 block">DTC C1515 (Calibrage incomplet)</span>
+                </button>
+
+            </div>
+
+            <!-- EXPLANATORY NOTE -->
+            <div class="text-xs text-zinc-500 bg-black/40 p-3 rounded border border-zinc-800 leading-relaxed">
+                <strong>📝 Note pédagogique de diagnostic :</strong> Si vous rencontrez un véhicule dont le volant tourne brusquement d'un seul côté dès que vous mettez le contact (Volant Fantôme), suspectez en priorité un **point zéro décalé** sur le capteur de couple. Une recalibration (généralement via l'outil de diagnostic, en maintenant le volant parfaitement au centre sans le toucher) réinitialisera la valeur d'offset interne du microcontrôleur de l'EPS.
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- MAIN APP JAVASCRIPT ENGINE -->
+    <script>
+        // App State Database
+        let activeScenario = 'normal'; // 'normal', 'open-sig2', 'drift'
+        let currentTorque = 0.0;       // -8.0 Nm to +8.0 Nm
+        let selectedPin = 1;
+
+        // Steering Wheel Drag Physics Variables
+        const wheelSvg = document.getElementById('steeringWheel');
+        let isDragging = false;
+        let startAngle = 0;
+        let currentRotationAngle = 0; // mapped to torque
+
+        // Pin Definition Table mapping
+        const pinDefinitions = {
+            1: { name: "Pin 1 (Alimentation VCC)", role: "Référence +5.0 Volts fournie par le calculateur EPS" },
+            2: { name: "Pin 2 (Masse GND)", role: "Masse de retour capteur reliée à la carte électronique de l'ECU" },
+            3: { name: "Pin 3 (Signal de couple 1 - SIG1)", role: "Tension analogique du capteur de couple principal" },
+            4: { name: "Pin 4 (Signal de couple 2 - SIG2)", role: "Tension analogique du capteur de couple de secours/redondant" },
+            5: { name: "Pin 5 (Signal Index de position)", role: "Impulsion logique de repérage de passage à zéro" },
+            6: { name: "Pin 6 (Blindage / Shield)", role: "Ligne de protection tressée contre les bruits magnétiques extérieurs" }
+        };
+
+        // Real-Time Scope Plot Database Arrays
+        const scopeCanvas = document.getElementById('scopeCanvas');
+        const scopeCtx = scopeCanvas.getContext('2d');
+        const maxDataPoints = 300;
+        const sig1History = Array(maxDataPoints).fill(2.5);
+        const sig2History = Array(maxDataPoints).fill(2.5);
+
+        // Map current applied torque to physical voltage output values
+        function calculateVoltages() {
+            let outputs = {
+                1: 5.00, // VCC
+                2: 0.02, // GND
+                3: 2.50, // SIG1 default
+                4: 2.50, // SIG2 default
+                5: 0.10, // Index default
+                6: 0.01  // Shield
+            };
+
+            // Calculate Voltages based on dynamic State
+            if (activeScenario === 'normal') {
+                // Main SIG 1 rises with torque to the right, falls with torque to the left
+                // Limit range cleanly between 0.5V and 4.5V
+                outputs[3] = 2.50 + (currentTorque * 0.25);
+                outputs[3] = Math.max(0.5, Math.min(4.5, outputs[3]));
+
+                // Sub SIG 2 is perfectly inverted relative to 2.5V center
+                outputs[4] = 2.50 - (currentTorque * 0.25);
+                outputs[4] = Math.max(0.5, Math.min(4.5, outputs[4]));
+                
+                // Index pulse triggers when passing exactly through neutral zone center (0 Nm +/- 0.5)
+                outputs[5] = Math.abs(currentTorque) < 0.4 ? 4.90 : 0.10;
+            } 
+            else if (activeScenario === 'open-sig2') {
+                outputs[3] = 2.50 + (currentTorque * 0.25);
+                outputs[3] = Math.max(0.5, Math.min(4.5, outputs[3]));
+
+                // Signal 2 is cut completely (stays at ground level)
+                outputs[4] = 0.00;
+                outputs[5] = Math.abs(currentTorque) < 0.4 ? 4.90 : 0.10;
+            } 
+            else if (activeScenario === 'drift') {
+                // Point zero is offset shifted. Even when hands are free (0 Nm), SIG1 has offset bias
+                outputs[3] = 2.90 + (currentTorque * 0.25);
+                outputs[3] = Math.max(0.5, Math.min(4.5, outputs[3]));
+
+                outputs[4] = 2.10 - (currentTorque * 0.25);
+                outputs[4] = Math.max(0.5, Math.min(4.5, outputs[4]));
+                
+                outputs[5] = Math.abs(currentTorque - 1.6) < 0.4 ? 4.90 : 0.10;
+            }
+
+            return outputs;
+        }
+
+        // Update Multimeter Screen values based on currently selected wire terminal
+        function updateMultimeter() {
+            const voltages = calculateVoltages();
+            const val = voltages[selectedPin];
+            
+            document.getElementById('dmmScreenValue').innerText = val.toFixed(2);
+            document.getElementById('dmmModeLabel').innerText = `V DC ⎓ (Pin ${selectedPin})`;
+        }
+
+        // Highlight active wiring schematic connection on clicking connector
+        function highlightSchematicWire(pinNum) {
+            // Reset active styles
+            for (let i = 1; i <= 5; i++) {
+                const wire = document.getElementById(`sch-wire-${i}`);
+                if (wire) {
+                    wire.setAttribute('stroke-width', '1.5');
+                    wire.style.filter = "none";
+                }
+            }
+
+            const activeWire = document.getElementById(`sch-wire-${pinNum}`);
+            if (activeWire) {
+                activeWire.setAttribute('stroke-width', '4');
+                // Apply visual glow
+                activeWire.style.filter = "drop-shadow(0px 0px 4px var(--neon-blue))";
+            }
+        }
+
+        // Probe specific terminal pin on the connector housing
+        function probePin(pinNumber) {
+            document.querySelectorAll('.pin-btn').forEach(btn => {
+                btn.classList.remove('selected-red');
+            });
+
+            selectedPin = pinNumber;
+            document.getElementById(`pin-${pinNumber}`).classList.add('selected-red');
+
+            // Set visual textual helper description labels
+            const pinDef = pinDefinitions[pinNumber];
+            document.getElementById('activeProbeLabel').innerText = `Pin ${pinNumber} - ${pinDef.name}`;
+
+            updateMultimeter();
+            highlightSchematicWire(pinNumber);
+        }
+
+        // Change the current simulated fault scenario
+        function setFaultScenario(scenario) {
+            activeScenario = scenario;
+            
+            // Toggle visual button boundaries
+            document.querySelectorAll('footer button').forEach(btn => {
+                btn.className = "p-4 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-zinc-500/50 transition flex flex-col justify-between h-full relative overflow-hidden group";
+            });
+
+            const normalBtn = document.getElementById('btn-fault-normal');
+            const openBtn = document.getElementById('btn-fault-open-sig2');
+            const driftBtn = document.getElementById('btn-fault-drift');
+
+            if (scenario === 'normal') {
+                normalBtn.className = "p-4 bg-zinc-900 border-2 border-green-600/30 text-left rounded-xl hover:border-green-500/80 transition flex flex-col justify-between h-full relative overflow-hidden group";
+                document.getElementById('statusLed').className = "w-3 h-3 rounded-full bg-green-500 animate-pulse";
+                document.getElementById('assistanceStatusText').innerText = "100% ACTIF";
+                document.getElementById('assistanceStatusText').className = "text-green-400 font-bold";
+            } 
+            else if (scenario === 'open-sig2') {
+                openBtn.className = "p-4 bg-zinc-900 border-2 border-red-600/30 text-left rounded-xl hover:border-red-500/80 transition flex flex-col justify-between h-full relative overflow-hidden group";
+                document.getElementById('statusLed').className = "w-3 h-3 rounded-full bg-red-500";
+                document.getElementById('assistanceStatusText').innerText = "0% (SÉCURITÉ)";
+                document.getElementById('assistanceStatusText').className = "text-red-500 font-bold";
+            } 
+            else if (scenario === 'drift') {
+                driftBtn.className = "p-4 bg-zinc-900 border-2 border-[#ffaa00]/30 text-left rounded-xl hover:border-[#ffaa00]/80 transition flex flex-col justify-between h-full relative overflow-hidden group";
+                document.getElementById('statusLed').className = "w-3 h-3 rounded-full bg-[#ffaa00] animate-pulse";
+                document.getElementById('assistanceStatusText').innerText = "DÉGRADÉ (DEVIATION)";
+                document.getElementById('assistanceStatusText').className = "text-[#ffaa00] font-bold";
+
+                // Trigger smooth ghost turning movement effect if left to drift
+                simulateVolantFantome();
+            }
+
+            updateMultimeter();
+        }
+
+        // Simulate automatic "ghost steering" pulling movement in Drift scenario
+        let ghostInterval = null;
+        function simulateVolantFantome() {
+            if (ghostInterval) clearInterval(ghostInterval);
+            
+            // Slowly rotate steering wheel of its own accord due to uncalibrated bias
+            ghostInterval = setInterval(() => {
+                if (activeScenario !== 'drift') {
+                    clearInterval(ghostInterval);
+                    return;
+                }
+
+                // Push towards Right slightly due to +0.4V offset imbalance
+                if (currentTorque < 1.6) {
+                    currentTorque += 0.05;
+                    if (currentTorque > 1.6) currentTorque = 1.6;
+                    
+                    // Update visual rotational markers
+                    currentRotationAngle = currentTorque * 15; // 15 degrees per Nm
+                    wheelSvg.style.transform = `rotate(${currentRotationAngle}deg)`;
+                    document.getElementById('torqueSlider').value = currentTorque;
+                    document.getElementById('torqueDisplay').innerText = `Couple : ${currentTorque.toFixed(2)} Nm`;
+                    
+                    updateMultimeter();
+                } else {
+                    clearInterval(ghostInterval);
+                }
+            }, 25);
+        }
+
+        // Handle input adjustments via slider
+        function updateTorqueFromSlider(val) {
+            currentTorque = parseFloat(val);
+            currentRotationAngle = currentTorque * 15; // Map scaling
+            wheelSvg.style.transform = `rotate(${currentRotationAngle}deg)`;
+            
+            document.getElementById('torqueDisplay').innerText = `Couple : ${currentTorque.toFixed(2)} Nm`;
+            updateMultimeter();
+        }
+
+        // Reset system wheel to central neutral point
+        function resetToNeutral() {
+            currentTorque = 0.0;
+            currentRotationAngle = 0;
+            wheelSvg.style.transform = `rotate(0deg)`;
+            document.getElementById('torqueSlider').value = 0;
+            document.getElementById('torqueDisplay').innerText = `Couple : 0.00 Nm`;
+            updateMultimeter();
+        }
+
+        // Simulate Zero-Point Calibration process (re-setting sensor offsets)
+        function simulateDTCRelearn() {
+            if (activeScenario === 'drift') {
+                // Show interactive loading
+                document.getElementById('assistanceStatusText').innerText = "CALIBRATION...";
+                document.getElementById('assistanceStatusText').className = "text-[#ffaa00] font-mono animate-pulse";
+                
+                setTimeout(() => {
+                    setFaultScenario('normal');
+                    resetToNeutral();
+                }, 1500);
+            } else {
+                alert("Le calibrage n'est nécessaire qu'en cas de décalage ou remplacement de la colonne.");
+            }
+        }
+
+        // Render Oscilloscope Screen Grid and active Waveform
+        function drawScope() {
+            const width = scopeCanvas.width;
+            const height = scopeCanvas.height;
+
+            scopeCtx.clearRect(0, 0, width, height);
+
+            // 1. Draw horizontal & vertical scope grids
+            scopeCtx.strokeStyle = '#121f1f';
+            scopeCtx.lineWidth = 0.5;
+
+            const divX = 8;
+            const divY = 6;
+            
+            // X divs
+            for (let i = 0; i <= divX; i++) {
+                scopeCtx.beginPath();
+                scopeCtx.moveTo(i * (width / divX), 0);
+                scopeCtx.lineTo(i * (width / divX), height);
+                scopeCtx.stroke();
+            }
+            // Y divs
+            for (let i = 0; i <= divY; i++) {
+                scopeCtx.beginPath();
+                scopeCtx.moveTo(0, i * (height / divY));
+                scopeCtx.lineTo(width, i * (height / divY));
+                scopeCtx.stroke();
+            }
+
+            // Draw center reference crosshair lines
+            scopeCtx.strokeStyle = '#1e3030';
+            scopeCtx.lineWidth = 1;
+            scopeCtx.beginPath();
+            scopeCtx.moveTo(0, height / 2);
+            scopeCtx.lineTo(width, height / 2);
+            scopeCtx.moveTo(width / 2, 0);
+            scopeCtx.lineTo(width / 2, height);
+            scopeCtx.stroke();
+
+            // 2. Plot real-time voltage traces
+            const voltages = calculateVoltages();
+            
+            // Shift queue history values forward
+            sig1History.shift();
+            sig1History.push(voltages[3]);
+
+            sig2History.shift();
+            sig2History.push(voltages[4]);
+
+            // Mapping Voltage directly to Height position (0V at bottom, 5V at top grid line)
+            function voltToY(volt) {
+                return height - (volt / 5.0) * height;
+            }
+
+            // Trace Channel 1 (Yellow)
+            scopeCtx.strokeStyle = '#ffaa00';
+            scopeCtx.shadowColor = 'rgba(255, 170, 0, 0.4)';
+            scopeCtx.shadowBlur = 4;
+            scopeCtx.lineWidth = 2;
+            scopeCtx.beginPath();
+            for (let i = 0; i < maxDataPoints; i++) {
+                const x = i * (width / maxDataPoints);
+                const y = voltToY(sig1History[i]);
+                if (i === 0) scopeCtx.moveTo(x, y);
+                else scopeCtx.lineTo(x, y);
+            }
+            scopeCtx.stroke();
+
+            // Trace Channel 2 (Blue)
+            scopeCtx.strokeStyle = '#00e5ff';
+            scopeCtx.shadowColor = 'rgba(0, 229, 255, 0.4)';
+            scopeCtx.shadowBlur = 4;
+            scopeCtx.lineWidth = 2;
+            scopeCtx.beginPath();
+            for (let i = 0; i < maxDataPoints; i++) {
+                const x = i * (width / maxDataPoints);
+                const y = voltToY(sig2History[i]);
+                if (i === 0) scopeCtx.moveTo(x, y);
+                else scopeCtx.lineTo(x, y);
+            }
+            scopeCtx.stroke();
+
+            scopeCtx.shadowBlur = 0; // Reset canvas overlay shadow values
+        }
+
+        // Continuous animation rendering tick loop
+        function animationTick() {
+            drawScope();
+            requestAnimationFrame(animationTick);
+        }
+
+        // SVG Steering Wheel dragging physics setup
+        function getAngle(x, y) {
+            const rect = wheelSvg.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            return Math.atan2(y - centerY, x - centerX) * (180 / Math.PI);
+        }
+
+        wheelSvg.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startAngle = getAngle(e.clientX, e.clientY) - currentRotationAngle;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            let angle = getAngle(e.clientX, e.clientY) - startAngle;
+            
+            // Bound rotation physically to +/- 120 degrees maximum
+            angle = Math.max(-120, Math.min(120, angle));
+            currentRotationAngle = angle;
+            wheelSvg.style.transform = `rotate(${currentRotationAngle}deg)`;
+
+            // Map back to Torque values (-8.0 to +8.0 Nm)
+            currentTorque = currentRotationAngle / 15;
+            document.getElementById('torqueSlider').value = currentTorque;
+            document.getElementById('torqueDisplay').innerText = `Couple : ${currentTorque.toFixed(2)} Nm`;
+            
+            updateMultimeter();
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                // Slowly snap steering wheel back to center (natural column torsion spring)
+                let snapBack = setInterval(() => {
+                    if (isDragging || activeScenario === 'drift') {
+                        clearInterval(snapBack);
+                        return;
+                    }
+                    currentTorque *= 0.7; // Smooth decay
+                    if (Math.abs(currentTorque) < 0.1) {
+                        currentTorque = 0.0;
+                        clearInterval(snapBack);
+                    }
+                    currentRotationAngle = currentTorque * 15;
+                    wheelSvg.style.transform = `rotate(${currentRotationAngle}deg)`;
+                    document.getElementById('torqueSlider').value = currentTorque;
+                    document.getElementById('torqueDisplay').innerText = `Couple : ${currentTorque.toFixed(2)} Nm`;
+                    updateMultimeter();
+                }, 20);
+            }
+        });
+
+        // Touch support for mobiles/tablets
+        wheelSvg.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            const touch = e.touches[0];
+            startAngle = getAngle(touch.clientX, touch.clientY) - currentRotationAngle;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const touch = e.touches[0];
+            let angle = getAngle(touch.clientX, touch.clientY) - startAngle;
+            
+            angle = Math.max(-120, Math.min(120, angle));
+            currentRotationAngle = angle;
+            wheelSvg.style.transform = `rotate(${currentRotationAngle}deg)`;
+
+            currentTorque = currentRotationAngle / 15;
+            document.getElementById('torqueSlider').value = currentTorque;
+            document.getElementById('torqueDisplay').innerText = `Couple : ${currentTorque.toFixed(2)} Nm`;
+            
+            updateMultimeter();
+        });
+
+        window.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        // Start engine once page finishes loading
+        window.onload = function() {
+            // Set canvas target resolution
+            scopeCanvas.width = scopeCanvas.offsetWidth || 400;
+            scopeCanvas.height = scopeCanvas.offsetHeight || 220;
+
+            probePin(3); // Start off with probing SIG 1
+            animationTick(); // Kick off scope painting loop
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Sonde de Température (ECT)</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-pink: #ff33cc;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Crisp Vector Icon SVGs */
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter CSS Representation */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 15px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 35px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CLIP LOCK';
+            position: absolute;
+            top: -10px; left: calc(50% - 35px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 45px;
+            height: 55px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-terminal.selected-black {
+            border-color: #888888;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pin-hole {
+            width: 10px;
+            height: 14px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Selectors */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .state-btn.active, .arch-btn.active {
+            background: var(--neon-cyan);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-amber);
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+        }
+
+        /* Oscilloscope Controls & Canvas */
+        .oscillo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .scope-screen-wrapper {
+            background: var(--screen-bg);
+            border: 3px solid #2a3333;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        #scopeCanvas {
+            width: 100%;
+            height: 250px;
+            background: #030808;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .scope-grid-label {
+            position: absolute;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #55c5c5;
+        }
+
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .scope-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #181d1d;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .scope-select {
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .scope-select:focus {
+            border-color: var(--neon-cyan);
+            outline: none;
+        }
+
+        .btn-trigger {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #172222, #00ffcc);
+            border: 1px solid var(--neon-cyan);
+            color: #080b0b;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-trigger:hover {
+            box-shadow: 0 0 20px var(--neon-glow);
+            transform: scale(1.02);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* FAZET TRICKS CONTROL PANEL */
+        .tricks-selector-title {
+            font-size: 12px;
+            color: var(--neon-amber);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .tricks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .trick-btn {
+            background: #192222;
+            border: 1px dashed var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .trick-btn:hover {
+            border-color: var(--neon-amber);
+            color: #fff;
+        }
+
+        .trick-btn.active {
+            background: var(--neon-amber);
+            color: #000;
+            border-color: var(--neon-amber);
+            border-style: solid;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">
+                <!-- Temperature SVG Icon -->
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" stroke="currentColor" fill="none"/><circle cx="11.5" cy="18.5" r="2" fill="currentColor"/></svg>
+                Diagnostic Technique - Sonde Température Liquide Refroidissement (ECT)
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module technique simule le diagnostic d'un capteur de température de liquide de refroidissement (ECT) à coefficient de température négatif (CTN/NTC) à 2 fils. Étudiez la baisse de tension proportionnelle à la chauffe, le système de commutation "Dual Range" de l'ECU et observez la réaction des motoventilateurs en cas de panne.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Volt/Lightning SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" fill="none"/></svg>
+                Simulateur de Test Guidé
+            </h3>
+            
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="color: var(--neon-amber);">Étape 1 : Sélectionner le comportement de commutation Pull-Up de l'ECU</label>
+            </div>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-arch-switching" onclick="changeArchitecture('switching')">Commutation Dual Range Active (Normal)</button>
+                <button class="arch-btn" id="btn-arch-classic" onclick="changeArchitecture('classic')">Ligne Simple Pull-Up 5V (Standard)</button>
+            </div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label>Étape 2 : Choisir l'état thermique du moteur</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-cold" onclick="changeEngineState('cold')">Moteur Très Froid (0 °C)</button>
+                <button class="state-btn" id="btn-state-warm" onclick="changeEngineState('warm')">Moteur Tiède (45 °C)</button>
+                <button class="state-btn" id="btn-state-hot" onclick="changeEngineState('hot')">Moteur Chaud (90 °C)</button>
+            </div>
+
+            <!-- INTERACTIVE TRICKS & FAZET BUTTONS SECTION -->
+            <div class="tricks-wrapper">
+                <div class="tricks-selector-title">💡 Fazet de Diagnostic Météorique (Astuces) :</div>
+                <div class="tricks-grid">
+                    <button class="trick-btn" id="btn-trick-unplug" onclick="toggleTrick('unplug')">Débrancher la fiche</button>
+                    <button class="trick-btn" id="btn-trick-short" onclick="toggleTrick('short')">Court-Circuit à la Masse</button>
+                    <button class="trick-btn" id="btn-trick-drift" onclick="toggleTrick('drift')">Résistance Décalée (Drift)</button>
+                </div>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 ou 2) du connecteur ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. La Pin 2 correspond au signal de retour de tension (SIG). Notez sa diminution lors de la chauffe moteur.
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;">Connecteur ECT (2 Voies)</label>
+                    <div class="connector-housing" id="connectorHousing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">GND</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">SIG</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (Masse GND)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th>Nature du Fil (Thermistance ECT)</th>
+                        <th>Valeur Théorique Attendue (Moteur Chaud - 90 °C)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td>Masse capteur de référence</td>
+                        <td>Inférieure à 0.05 V (Masse dédiée retour calculateur)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td>Ligne de Signal de température (SIG)</td>
+                        <td id="table-p2-desc">0.80 V à 90 °C (Tension décroissante CTN)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Scope/Waveform SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-cyan);" viewBox="0 0 24 24"><path d="M3 12h3l3-9 4 18 3-12h5" stroke="currentColor" fill="none"/></svg>
+                Oscilloscope de Diagnostic à Double Trace (Tension ECT / Commande Ventilateur)
+            </h3>
+            <div class="oscillo-container">
+                
+                <div class="scope-screen-wrapper">
+                    <div class="scope-grid-label label-volts" id="voltsDivLabel">Y: 1.0 V / Div</div>
+                    <div class="scope-grid-label label-time" id="timeDivLabel">X: 5.0 s / Div</div>
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <div class="scope-controls">
+                    <div class="control-group">
+                        <label>Sensibilité Verticale (Tension)</label>
+                        <select class="scope-select" id="ctrlVolts" onchange="updateScopeParameters()">
+                            <option value="0.5">0.5 V / Div</option>
+                            <option value="1" selected>1.0 V / Div</option>
+                            <option value="2">2.0 V / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Vitesse de Balayage (Temps)</label>
+                        <select class="scope-select" id="ctrlTime" onchange="updateScopeParameters()">
+                            <option value="2">2.0 s / Div</option>
+                            <option value="5" selected>5.0 s / Div</option>
+                            <option value="10">10.0 s / Div</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-trigger" onclick="triggerSnapThrottle()">Simuler Chauffe Progressive du Moteur (0 à 100 °C)</button>
+                </div>
+
+                <div class="instruction-box" style="margin-bottom:0;">
+                    <strong>ℹ️ Guide d'interprétation des courbes à l'oscilloscope :</strong><br>
+                    • <strong style="color: var(--neon-cyan);">Trace Cyan (Tension ECT Pin 2) :</strong> Diminue régulièrement avec la chauffe. Si la commutation active est présente, observez la marche ascendante nette d'environ 1.2V à 3.6V autour de 50°C !<br>
+                    • <strong style="color: var(--neon-pink);">Trace Rose (PWM Commande Ventilateur) :</strong> Reste inactive (0V constant) sous 95°C, puis commence à hacher à la masse pour réguler la vitesse de la marouhe, ou se fige à 100% (Masse active) en mode de sécurité d'urgence (Unplugged).
+                </div>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus ou sélectionnez-les pour voir la ligne s'illuminer et visualiser le cheminement électrique entre le capteur de température d'eau, la résistance de Pull-Up interne et l'unité de commande moteur (ECU).
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 220" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-brown" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- ECU INTERNAL PULL-UP DESIGN -->
+                <g id="ecu-pullup-block">
+                    <rect x="20" y="20" width="130" height="50" rx="4" fill="#172222" stroke="#ffaa00" stroke-width="1.5" />
+                    <text id="power-source-text" x="85" y="40" fill="#ffaa00" font-size="8" font-weight="bold" text-anchor="middle" style="text-transform: uppercase;">PULL-UP INTERNE (ECU)</text>
+                    <text id="pullup-resistor-label" x="85" y="55" fill="#a0b2b2" font-size="8" text-anchor="middle">RL = 4000 Ohms</text>
+                </g>
+
+                <!-- CAPTEUR ECT -->
+                <rect x="180" y="100" width="140" height="80" rx="6" fill="#111616" stroke="#00ffcc" stroke-width="2" />
+                <text x="250" y="145" fill="#00ffcc" font-size="10" font-weight="bold" text-anchor="middle">SONDE ECT (CTN)</text>
+
+                <!-- Terminal connector dots -->
+                <circle cx="225" cy="110" r="5" fill="#8b5a2b" id="circ-p1" />
+                <text x="225" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                <circle cx="275" cy="110" r="5" fill="#00a8ff" id="circ-p2" />
+                <text x="275" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                <!-- CALCULATEUR MOTEUR (ECU) -->
+                <rect x="370" y="50" width="110" height="150" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="425" y="130" fill="#a0b2b2" font-size="10" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+
+                <!-- LIGNES DE CABLAGE -->
+                <!-- Fil 1: Pin 1 -> ECU Pin 22 (Masse capteur) -->
+                <path id="wire-path-1" d="M 215,110 L 215,85 L 340,85 L 340,75 L 380,75" fill="none" stroke="#8b5a2b" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="375" y="71" fill="#8b5a2b" font-size="7" text-anchor="end">Pin 22</text>
+
+                <!-- Fil 2: Pin 2 -> ECU Pin 34 (Signal Tension) -->
+                <path id="wire-path-2" d="M 275,110 L 275,90 L 350,90 L 350,115 L 380,115" fill="none" stroke="#00a8ff" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="375" y="111" fill="#00a8ff" font-size="7" text-anchor="end">Pin 34</text>
+
+                <!-- Back connection from pullup to signal wire inside ECU -->
+                <path d="M 150,45 L 350,45 L 350,90" fill="none" stroke="#00a8ff" stroke-width="1.5" stroke-dasharray="2 2" />
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">
+                <!-- Shield/Diagnostic SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-red);" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" fill="none"/></svg>
+                Procédures de Diagnostic & Stratégies de Panne
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                <div>
+                    <span class="badge-fail">Loi Electrique : Diagnostic des Résistances CTN / NTC</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        La sonde ECT utilise une thermistance à coefficient de température négatif (CTN / NTC) : sa résistance diminue fortement à mesure que la température augmente (par exemple, environ 5000 Ohms à 0 °C, 2000 Ohms à 25 °C, et tombe à seulement 200 Ohms à 90 °C). Pour la tester, mesurez sa résistance débranchée à différentes températures et comparez-les aux valeurs constructeur. 
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: ENGINE TEMPERATURE CONTROL
+                        </div>
+                        <div class="live-row"><span>Engine Coolant Temp (ECT):</span><span id="live-temp-g">0 °C</span></div>
+                        <div class="live-row"><span>ECT Sensor Resistance:</span><span id="live-res-g">0 Ohm</span></div>
+                        <div class="live-row"><span>ECT Voltage Signal:</span><span id="live-volt-g">0.00 V</span></div>
+                        <div class="live-row"><span>ECU Internal Pull-Up value:</span><span id="live-pullup-g" style="color: var(--neon-cyan);">4000 Ohm</span></div>
+                        <div class="live-row"><span>Cooling Fan 1 Command (PWM):</span><span id="live-fan-g" style="color: var(--neon-amber);">0 %</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez démarrer la simulation en cliquant sur <strong>"Moteur Tiède"</strong> ou <strong>"Moteur Chaud"</strong> ci-dessus pour observer le comportement dynamique du calculateur en temps réel.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Architecture configurations (switching or classic)
+        let currentArchitecture = 'switching';
+
+        // Tricks States
+        let trickUnplugActive = false;
+        let trickShortActive = false;
+        let trickDriftActive = false;
+
+        // Base database of ECT physical responses
+        // Pin 1: GND, Pin 2: SIG
+        const DMM_DATABASE_SWITCHING = {
+            cold: { 1: 0.02, 2: 4.15 },   // 0 °C -> ~5500 Ohm -> 4.15V (Pull up RL = 4000 Ohm)
+            warm: { 1: 0.02, 2: 3.65 },   // 45 °C -> ~1000 Ohm -> ~3.65V (Pull-up switched to 350 Ohm at 40°C!)
+            hot: { 1: 0.02, 2: 1.20 }     // 90 °C -> ~240 Ohm -> ~2.00V -> commutated area holds high resolution
+        };
+
+        const DMM_DATABASE_CLASSIC = {
+            cold: { 1: 0.02, 2: 4.15 },   // 0 °C -> 4.15V
+            warm: { 1: 0.02, 2: 2.30 },   // 45 °C -> ~1500 Ohm -> ~2.30V (fixed Pull-Up 2000 Ohm)
+            hot: { 1: 0.02, 0.45: 1.20, 2: 0.45 }     // 90 °C -> ~200 Ohm -> ~0.45V
+        };
+
+        let currentEngineState = 'cold';
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+
+        function getActiveDatabase() {
+            return currentArchitecture === 'switching' ? DMM_DATABASE_SWITCHING : DMM_DATABASE_CLASSIC;
+        }
+
+        // Toggles interactive tricks
+        function toggleTrick(trickName) {
+            if (trickName === 'unplug') {
+                trickUnplugActive = !trickUnplugActive;
+                document.getElementById('btn-trick-unplug').classList.toggle('active', trickUnplugActive);
+                
+                // Dim the connector visually to simulate unplugged state
+                const housing = document.getElementById('connectorHousing');
+                if (trickUnplugActive) {
+                    housing.style.opacity = '0.35';
+                    housing.style.pointerEvents = 'none';
+                    if (trickShortActive) toggleTrick('short'); // cancel conflicting short
+                } else {
+                    housing.style.opacity = '1';
+                    housing.style.pointerEvents = 'auto';
+                }
+            } 
+            else if (trickName === 'short') {
+                trickShortActive = !trickShortActive;
+                document.getElementById('btn-trick-short').classList.toggle('active', trickShortActive);
+                if (trickShortActive && trickUnplugActive) {
+                    toggleTrick('unplug'); // cancel conflicting unplug
+                }
+            }
+            else if (trickName === 'drift') {
+                trickDriftActive = !trickDriftActive;
+                document.getElementById('btn-trick-drift').classList.toggle('active', trickDriftActive);
+            }
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function calculateVoltage() {
+            if (trickUnplugActive) {
+                let v = 0.00;
+                if (selectedRedPin === 1) v = 0.00; 
+                if (selectedRedPin === 2) v = 5.01;  // Unplugged SIG pulls up to absolute 5.00V
+                document.getElementById('dmmValue').innerText = v.toFixed(2);
+                return;
+            }
+
+            if (trickShortActive) {
+                let v = 0.00;
+                if (selectedRedPin === 1) v = 0.02; 
+                if (selectedRedPin === 2) v = 0.02;  // Short to GND pulls SIG line directly to 0V
+                document.getElementById('dmmValue').innerText = v.toFixed(2);
+                return;
+            }
+
+            let refOff = getActiveDatabase()[currentEngineState];
+            let vRed = 0;
+            let vBlack = 0;
+
+            if (selectedRedPin && refOff[selectedRedPin] !== undefined) {
+                vRed = refOff[selectedRedPin];
+            }
+
+            // Drifted sensor shift
+            if (trickDriftActive && selectedRedPin === 2) {
+                vRed += 0.85; // shift sensor reading high (tricks ECU into thinking engine is hotter than it actually is)
+            }
+
+            if (selectedBlackPin !== 'ground') {
+                vBlack = refOff[selectedBlackPin] || 0;
+            }
+
+            let difference = vRed - vBlack;
+            if (difference < 0) difference = Math.abs(difference);
+
+            document.getElementById('dmmValue').innerText = difference.toFixed(2);
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#8b5a2b', 2: '#00a8ff' };
+
+            for (let i = 1; i <= 2; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-brown)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-blue)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            document.querySelectorAll('.pin-terminal').forEach(el => { el.classList.remove('selected-red'); });
+            selectedRedPin = pinNumber;
+            document.getElementById(`pin-${pinNumber}`).classList.add('selected-red');
+
+            const names = {
+                1: 'Pin 1 (Masse de référence capteur GND)',
+                2: 'Pin 2 (Ligne de retour signal tension SIG)'
+            };
+            document.getElementById('selected-red-label').innerText = names[pinNumber];
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function changeEngineState(state) {
+            currentEngineState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-state-${state}`).classList.add('active');
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function changeArchitecture(arch) {
+            currentArchitecture = arch;
+            document.querySelectorAll('.arch-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-arch-${arch}`).classList.add('active');
+
+            // DOM Label Updates
+            const pullupText = document.getElementById('pullup-resistor-label');
+            if(pullupText) {
+                pullupText.textContent = arch === 'switching' ? "RL = Commutation (4K/350R)" : "RL = 2000 Ohms (Standard)";
+            }
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if(panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        // Live Scanner Data Core Engine
+        function updateLiveScannerData() {
+            let rpmEl = document.getElementById('live-rpm-g');
+            let tempEl = document.getElementById('live-temp-g');
+            let resEl = document.getElementById('live-res-g');
+            let voltEl = document.getElementById('live-volt-g');
+            let pullupEl = document.getElementById('live-pullup-g');
+            let fanEl = document.getElementById('live-fan-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!rpmEl) return;
+
+            rpmEl.innerText = "750 RPM";
+
+            // Handle UNPLUGGED TRICK
+            if (trickUnplugActive) {
+                tempEl.innerText = "-40 °C";
+                resEl.innerText = "Infini (O.L)";
+                voltEl.innerText = "5.01 V";
+                pullupEl.innerText = "4000 Ohm";
+                fanEl.innerText = "100 % (Vitesse Maxi Urgence)";
+                dtcEl.innerText = "P0118 - ENGINE COOLANT TEMPERATURE SENSOR CIRCUIT HIGH";
+                dtcEl.style.color = "var(--neon-red)";
+                expEl.innerHTML = "<strong>🔥 FAZET L-MOUSTACH (Test Fiche Débranchée / Safe Mode) :</strong><br><br>• <strong>Sécurité Absolue (Safe Mode) :</strong> En débranchant la fiche, la tension de signal monte à 5.00V. Le calculateur détecte immédiatement un circuit ouvert. N'ayant plus de repère de température, il applique une valeur par défaut de sécurité de -40°C et, par peur d'un coup de chauffe destructeur, **déclenche instantanément les ventilateurs à 100% de leur vitesse maximale** et désactive le compresseur de clim ! Un excellent test pour valider le relais de ventilateur.";
+                return;
+            }
+
+            // Handle SHORT CIRCUIT TRICK
+            if (trickShortActive) {
+                tempEl.innerText = "140 °C";
+                resEl.innerText = "0 Ohm";
+                voltEl.innerText = "0.02 V";
+                pullupEl.innerText = "Switch à 350 Ohm";
+                fanEl.innerText = "100 % (Alerte Surchauffe)";
+                dtcEl.innerText = "P0117 - ENGINE COOLANT TEMPERATURE SENSOR CIRCUIT LOW / SHORT TO GND";
+                dtcEl.style.color = "var(--neon-red)";
+                expEl.innerHTML = "<strong>🔥 FAZET L-MOUSTACH (Court-Circuit à la Masse) :</strong><br><br>• <strong>Court-circuit franc :</strong> Le fil de signal touche la carrosserie ou le capteur a fondu à l'intérieur. La tension s'écroule à 0V. Le calculateur l'interprète comme une surchauffe extrême (140°C). Il allume le témoin rouge STOP au tableau de bord et force les motoventilateurs à tourner à fond sous le code <b>P0117</b>.";
+                return;
+            }
+
+            // Handle DRIFT/DECALAGE TRICK
+            if (trickDriftActive) {
+                let currentTemp = currentEngineState === 'cold' ? "35 °C" : (currentEngineState === 'warm' ? "85 °C" : "115 °C");
+                let currentDtc = currentEngineState === 'hot' ? "P0116 - RANGE/PERFORMANCE FAILURE" : "NO FAULT";
+                
+                tempEl.innerText = currentTemp + " (Fausse Valeur)";
+                resEl.innerText = currentEngineState === 'cold' ? "1500 Ohm" : (currentEngineState === 'warm' ? "300 Ohm" : "120 Ohm");
+                voltEl.innerText = currentEngineState === 'cold' ? "4.15 V" : (currentEngineState === 'warm' ? "3.65 V" : "1.20 V");
+                pullupEl.innerText = currentEngineState === 'cold' ? "4000 Ohm" : "350 Ohm";
+                fanEl.innerText = currentEngineState === 'hot' ? "85 %" : "0 %";
+                dtcEl.innerText = currentDtc;
+                if (currentEngineState === 'hot') dtcEl.style.color = "var(--neon-red)";
+                
+                expEl.innerHTML = "<strong>🔥 FAZET L-MOUSTACH (Résistance décalée / Capteur dérive) :</strong><br><br>• <strong>La dérive thermique :</strong> C'est la panne la plus fourbe ! Le capteur n'est ni coupé ni en court-circuit. Sa courbe de résistance a glissé (Drift). Le moteur est froid à 0°C mais le capteur dit à l'ECU qu'il fait déjà 35°C. Le calculateur injecte trop peu d'essence (mélange trop pauvre), provoquant des ratés et un démarrage à froid très difficile !";
+                return;
+            }
+
+            // Normal operation stats
+            if (currentEngineState === 'cold') {
+                tempEl.innerText = "0 °C";
+                resEl.innerText = "5500 Ohm";
+                voltEl.innerText = "4.15 V";
+                pullupEl.innerText = "4000 Ohm";
+                fanEl.innerText = "0 %";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🔴 État: Moteur Très Froid (Démarrage à Froid)</strong><br><br>• <strong>Haute Résistance :</strong> La résistance est élevée (5500 Ohms). La tension du signal est haute (4.15V). L'ECU calcule cette valeur et enrichit massivement l'injection (effet starter) pour faciliter le démarrage à froid.";
+            } 
+            else if (currentEngineState === 'warm') {
+                tempEl.innerText = "45 °C";
+                resEl.innerText = "1200 Ohm";
+                
+                if (currentArchitecture === 'switching') {
+                    voltEl.innerText = "3.65 V (Switché)";
+                    pullupEl.innerText = "350 Ohm (Basse résistance)";
+                    expEl.innerHTML = "<strong>🟢 État: Moteur Tiède (Active Switching d'ECU)</strong><br><br>• <strong>Le Secret Technique :</strong> À 40°C, la tension sur un Pull-up classique de 4000 Ohms descendrait à 1.10V, laissant une faible précision pour la suite. Le calculateur bascule donc électroniquement sa résistance interne de Pull-Up sur **350 Ohms**. La tension remonte d'un coup à 3.65V ! Le calculateur s'offre ainsi une échelle de précision énorme pour surveiller la plage critique de 70°C à 110°C.";
+                } else {
+                    voltEl.innerText = "2.30 V";
+                    pullupEl.innerText = "2000 Ohm (Fixe)";
+                    expEl.innerHTML = "<strong>🟢 État: Moteur Tiède (Ligne standard)</strong><br><br>• <strong>Ligne classique :</strong> Pas de commutation de résistance. La tension baisse normalement à 2.30V selon la décroissance pure de la CTN.";
+                }
+                fanEl.innerText = "0 %";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+            } 
+            else if (currentEngineState === 'hot') {
+                tempEl.innerText = "90 °C";
+                resEl.innerText = "240 Ohm";
+                voltEl.innerText = currentArchitecture === 'switching' ? "2.00 V" : "0.45 V";
+                pullupEl.innerText = currentArchitecture === 'switching' ? "350 Ohm" : "2000 Ohm";
+                fanEl.innerText = "25 % (Première vitesse active)";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🚀 État: Moteur Chaud (Régulation Thermique)</strong><br><br>• <strong>Température de fonctionnement :</strong> À 90°C, la résistance s'est écroulée à 240 Ohms. L'ECU détecte la stabilisation thermique. Si la température franchit 95°C, il commence à piloter le relais ou module de ventilateur en PWM (25%) pour stabiliser l'eau.";
+            }
+        }
+
+        // ====================================================
+        // OSCILLOSCOPE INTERACTIF
+        // ====================================================
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let voltScale = 1.0;
+        let timeScale = 5;
+        let isAnimating = false;
+        let animProgress = 0;
+        let scopeInterval = null;
+
+        function updateScopeParameters() {
+            voltScale = parseFloat(document.getElementById('ctrlVolts').value);
+            timeScale = parseInt(document.getElementById('ctrlTime').value);
+            document.getElementById('voltsDivLabel').innerText = `Y: ${voltScale.toFixed(1)} V / Div`;
+            document.getElementById('timeDivLabel').innerText = `X: ${timeScale.toFixed(1)} s / Div`;
+            drawScope();
+        }
+
+        function drawScope() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const width = canvas.width || 500;
+            const height = canvas.height || 250;
+            const numDivsX = 10;
+            const numDivsY = 6;
+            const gridSpacingX = width / numDivsX;
+            const gridSpacingY = height / numDivsY;
+
+            ctx.strokeStyle = '#122525';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= numDivsX; i++) {
+                ctx.beginPath(); ctx.moveTo(i * gridSpacingX, 0); ctx.lineTo(i * gridSpacingX, height); ctx.stroke();
+            }
+            for (let i = 0; i <= numDivsY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, i * gridSpacingY); ctx.lineTo(width, i * gridSpacingY); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#1e4040';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+            ctx.stroke();
+
+            function voltToY(volts, offset = 0) {
+                const maxVoltsRepresented = numDivsY * voltScale;
+                return height - ((volts + offset) / maxVoltsRepresented) * height;
+            }
+
+            if (!isAnimating) {
+                // Static traces at rest
+                let db = getActiveDatabase()[currentEngineState];
+                let signVal = db[2];
+
+                if (trickUnplugActive) signVal = 5.01;
+                if (trickShortActive) signVal = 0.02;
+                if (trickDriftActive) signVal += 0.85;
+
+                // Trace 1 (Signal ECT - Cyan)
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(0, voltToY(signVal, 0));
+                ctx.lineTo(width, voltToY(signVal, 0));
+                ctx.stroke();
+
+                // Trace 2 (Fan PWM - Pink)
+                ctx.strokeStyle = '#ff33cc';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                let fanRest = (currentEngineState === 'hot' || trickUnplugActive || trickShortActive) ? 4.50 : 0.00;
+                ctx.moveTo(0, voltToY(fanRest / 4.0, 1.0)); 
+                ctx.lineTo(width, voltToY(fanRest / 4.0, 1.0));
+                ctx.stroke();
+            } else {
+                // Dynamic traces simulating progressive warming
+                let samplesSIG = [];
+                let samplesFAN = [];
+                const step = 2;
+
+                for (let x = 0; x < width; x += step) {
+                    let tS = (x / width) * (timeScale * numDivsX);
+                    let progress = Math.min(tS / (timeScale * numDivsX), 1.0); // 0 to 1 representing time
+
+                    let valSIG = 4.15; // start cold (4.15V)
+                    let valFAN = 0.0;
+
+                    if (trickUnplugActive) {
+                        valSIG = 5.01;
+                        valFAN = 12.0; // max safe speed
+                    } 
+                    else if (trickShortActive) {
+                        valSIG = 0.02;
+                        valFAN = 12.0;
+                    } 
+                    else {
+                        // Linear cooling simulation
+                        if (currentArchitecture === 'switching') {
+                            if (progress < 0.4) {
+                                // Temperature rising, volt going down (4.15V to ~2.2V)
+                                valSIG = 4.15 - (4.87 * progress);
+                            } else if (progress >= 0.4 && progress < 0.43) {
+                                // Jump occurs at 40% of sweep (ECU Pull-up Commutates!)
+                                let jumpProgress = (progress - 0.4) / 0.03; // 0 to 1
+                                valSIG = 2.20 + (1.45 * jumpProgress); // Jumps up!
+                            } else {
+                                // Continues decrease on the higher accuracy scale
+                                let afterProgress = (progress - 0.43) / 0.57;
+                                valSIG = 3.65 - (2.45 * afterProgress);
+                            }
+                        } else {
+                            // Standard line: smooth non-stop drop from 4.15V to 0.45V
+                            valSIG = 4.15 - (3.70 * progress);
+                        }
+
+                        if (trickDriftActive) valSIG += 0.85;
+
+                        // Fan command starts triggering as we cross 95% of progress (representing hot temperature > 95°C)
+                        if (progress > 0.9) {
+                            valFAN = 4.0; // 35% speed pulse
+                        }
+                    }
+
+                    samplesSIG.push({ x: x, y: voltToY(valSIG, 0) });
+                    samplesFAN.push({ x: x, y: voltToY(valFAN / 4.0, 1.0) });
+                }
+
+                // Render Trace 1 (Signal ECT) - Cyan
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = 'rgba(0, 255, 204, 0.5)';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 2.5;
+                if (samplesSIG.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(samplesSIG[0].x, samplesSIG[0].y);
+                    for (let j = 0; j < samplesSIG.length; j++) {
+                        if (samplesSIG[j].x < animProgress) {
+                            ctx.lineTo(samplesSIG[j].x, samplesSIG[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+
+                // Render Trace 2 (Ventilateur PWM) - Pink
+                ctx.strokeStyle = '#ff33cc';
+                ctx.shadowColor = 'rgba(255, 51, 204, 0.5)';
+                ctx.lineWidth = 2.0;
+                if (samplesFAN.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(samplesFAN[0].x, samplesFAN[0].y);
+                    for (let j = 0; j < samplesFAN.length; j++) {
+                        if (samplesFAN[j].x < animProgress) {
+                            ctx.lineTo(samplesFAN[j].x, samplesFAN[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function triggerSnapThrottle() {
+            if (isAnimating) return;
+            isAnimating = true;
+            animProgress = 0;
+            changeEngineState('hot'); // targets hot temperature at the end
+
+            if (scopeInterval) clearInterval(scopeInterval);
+            const startTime = Date.now();
+            const duration = 2500; // time animation
+
+            scopeInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                animProgress = (elapsed / duration) * canvas.width;
+
+                let representedTime = (animProgress / canvas.width) * (timeScale * 10);
+                let db = getActiveDatabase();
+
+                if (trickUnplugActive) {
+                    document.getElementById('dmmValue').innerText = selectedRedPin === 2 ? "5.01" : "0.00";
+                } 
+                else if (trickShortActive) {
+                    document.getElementById('dmmValue').innerText = "0.02";
+                }
+                else if (representedTime < (timeScale * 3)) {
+                    document.getElementById('dmmValue').innerText = db['cold'][selectedRedPin].toFixed(2);
+                } else if (representedTime >= (timeScale * 3) && representedTime < (timeScale * 7)) {
+                    document.getElementById('dmmValue').innerText = db['warm'][selectedRedPin].toFixed(2);
+                } else {
+                    document.getElementById('dmmValue').innerText = db['hot'][selectedRedPin].toFixed(2);
+                }
+
+                drawScope();
+
+                if (elapsed >= duration) {
+                    clearInterval(scopeInterval);
+                    isAnimating = false;
+                    changeEngineState('hot');
+                }
+            }, 30);
+        }
+
+        window.onload = function() {
+            canvas.width = canvas.offsetWidth || 500;
+            canvas.height = canvas.offsetHeight || 250;
+            selectPin(1);
+            updateScopeParameters();
+        };
+    </script>
+</body>
+</html>

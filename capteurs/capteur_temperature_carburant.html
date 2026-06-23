@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Capteur Température Carburant (FTS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #060909;
+            --panel-bg: #0f1414;
+            --border-color: #1a2525;
+            --neon-blue: #00d9ff;
+            --neon-glow-blue: rgba(0, 217, 255, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #9cb1b1;
+            --screen-bg: #030707;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        /* Tech Panels styling */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-blue);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-blue);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Multimeter styling */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ffaa00;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Wiring diagram pin selections */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 15px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 35px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CLIP VERROU';
+            position: absolute;
+            top: -10px; left: calc(50% - 40px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 60px;
+            height: 56px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px var(--neon-glow-blue);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Selectors and Control Styles */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .state-btn.active {
+            background: var(--neon-blue);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow-blue);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-amber);
+            color: #080b0b;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+        }
+
+        /* Thermometer visual elements */
+        .thermo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            background: #0a0e0e;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+        }
+
+        /* Tech table */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #121d1d;
+            color: var(--neon-blue);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 217, 255, 0.02);
+        }
+
+        .instruction-box {
+            background: #101616;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        .badge-normal {
+            background: var(--neon-blue);
+            color: black;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-[1200px] mx-auto">
+        
+        <!-- INTRO PANEL (FULL WIDTH) -->
+        <div class="panel col-span-1 lg:col-span-2">
+            <h3 class="panel-title">🌡️ Diagnostic Interactif - Capteur Température Carburant (FTS - NTC)</h3>
+            <p class="m-0 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                Maîtrisez le diagnostic du capteur de température de carburant (Thermistance NTC à 2 fils)[cite: 1]. Ce paramètre est lent et ne nécessite pas d'oscilloscope. Utilisez le multimètre virtuel pour analyser l'évolution de la tension pull-up 5V en fonction de la température et identifier les pannes de faisceau courantes (coupure, court-circuit, chute de tension).
+            </p>
+        </div>
+
+        <!-- STATE SELECTORS -->
+        <div class="panel col-span-1 lg:col-span-2 panel-amber">
+            <h3 class="panel-title panel-title-amber"><span class="text-[--neon-amber]">🛠️</span> Sélectionner la Panne Active sur le Faisceau</h3>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-scen-normal" onclick="selectScenario('normal')">1. Système Conforme (OK)</button>
+                <button class="arch-btn" id="btn-scen-open" onclick="selectScenario('open')">2. Circuit Ouvert (Fil Coupé / Débranché)</button>
+                <button class="arch-btn" id="btn-scen-short" onclick="selectScenario('short')">3. Court-Circuit à la Masse (GND)</button>
+                <button class="arch-btn" id="btn-scen-offset" onclick="selectScenario('offset')">4. Résistance de Masse (+0.5V Offset)</button>
+            </div>
+        </div>
+
+        <!-- LEFT COLUMN: DIAGNOSTIC BENCH & MULTIMETER -->
+        <div class="panel">
+            <h3 class="panel-title"><span class="text-[--neon-amber]">⚡</span> Banc de Test et Multimètre</h3>
+            
+            <!-- Step 1: Simulated Fuel Temp State -->
+            <div class="control-group mb-2">
+                <label style="color: var(--neon-amber);">Étape 1 : Choisir la température réelle du carburant</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-cold" onclick="changeState('cold')">Carburant Froid (20°C)</button>
+                <button class="state-btn" id="btn-state-warm" onclick="changeState('warm')">Moteur Tiède (50°C)</button>
+                <button class="state-btn" id="btn-state-hot" onclick="changeState('hot')">Surchauffe Retour (80°C)</button>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consigne de diagnostic :</strong> Cliquez sur une des broches du connecteur du <b>capteur de température (FTS)</b> pour brancher la sonde rouge (+) du multimètre. La sonde noire (-) reste branchée à la masse carrosserie.
+            </div>
+
+            <!-- Multimeter & Connector layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                
+                <!-- Multimeter UI -->
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial" id="dmmDial" style="transform: rotate(30deg);">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <!-- 2-Pin Connector Layout -->
+                <div class="flex flex-col items-center gap-4 w-full">
+                    <div class="wiring-diagram w-full">
+                        <label class="text-[10px] font-bold uppercase mb-4 text-[#9cb1b1]" id="connectorLabel">Connecteur Capteur FTS</label>
+                        <div class="connector-housing" id="connectorHousing">
+                            <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                                <span class="pin-num">1</span>
+                                <div class="pin-hole"></div>
+                                <span class="text-[8px] opacity-40">5V / SIG</span>
+                            </div>
+                            <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                                <span class="pin-num">2</span>
+                                <div class="pin-hole"></div>
+                                <span class="text-[8px] opacity-40">MASSE</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Pinout Specifications Table -->
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Pin</th>
+                        <th style="width: 45%;">Rôle du Fil</th>
+                        <th style="width: 40%;">Valeur attendue (Système OK)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td>Alimentation +5V Référence &amp; Signal retour (Pull-up ECU)[cite: 1]</td>
+                        <td><strong>3.80V</strong> à 20°C (froid) et descend vers <strong>1.00V</strong> à 80°C (chaud)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td>Retour de masse capteur (GND gérée par l'ECU)[cite: 1]</td>
+                        <td>Proche de la masse absolue : &lt; 0.05 V[cite: 1]</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- RIGHT COLUMN: DYNAMIC INDICATORS & SCHEMATIC -->
+        <div class="panel">
+            <h3 class="panel-title"><span class="text-[--neon-blue]">📊</span> Indicateurs Thermiques &amp; Densité Carburant</h3>
+            
+            <div class="flex flex-col gap-4">
+                
+                <!-- Thermometer & State View -->
+                <div class="thermo-container">
+                    <svg width="60" height="180" viewBox="0 0 60 180" class="block">
+                        <!-- Thermometer background -->
+                        <rect x="25" y="10" width="10" height="130" rx="5" fill="#1b2525" />
+                        <circle cx="30" cy="150" r="18" fill="#1b2525" />
+                        
+                        <!-- Red active fluid thermometer -->
+                        <rect id="thermoFluid" x="27" y="100" width="6" height="50" rx="3" fill="#ff3333" style="transition: all 0.5s ease;"/>
+                        <circle cx="30" cy="150" r="14" fill="#ff3333" />
+                        
+                        <!-- Scale marks -->
+                        <line x1="40" y1="30" x2="45" y2="30" stroke="#9cb1b1" stroke-width="1.5" />
+                        <text x="50" y="33" fill="#9cb1b1" font-size="8" font-family="monospace">80°C</text>
+
+                        <line x1="40" y1="75" x2="45" y2="75" stroke="#9cb1b1" stroke-width="1.5" />
+                        <text x="50" y="78" fill="#9cb1b1" font-size="8" font-family="monospace">50°C</text>
+
+                        <line x1="40" y1="120" x2="45" y2="120" stroke="#9cb1b1" stroke-width="1.5" />
+                        <text x="50" y="123" fill="#9cb1b1" font-size="8" font-family="monospace">20°C</text>
+                    </svg>
+
+                    <div class="flex-1 flex flex-col gap-3">
+                        <div class="bg-[#050707] p-4 rounded-lg border border-[#172222]">
+                            <span class="text-[10px] font-bold text-[#9cb1b1] block uppercase">Température Réelle</span>
+                            <span class="text-2xl font-black text-[--neon-blue]" id="textRealTemp">20°C</span>
+                        </div>
+
+                        <div class="bg-[#050707] p-4 rounded-lg border border-[#172222]">
+                            <span class="text-[10px] font-bold text-[#9cb1b1] block uppercase">Valeur Résistance Interne (NTC)</span>
+                            <span class="text-xl font-black text-[--neon-amber]" id="textResistance">~2500 Ω</span>
+                        </div>
+
+                        <div class="bg-[#050707] p-4 rounded-lg border border-[#172222]">
+                            <span class="text-[10px] font-bold text-[#9cb1b1] block uppercase">Calcul de Densité (Impact ECU)</span>
+                            <span class="text-xs leading-relaxed" id="textDensityImpact">
+                                Température basse = Carburant dense. L'ECU calcule un volume d'injection optimal pour maintenir le rapport stœchiométrique.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Static NTC Visualizer -->
+                <div class="bg-[#050707] border border-[#172222] rounded-lg p-4">
+                    <span class="text-xs font-bold text-[--neon-blue] block mb-3 uppercase">🔍 Rappel Technique : Comportement Thermistance NTC</span>
+                    <svg viewBox="0 0 400 120" class="w-full h-auto block">
+                        <!-- Curve grid -->
+                        <path d="M 30,10 L 30,110 L 390,110" stroke="#1c2525" stroke-width="1.5" fill="none" />
+                        <text x="25" y="15" fill="#555" font-size="8" text-anchor="end">R (Ω)</text>
+                        <text x="380" y="118" fill="#555" font-size="8" text-anchor="middle">Temp (°C)</text>
+                        
+                        <!-- NTC Curve -->
+                        <path d="M 40,20 Q 80,100 370,105" stroke="var(--neon-amber)" stroke-dasharray="3,3" stroke-width="1.5" fill="none" />
+                        
+                        <!-- Dots indicating current selected state -->
+                        <circle id="chartPointCold" cx="60" cy="50" r="5" fill="#ffaa00" style="display:none;"/>
+                        <circle id="chartPointWarm" cx="120" cy="85" r="5" fill="#ffaa00" style="display:none;"/>
+                        <circle id="chartPointHot" cx="240" cy="101" r="5" fill="#ffaa00" style="display:none;"/>
+                        
+                        <!-- Labels inside chart -->
+                        <text x="70" y="45" fill="#9cb1b1" font-size="8" id="chartLabelCold" style="display:none;">20°C: Forte Résistance (~2.5kΩ)</text>
+                        <text x="130" y="80" fill="#9cb1b1" font-size="8" id="chartLabelWarm" style="display:none;">50°C: Résistance Moyenne (~800Ω)</text>
+                        <text x="250" y="95" fill="#9cb1b1" font-size="8" id="chartLabelHot" style="display:none;">80°C: Faible Résistance (~250Ω)</text>
+                    </svg>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- INTERACTIVE WIRING DIAGRAM PANEL -->
+        <div class="panel col-span-1 lg:col-span-2">
+            <h3 class="panel-title" style="color: var(--neon-amber);">🔌 Schéma Électrique Interactif (Pull-up d'entrée ECU)</h3>
+            <p class="m-0 mb-4 text-xs" style="color: var(--text-secondary);">
+                Le capteur de température carburant est monté sur la ligne de retour basse pression[cite: 1]. La tension de 5V traverse une résistance fixe de pull-up interne à l'ECU avant d'arriver au capteur[cite: 1]. Observez comment la tension varie selon le diviseur résistif.
+            </p>
+
+            <svg id="wiringSvg" viewBox="0 0 500 240" class="w-full h-auto bg-[#050707] border border-[#172222] rounded-lg block">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#0e1414" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- ENGINE ECU BLOCK -->
+                <rect x="340" y="30" width="140" height="180" rx="4" fill="#131a1a" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="410" y="50" fill="#a0b2b2" font-size="9" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+                
+                <!-- ECU INTERNAL CIRCUITS -->
+                <!-- 5V Source -->
+                <circle cx="410" cy="80" r="3" fill="#ffaa00" />
+                <text x="420" y="83" fill="#ffaa00" font-size="8">Réf 5.00 V</text>
+                
+                <!-- Internal Pull-up resistor -->
+                <path d="M 410,83 L 410,105 L 405,107 L 415,111 L 405,115 L 415,119 L 410,121 L 410,130" fill="none" stroke="#9cb1b1" stroke-width="1.5" />
+                <text x="425" y="115" fill="#9cb1b1" font-size="7">Pull-up 1kΩ</text>
+                
+                <!-- Signal Tap point going to analog digital converter -->
+                <line x1="410" y1="130" x2="450" y2="130" stroke="#00d9ff" stroke-width="1.5" />
+                <rect x="450" y="123" width="20" height="14" fill="#0d1212" stroke="#00d9ff" stroke-width="1" />
+                <text x="460" y="132" fill="#00d9ff" font-size="7" text-anchor="middle">ADC</text>
+
+                <!-- CAPTEUR FUEL TEMPERATURE ON HP RETURN LINE -->
+                <rect x="130" y="80" width="130" height="100" rx="6" fill="#0d1212" stroke="#00d9ff" stroke-width="2" />
+                <text x="195" y="125" fill="#00d9ff" font-size="10" font-weight="bold" text-anchor="middle">CAPTEUR FTS (NTC)</text>
+                <text x="195" y="140" fill="#a0b2b2" font-size="7" text-anchor="middle">(Sur rampe de retour)</text>
+
+                <!-- NTC Thermistor Symbol inside sensor -->
+                <path d="M 180,105 L 210,105 L 215,100 L 220,110 L 225,100 L 230,110 L 235,105" fill="none" stroke="#ffaa00" stroke-width="1.5" style="transform: rotate(45deg); transform-origin: 195px 105px;"/>
+
+                <!-- TERMINAL PINS DOTS -->
+                <circle cx="145" cy="90" r="4" fill="#ff3333" id="svg-pin-1" />
+                <text x="145" y="102" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                <circle cx="245" cy="90" r="4" fill="#7a5230" id="svg-pin-2" />
+                <text x="245" y="102" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                <!-- WIRES PATHWAYS -->
+                <!-- Wire 1: Reference 5V / Signal shared -->
+                <path id="wire-1" d="M 410,130 L 340,130 L 290,130 L 290,75 L 145,75 L 145,86" fill="none" stroke="#ff3333" stroke-width="2" />
+                <text x="330" y="125" fill="#ff3333" font-size="7" text-anchor="end">Fil Signal &amp; Pull-up 5V</text>
+
+                <!-- Wire 2: Sensor Ground -->
+                <path id="wire-2" d="M 245,86 L 245,70 L 100,70 L 100,200" fill="none" stroke="#7a5230" stroke-width="2" />
+                <!-- Ground symbol -->
+                <path d="M 90,200 L 110,200 M 94,204 L 106,204 M 98,208 L 102,208" stroke="#7a5230" stroke-width="1.5" />
+                <text x="100" y="220" fill="#7a5230" font-size="8" font-weight="bold" text-anchor="middle">MASSE</text>
+
+                <!-- High-Pressure pump returning fuel flow line -->
+                <path d="M 50,130 L 130,130" stroke="#ffaa00" stroke-width="3" stroke-dasharray="3,3" />
+                <text x="80" y="120" fill="#ffaa00" font-size="7" text-anchor="middle">RETOUR HP</text>
+            </svg>
+        </div>
+
+        <!-- ADVICE & TROUBLESHOOTING GUIDE -->
+        <div class="panel col-span-1 lg:col-span-2 panel-red">
+            <h3 class="panel-title panel-title-red">🛑 Stratégies Avancées de Diagnostic Température (ScannerDanner Mindset)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm leading-relaxed" id="adviceContainer">
+                <!-- Loaded dynamically depending on scenario -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentScenario = 'normal'; // normal, open, short, offset
+        let currentState = 'cold'; // cold, warm, hot
+        let selectedPin = 1;
+
+        // DATABASE: NTC Thermistor Standard Spec with internal 1k pull-up on 5V supply
+        const DB_NORMAL = {
+            cold: { 1: 3.57, 2: 0.01, resistance: 2500, temp: 20 }, // 2.5k ohm FTS resistance
+            warm: { 1: 2.22, 2: 0.02, resistance: 800, temp: 50 },  // 800 ohm FTS resistance
+            hot:  { 1: 1.00, 2: 0.04, resistance: 250, temp: 80 }   // 250 ohm FTS resistance
+        };
+
+        const DB_OPEN_CIRCUIT = {
+            cold: { 1: 5.00, 2: 0.00, resistance: Infinity, temp: -40 }, // Pulls all the way to 5V!
+            warm: { 1: 5.00, 2: 0.00, resistance: Infinity, temp: -40 },
+            hot:  { 1: 5.00, 2: 0.00, resistance: Infinity, temp: -40 }
+        };
+
+        const DB_SHORT_TO_GND = {
+            cold: { 1: 0.00, 2: 0.00, resistance: 0, temp: 130 }, // Drops completely to 0V!
+            warm: { 1: 0.00, 2: 0.00, resistance: 0, temp: 130 },
+            hot:  { 1: 0.00, 2: 0.00, resistance: 0, temp: 130 }
+        };
+
+        const DB_GROUND_FAULT = {
+            // High Ground Offset (+0.5V). Decals the pull-up baseline
+            cold: { 1: 3.78, 2: 0.50, resistance: 2500, temp: 12 }, 
+            warm: { 1: 2.65, 2: 0.52, resistance: 800, temp: 41 },
+            hot:  { 1: 1.48, 2: 0.55, resistance: 250, temp: 68 }
+        };
+
+        // ====================================================
+        // SCENARIO SELECTION HANDLER
+        // ====================================================
+        function selectScenario(scenario) {
+            currentScenario = scenario;
+            selectedPin = 1;
+
+            // Toggle active state on buttons
+            document.getElementById('btn-scen-normal').classList.toggle('active', scenario === 'normal');
+            document.getElementById('btn-scen-open').classList.toggle('active', scenario === 'open');
+            document.getElementById('btn-scen-short').classList.toggle('active', scenario === 'short');
+            document.getElementById('btn-scen-offset').classList.toggle('active', scenario === 'offset');
+
+            injectPinsUI();
+            injectDynamicExplsAndTroubleshooting();
+            updateSimulation();
+        }
+
+        function injectPinsUI() {
+            const housing = document.getElementById('connectorHousing');
+            housing.innerHTML = `
+                <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                    <span class="pin-num">1</span>
+                    <div class="pin-hole"></div>
+                    <span class="text-[8px] opacity-40">5V_REF</span>
+                </div>
+                <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                    <span class="pin-num">2</span>
+                    <div class="pin-hole"></div>
+                    <span class="text-[8px] opacity-40">S_GND</span>
+                </div>
+            `;
+        }
+
+        function injectDynamicExplsAndTroubleshooting() {
+            const adviceContainer = document.getElementById('adviceContainer');
+
+            if (currentScenario === 'normal') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-normal">ScannerDanner : Comprendre le circuit de Pull-up</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Fait d'atelier :</b> Sur un capteur à 2 fils, la tension de référence (5V) et la ligne de retour d'information partagent le <b>même fil (Pin 1)</b>[cite: 1]. C'est la résistance interne du capteur (FTS) qui, en chauffant, met ce signal à la masse par le Pin 2[cite: 1]. Si vous débranchez le capteur, la tension sur le connecteur côté faisceau doit s'envoler directement à <b>5.00V</b>[cite: 1].
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-normal">Pourquoi mesurer à froid et à chaud ?</span>
+                        <p style="color: var(--text-secondary);">
+                            Une thermistance NTC voit sa résistance chuter drastiquement quand elle chauffe[cite: 1]. À froid (20°C), elle oppose une forte barrière (~2.5kΩ)[cite: 1], le signal reste haut à **3.57V**. À chaud (80°C), elle s'ouvre (~250Ω), le signal s'écrase vers la masse à **1.00V**.
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'open') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">Code OBD : P0183 - Température carburant trop haute (Circuit Ouvert)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Symptôme flagrant :</b> Le fil de signal est sectionné ou le connecteur est cassé. L'ECU ne voit aucune mise à la masse, le voltmètre affiche **5.00V constant sur le Pin 1**[cite: 1] quelle que soit la température. Le scanner affiche une valeur par défaut absurde de **-40°C**.
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Le "Bypass Test" de Paul Danner</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Astuce suprême :</b> Pour savoir si c'est le capteur ou le faisceau/ECU qui est en panne : prenez un fil volant (shunt) et court-circuitez directement les bornes 1 et 2 du connecteur côté faisceau. Si la tension s'effondre de 5.0V à 0.0V et que le scanner bascule de -40°C à +130°C, cela prouve que le faisceau est intact et que <b>le capteur interne est défectueux</b>.
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'short') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">Code OBD : P0182 - Signal trop bas (Court-circuit à la Masse)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Symptôme :</b> Le fil d'alimentation/signal touche directement le bloc moteur ou un autre blindage métallique. La tension chute directement à **0.00V** sur le Pin 1, et l'ECU estime que le carburant bout à plus de **+130°C**. L'injection est déséquilibrée car le calculateur croit que le carburant est infiniment léger.
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Méthode de traçage rapide</span>
+                        <p style="color: var(--text-secondary);">
+                            Débranchez le capteur. Si la tension sur le Pin 1 reste désespérément bloquée à **0V** au lieu de remonter à 5V, la mise à la masse se fait dans le faisceau d'alimentation. Débranchez également le gros connecteur de l'ECU : si le fil sonne encore en continuité à la masse avec votre ohmmètre, vous avez un fil pincé contre le châssis !
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'offset') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">La Chute de Tension Invisible (GND Offset)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Panne sournoise :</b> La masse du capteur (Pin 2) est corrodée ou l'ECU a un composant fatigué, laissant la masse flotter à **+0.50V** sous charge au lieu de ~0V[cite: 1]. Conséquence : toute la courbe pull-up est surélevée. Le capteur indique par exemple 2.65V (signifiant ~40°C) alors que le mazout est réellement à 50°C.
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Démonstration mathématique de ScannerDanner</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Test clé :</b> Ne mesurez jamais la masse en retirant le connecteur. Laissez le capteur branché (Backprobe ou fil dénudé) et mesurez la tension entre la broche 2 de masse et la masse brute de la batterie. Si vous lisez plus de **0.1V**, la chute de tension fausse la calculatrice de l'ECU de plus de 10°C, ce qui peut causer des instabilités de ralenti à chaud !
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // ====================================================
+        // INTERACTIVE STATE CONTROLS
+        // ====================================================
+        function selectPin(pinNum) {
+            selectedPin = pinNum;
+            document.querySelectorAll('.pin-terminal').forEach(el => {
+                el.classList.remove('selected-red');
+            });
+            document.getElementById(`pin-${pinNum}`).classList.add('selected-red');
+            
+            // Dial rotation visual effect (V DC or Ground Test)
+            const rotation = [0, 30, -30][pinNum];
+            document.getElementById('dmmDial').style.transform = `rotate(${rotation}deg)`;
+            
+            updateSimulation();
+        }
+
+        function changeState(state) {
+            currentState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => {
+                if(btn.id.startsWith('btn-state-')) btn.classList.remove('active');
+            });
+            document.getElementById(`btn-state-${state}`).classList.add('active');
+
+            updateSimulation();
+        }
+
+        // ====================================================
+        // UPDATE SIMULATION ENGINE
+        // ====================================================
+        function updateSimulation() {
+            let activeDb = DB_NORMAL;
+            if (currentScenario === 'open') activeDb = DB_OPEN_CIRCUIT;
+            else if (currentScenario === 'short') activeDb = DB_SHORT_TO_GND;
+            else if (currentScenario === 'offset') activeDb = DB_GROUND_FAULT;
+
+            const dataset = activeDb[currentState];
+            const voltage = dataset[selectedPin];
+            const realTemp = dataset.temp;
+            const resistance = dataset.resistance;
+
+            // Update Multimeter display
+            document.getElementById('dmmValue').innerText = voltage.toFixed(2);
+
+            // Update physical thermometer fluid column
+            const thermoFluid = document.getElementById('thermoFluid');
+            let heightPercent = 10; // minimum at cold / open
+            if (currentScenario !== 'open') {
+                const mapTemp = (currentScenario === 'short') ? 130 : DB_NORMAL[currentState].temp;
+                heightPercent = ((mapTemp - 20) / (130 - 20)) * 120 + 20; 
+                heightPercent = Math.max(20, Math.min(140, heightPercent));
+            }
+            thermoFluid.setAttribute('height', heightPercent);
+            thermoFluid.setAttribute('y', 150 - heightPercent);
+
+            // Update side text panels
+            const labelRealTemp = document.getElementById('textRealTemp');
+            const labelResistance = document.getElementById('textResistance');
+            const labelDensity = document.getElementById('textDensityImpact');
+
+            if (currentScenario === 'open') {
+                labelRealTemp.innerText = "Défaut ECU : -40°C (Coupure)";
+                labelRealTemp.style.color = "var(--neon-red)";
+                labelResistance.innerText = "∞ Ω (Infini)";
+                labelDensity.innerText = "Faisceau débranché. L'ECU bascule en mode de secours par défaut, augmentant le temps d'injection et risquant de faire fumer le moteur noir à chaud.";
+            } else if (currentScenario === 'short') {
+                labelRealTemp.innerText = "Défaut ECU : +130°C (Court-circuit)";
+                labelRealTemp.style.color = "var(--neon-red)";
+                labelResistance.innerText = "0 Ω (Court-circuit)";
+                labelDensity.innerText = "Signal court-circuité. Le calculateur estime que le carburant est infiniment léger. Il appauvrit dangereusement le mélange, provoquant des ratés de combustion.";
+            } else {
+                const exactTemp = DB_NORMAL[currentState].temp;
+                labelRealTemp.innerText = `${exactTemp}°C`;
+                labelRealTemp.style.color = "var(--neon-blue)";
+                labelResistance.innerText = `~${resistance} Ω`;
+                
+                if (exactTemp === 20) {
+                    labelDensity.innerText = "Carburant froid = densité maximale. L'ECU adapte le volume d'injection pour compenser la richesse naturelle de l'air ambiant.";
+                } else if (exactTemp === 50) {
+                    labelDensity.innerText = "Régime stabilisé. Température nominale de fonctionnement. Rentabilité énergétique et émissions parfaites.";
+                } else {
+                    labelDensity.innerText = "Carburant dilaté à chaud. Densité réduite. L'ECU doit allonger le temps d'ouverture des injecteurs pour conserver la masse de fuel intacte.";
+                }
+            }
+
+            // Sync static NTC curve chart indicator dots
+            document.getElementById('chartPointCold').style.display = (currentState === 'cold' && currentScenario !== 'open' && currentScenario !== 'short') ? 'block' : 'none';
+            document.getElementById('chartPointWarm').style.display = (currentState === 'warm' && currentScenario !== 'open' && currentScenario !== 'short') ? 'block' : 'none';
+            document.getElementById('chartPointHot').style.display = (currentState === 'hot' && currentScenario !== 'open' && currentScenario !== 'short') ? 'block' : 'none';
+
+            document.getElementById('chartLabelCold').style.display = (currentState === 'cold' && currentScenario !== 'open' && currentScenario !== 'short') ? 'block' : 'none';
+            document.getElementById('chartLabelWarm').style.display = (currentState === 'warm' && currentScenario !== 'open' && currentScenario !== 'short') ? 'block' : 'none';
+            document.getElementById('chartLabelHot').style.display = (currentState === 'hot' && currentScenario !== 'open' && currentScenario !== 'short') ? 'block' : 'none';
+
+            updateWiringHighlight();
+        }
+
+        // ====================================================
+        // SCHEMATIC WIRE HIGHLIGHTS (SVG)
+        // ====================================================
+        function updateWiringHighlight() {
+            const wires = ['wire-1', 'wire-2'];
+
+            wires.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.opacity = '0.35';
+                    el.style.strokeWidth = '2';
+                    el.style.filter = 'none';
+                }
+            });
+
+            const activeId = `wire-${selectedPin}`;
+            const activeEl = document.getElementById(activeId);
+            if (activeEl) {
+                activeEl.style.opacity = '1';
+                activeEl.style.strokeWidth = '4.5';
+                if (selectedPin === 1) {
+                    activeEl.style.filter = 'url(#glow-red)';
+                    activeEl.style.stroke = '#ff3333';
+                }
+                else if (selectedPin === 2) {
+                    activeEl.style.filter = 'url(#glow-blue)';
+                    activeEl.style.stroke = '#00d9ff';
+                }
+            }
+        }
+
+        // ====================================================
+        // BOOTSTRAP INITIALIZATION
+        // ====================================================
+        window.onload = function() {
+            selectScenario('normal');
+        };
+    </script>
+</body>
+</html>

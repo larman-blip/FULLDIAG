@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - IPDM / BSM intelligent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #060909;
+            --panel-bg: #0f1414;
+            --border-color: #1a2626;
+            --neon-green: #39ff14;
+            --neon-blue: #00e5ff;
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #9cb5b5;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        /* Tech Panels styling */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-blue);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        /* Multimeter graphics styling */
+        .multimeter {
+            background: #1c2121;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+        }
+
+        .dmm-screen {
+            background: #1d261e;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.9);
+        }
+
+        /* Pin interactive design */
+        .pin-btn {
+            background: #121818;
+            border: 2px solid #293d3d;
+            transition: all 0.2s ease;
+        }
+        .pin-btn:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+        }
+        .pin-btn.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.5);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        /* Glowing wires for schematic */
+        .wire-active {
+            stroke: #ff3333 !important;
+            filter: drop-shadow(0px 0px 4px #ff3333);
+        }
+        .wire-logic-active {
+            stroke: #00e5ff !important;
+            filter: drop-shadow(0px 0px 4px #00e5ff);
+        }
+
+        /* Oscilloscope Screen glow */
+        .scope-screen {
+            background: #030707;
+            border: 2px solid #1f2d2d;
+            border-radius: 8px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+        }
+
+        /* Component animations */
+        @keyframes clickAnim {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        .btn-press:active {
+            animation: clickAnim 0.1s ease-in-out;
+        }
+
+        /* Relay Contact styling */
+        .relay-contact {
+            transform-origin: 0% 50%;
+            transition: transform 0.1s;
+        }
+        .relay-closed {
+            transform: rotate(15deg);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- MODULE HEADER / BANNER -->
+        <header class="panel p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="text-xs font-bold tracking-wider uppercase text-[#00e5ff] bg-cyan-950/40 px-3 py-1 rounded border border-cyan-850">Diagnostic Système - Réseau & Puissance</span>
+                <h1 class="text-2xl md:text-3xl font-extrabold mt-2 text-white">Module IPDM (Intelligent Power Distribution)</h1>
+                <p class="text-sm text-[#9cb5b5] mt-1">Étude d'un boîtier de servitude moteur. Les commandes de l'habitacle transitent par le réseau CAN pour piloter les relais de puissance.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-zinc-900/60 p-3 rounded-lg border border-zinc-800">
+                <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse" id="statusLed"></div>
+                <div class="text-xs font-mono">
+                    <span class="text-zinc-400">ÉTAT DU RESEAU CAN :</span><br>
+                    <span id="canStatusText" class="text-green-400 font-bold">COMMUNICATION OK</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- TWO COLUMN WORKSPACE -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- LEFT PANEL: COCKPIT CONTROLS & SENSORS -->
+            <section class="panel lg:col-span-6 p-6 space-y-6">
+                <div class="border-b border-zinc-800 pb-3 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-[#00e5ff]">🎛️</span> Commandes BCM & Capteurs Moteur
+                    </h2>
+                    <span class="text-[10px] bg-[#1f2d2d] px-2 py-1 rounded text-[#9cb5b5] border border-zinc-700">ORDRES VIA CAN-BUS</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Light Switch -->
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col items-center justify-between gap-3 shadow-inner">
+                        <span class="text-xs font-bold text-zinc-400">Commodo d'Éclairage</span>
+                        <div class="flex gap-2 w-full bg-zinc-950 p-1 rounded-lg">
+                            <button onclick="setLights('off')" id="btn-light-off" class="flex-1 py-1.5 text-xs font-bold bg-cyan-900 text-cyan-200 rounded border border-cyan-700">OFF</button>
+                            <button onclick="setLights('low')" id="btn-light-low" class="flex-1 py-1.5 text-xs font-bold bg-zinc-800 text-zinc-500 rounded hover:bg-zinc-700 transition">CROIS.</button>
+                        </div>
+                        <span class="text-[10px] text-zinc-500 font-mono" id="bcm-light-msg">Message: CMD_LIGHT_00</span>
+                    </div>
+
+                    <!-- Horn Button -->
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col items-center justify-between gap-3 shadow-inner">
+                        <span class="text-xs font-bold text-zinc-400">Volant (Klaxon)</span>
+                        <button onmousedown="setHorn(true)" onmouseup="setHorn(false)" onmouseleave="setHorn(false)" ontouchstart="setHorn(true)" ontouchend="setHorn(false)"
+                                class="w-16 h-16 rounded-full bg-zinc-800 border-4 border-zinc-700 flex items-center justify-center text-2xl hover:bg-zinc-700 active:bg-zinc-600 transition shadow-lg btn-press">
+                            🎺
+                        </button>
+                        <span class="text-[10px] text-zinc-500 font-mono" id="bcm-horn-msg">Message: CMD_HORN_00</span>
+                    </div>
+
+                    <!-- Engine Temp Slider (ECU) -->
+                    <div class="col-span-2 bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col gap-3 shadow-inner">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-zinc-400">Capteur T° Moteur (ECU)</span>
+                            <span class="text-xs font-bold text-[#ffaa00]" id="tempDisplay">90 °C</span>
+                        </div>
+                        <input type="range" id="tempSlider" min="50" max="115" step="1" value="90" 
+                               class="w-full accent-[#ffaa00] bg-zinc-800 rounded-lg cursor-pointer h-2"
+                               oninput="updateTemp(this.value)">
+                        <div class="flex justify-between text-[10px] text-zinc-500 font-mono mt-1">
+                            <span>Froid (Fan OFF)</span>
+                            <span>> 98°C (Fan ON)</span>
+                        </div>
+                        <span class="text-[10px] text-zinc-500 font-mono text-center" id="ecu-fan-msg">Message: CMD_FAN_00</span>
+                    </div>
+                </div>
+
+                <!-- DIGITAL MULTIMETER AND PINOUT -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
+                    
+                    <!-- Multimeter -->
+                    <div class="flex flex-col items-center justify-center">
+                        <div class="multimeter w-full max-w-[220px] p-4 space-y-3">
+                            <div class="dmm-screen p-3 text-right font-mono relative rounded border-2 border-black">
+                                <span class="absolute top-1 left-2 text-[10px] text-zinc-500 font-bold" id="dmmModeLabel">V DC ⎓</span>
+                                <div class="text-3xl text-green-400 font-extrabold tracking-wider" id="dmmScreenValue">0.00</div>
+                            </div>
+                            <div class="flex justify-between px-2 pt-2 text-[9px] font-mono text-zinc-400 border-t border-zinc-700/60 mt-2">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 bg-zinc-900 border border-zinc-500 rounded-full inline-block"></span> COM</span>
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 bg-red-600 rounded-full inline-block"></span> V(+)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connecteur Sortie IPDM -->
+                    <div class="space-y-3">
+                        <span class="text-xs font-bold text-[#9cb5b5] uppercase block text-center">Faisceau Faisceau Moteur / Habitacle</span>
+                        
+                        <div class="bg-zinc-950 p-3 rounded-xl border border-zinc-800 flex flex-col items-center gap-3">
+                            <div class="flex flex-wrap justify-center gap-2 p-2 bg-zinc-850 border-2 border-zinc-700 rounded-lg shadow-inner w-full max-w-[200px]">
+                                <!-- Pins -->
+                                <button class="pin-btn w-10 h-10 rounded flex flex-col justify-center items-center text-[10px] font-mono font-bold text-zinc-300 selected-red" id="pin-1" onclick="probePin(1)">1<br><span class="text-[7px] text-red-400">+12V</span></button>
+                                <button class="pin-btn w-10 h-10 rounded flex flex-col justify-center items-center text-[10px] font-mono font-bold text-zinc-300" id="pin-2" onclick="probePin(2)">2<br><span class="text-[7px] text-blue-300">CAN H</span></button>
+                                <button class="pin-btn w-10 h-10 rounded flex flex-col justify-center items-center text-[10px] font-mono font-bold text-zinc-300" id="pin-3" onclick="probePin(3)">3<br><span class="text-[7px] text-blue-300">CAN L</span></button>
+                                <button class="pin-btn w-10 h-10 rounded flex flex-col justify-center items-center text-[10px] font-mono font-bold text-zinc-300" id="pin-4" onclick="probePin(4)">4<br><span class="text-[7px] text-yellow-400">KLX</span></button>
+                                <button class="pin-btn w-10 h-10 rounded flex flex-col justify-center items-center text-[10px] font-mono font-bold text-zinc-300" id="pin-5" onclick="probePin(5)">5<br><span class="text-[7px] text-yellow-400">FEUX</span></button>
+                                <button class="pin-btn w-10 h-10 rounded flex flex-col justify-center items-center text-[10px] font-mono font-bold text-zinc-300" id="pin-6" onclick="probePin(6)">6<br><span class="text-[7px] text-yellow-400">VENT</span></button>
+                            </div>
+                            <div class="w-full text-[10px] text-zinc-400 text-center font-mono" id="activeProbeLabel">
+                                Broche 1 : Alimentation Permanente (Bat+)
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: INTERNAL SCHEMATIC & SCOPE -->
+            <section class="lg:col-span-6 space-y-6">
+                
+                <!-- IPDM INTERNAL SCHEMATIC -->
+                <div class="panel p-4">
+                    <h2 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                        <span class="text-[#ffaa00]">⚡</span> Architecture Interne IPDM (Relais & MCU)
+                    </h2>
+                    
+                    <div class="bg-[#0a0f0f] border border-zinc-800 rounded-lg overflow-hidden p-2 relative">
+                        <svg id="ipdmSvg" viewBox="0 0 300 200" class="w-full h-auto">
+                            <!-- Input Wires from left -->
+                            <line x1="0" y1="20" x2="30" y2="20" stroke="#ff3333" stroke-width="3" />
+                            <text x="5" y="15" fill="#ff3333" font-size="8" font-family="mono">BAT +12V</text>
+                            
+                            <line x1="0" y1="170" x2="30" y2="170" stroke="#00e5ff" stroke-width="1.5" />
+                            <text x="5" y="165" fill="#00e5ff" font-size="8" font-family="mono">CAN BUS</text>
+
+                            <!-- IPDM Board Frame -->
+                            <rect x="30" y="5" width="240" height="190" rx="6" fill="#131919" stroke="#3a4f4f" stroke-width="2"/>
+                            
+                            <!-- Microcontroller (MCU) -->
+                            <rect x="40" y="140" width="60" height="40" rx="3" fill="#1e2929" stroke="#00e5ff" stroke-width="1.5"/>
+                            <text x="70" y="160" fill="#00e5ff" font-size="10" font-weight="bold" text-anchor="middle">CPU</text>
+                            <text x="70" y="170" fill="#5c8a8a" font-size="6" text-anchor="middle">Logique de ctrl</text>
+
+                            <!-- Internal 12V Bus -->
+                            <line x1="30" y1="20" x2="250" y2="20" stroke="#ff3333" stroke-width="3" id="int-bus-12v" />
+                            
+                            <!-- RELAY 1: Horn -->
+                            <!-- Logic Wire -->
+                            <path d="M 70,140 L 70,100 L 100,100" fill="none" stroke="#5c8a8a" stroke-width="1.5" id="wire-logic-horn" />
+                            <!-- Coil -->
+                            <rect x="100" y="90" width="20" height="20" fill="#111" stroke="#ffaa00" stroke-width="1"/>
+                            <line x1="104" y1="94" x2="116" y2="106" stroke="#ffaa00" stroke-width="1" />
+                            <!-- Switch -->
+                            <line x1="140" y1="20" x2="140" y2="80" stroke="#ff3333" stroke-width="2" />
+                            <circle cx="140" cy="80" r="2" fill="#fff"/>
+                            <!-- Armature -->
+                            <line x1="140" y1="80" x2="135" y2="110" stroke="#999" stroke-width="2" class="relay-contact" id="contact-horn" />
+                            <!-- Output point -->
+                            <circle cx="140" cy="110" r="2" fill="#fff"/>
+                            <line x1="140" y1="110" x2="270" y2="110" stroke="#444" stroke-width="2" id="wire-out-horn" />
+                            <text x="135" y="130" fill="#aaa" font-size="7">Relais Klaxon</text>
+                            <!-- Fuse -->
+                            <rect x="180" y="106" width="16" height="8" fill="#333" stroke="#fff" stroke-width="1"/>
+                            <path d="M 180,110 Q 188,100 196,110" fill="none" stroke="#ff3333" stroke-width="1.5" id="fuse-horn"/>
+
+                            <!-- RELAY 2: Low Beam -->
+                            <path d="M 80,140 L 80,135 L 200,135 L 200,70 L 220,70" fill="none" stroke="#5c8a8a" stroke-width="1.5" id="wire-logic-light" />
+                            <rect x="220" y="60" width="20" height="20" fill="#111" stroke="#00ffcc" stroke-width="1"/>
+                            <line x1="224" y1="64" x2="236" y2="76" stroke="#00ffcc" stroke-width="1" />
+                            
+                            <line x1="250" y1="20" x2="250" y2="50" stroke="#ff3333" stroke-width="2" />
+                            <circle cx="250" cy="50" r="2" fill="#fff"/>
+                            <line x1="250" y1="50" x2="245" y2="80" stroke="#999" stroke-width="2" class="relay-contact" id="contact-light" />
+                            <circle cx="250" cy="80" r="2" fill="#fff"/>
+                            <line x1="250" y1="80" x2="270" y2="80" stroke="#444" stroke-width="2" id="wire-out-light" />
+                            <text x="215" y="100" fill="#aaa" font-size="7">Relais Feux Crois.</text>
+
+                            <!-- RELAY 3: Fan -->
+                            <path d="M 90,140 L 90,120 L 200,120 L 200,160 L 220,160" fill="none" stroke="#5c8a8a" stroke-width="1.5" id="wire-logic-fan" />
+                            <rect x="220" y="150" width="20" height="20" fill="#111" stroke="#ff3333" stroke-width="1"/>
+                            <line x1="224" y1="154" x2="236" y2="166" stroke="#ff3333" stroke-width="1" />
+                            
+                            <!-- Fan pulls power directly from high current line, simplified here from BAT directly -->
+                            <line x1="160" y1="20" x2="160" y2="35" stroke="#ff3333" stroke-width="2" />
+                            <line x1="160" y1="35" x2="260" y2="35" stroke="#ff3333" stroke-width="2" />
+                            <line x1="260" y1="35" x2="260" y2="140" stroke="#ff3333" stroke-width="2" />
+                            
+                            <circle cx="260" cy="140" r="2" fill="#fff"/>
+                            <line x1="260" y1="140" x2="255" y2="170" stroke="#999" stroke-width="2" class="relay-contact" id="contact-fan" />
+                            <circle cx="260" cy="170" r="2" fill="#fff"/>
+                            <line x1="260" y1="170" x2="270" y2="170" stroke="#444" stroke-width="2" id="wire-out-fan" />
+                            <text x="220" y="190" fill="#aaa" font-size="7">Relais Moto-Vent.</text>
+
+                            <!-- Outputs -->
+                            <text x="275" y="82" fill="#ccc" font-size="6">5</text>
+                            <text x="275" y="112" fill="#ccc" font-size="6">4</text>
+                            <text x="275" y="172" fill="#ccc" font-size="6">6</text>
+                            
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- OSCILLOSCOPE -->
+                <div class="panel p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span class="text-[#39ff14]">📊</span> Traceur Réseau CAN (Bus Moteur)
+                        </h2>
+                    </div>
+
+                    <div class="scope-screen p-1 relative">
+                        <canvas id="scopeCanvas" class="w-full h-32 block"></canvas>
+                        <div class="absolute top-2 left-2 bg-zinc-900/80 px-1.5 py-0.5 rounded text-[8px] font-mono text-[#39ff14]">1V/Div</div>
+                        <div class="absolute bottom-2 right-2 flex gap-2 text-[8px] font-mono font-bold">
+                            <span class="text-[#00e5ff]">CAN H</span>
+                            <span class="text-[#ffaa00]">CAN L</span>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- LOWER SECTION: DIAGNOSTIC FAULTS SIMULATION -->
+        <footer class="panel panel-red p-6 space-y-4">
+            <h3 class="text-base font-bold text-[#ff3333] flex items-center gap-2 border-b border-zinc-800 pb-2">
+                <span>🛑</span> Simulation de Pannes (Comportement et Fail-Safe)
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                
+                <!-- Normal -->
+                <button onclick="setFaultScenario('normal')" id="btn-fault-normal" class="p-3 bg-zinc-900 border-2 border-green-600/30 text-left rounded-xl hover:border-green-500/80 transition flex flex-col justify-between group">
+                    <h4 class="font-bold text-sm text-white group-hover:text-[#00e5ff]">1. Système Nominal</h4>
+                    <p class="text-[10px] text-zinc-400 mt-1">L'IPDM exécute les ordres reçus via le bus CAN sans erreur.</p>
+                </button>
+
+                <!-- Stuck Relay -->
+                <button onclick="setFaultScenario('stuck-relay')" id="btn-fault-stuck" class="p-3 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-red-500/50 transition flex flex-col justify-between group">
+                    <h4 class="font-bold text-sm text-white group-hover:text-red-400">2. Relais Feux Collé</h4>
+                    <p class="text-[10px] text-zinc-400 mt-1">Les contacts de puissance du relais des feux de croisement ont fondu (soudés fermés).</p>
+                </button>
+
+                <!-- Blown Fuse -->
+                <button onclick="setFaultScenario('blown-fuse')" id="btn-fault-fuse" class="p-3 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-[#ffaa00]/50 transition flex flex-col justify-between group">
+                    <h4 class="font-bold text-sm text-white group-hover:text-[#ffaa00]">3. Fusible Grillé</h4>
+                    <p class="text-[10px] text-zinc-400 mt-1">Le fusible interne protégeant la ligne du klaxon est rompu. Le relais claque mais rien ne sort.</p>
+                </button>
+
+                <!-- CAN Lost (Fail-Safe) -->
+                <button onclick="setFaultScenario('can-lost')" id="btn-fault-can" class="p-3 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-red-500/50 transition flex flex-col justify-between group">
+                    <h4 class="font-bold text-sm text-white group-hover:text-red-400">4. Perte Com. CAN</h4>
+                    <p class="text-[10px] text-zinc-400 mt-1">Fils CAN coupés. L'IPDM passe en mode dégradé (Fail-Safe) pour la sécurité.</p>
+                </button>
+
+            </div>
+            
+            <div class="text-xs text-zinc-500 bg-black/40 p-3 rounded border border-zinc-800 mt-2">
+                <strong>💡 Concept de Mode Dégradé (Fail-Safe) :</strong> Si l'IPDM cesse de recevoir des signaux CAN réguliers du BCM ou de l'ECU (Time-out), il adopte une stratégie de survie. Généralement, il allume automatiquement les feux de croisement (pour être vu de nuit) et force le motoventilateur à haute vitesse (pour éviter une casse moteur due à la surchauffe par ignorance).
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- JAVASCRIPT ENGINE -->
+    <script>
+        // System State Variables
+        let activeScenario = 'normal'; // 'normal', 'stuck-relay', 'blown-fuse', 'can-lost'
+        
+        // Input Controls State
+        let inputs = {
+            hornPressed: false,
+            lightMode: 'off', // 'off', 'low'
+            engineTemp: 90
+        };
+
+        // IPDM Internal Logic State (Relays ON/OFF)
+        let ipdmState = {
+            relayHorn: false,
+            relayLight: false,
+            relayFan: false,
+            fuseHornOk: true,
+            canActive: true
+        };
+
+        let selectedPin = 1;
+
+        // Pin definitions for UI text
+        const pinDefs = {
+            1: "Alimentation Permanente (+12V BAT)",
+            2: "Réseau CAN High (Habitacle/Moteur)",
+            3: "Réseau CAN Low (Habitacle/Moteur)",
+            4: "Sortie Puissance vers Avertisseur Sonore (Klaxon)",
+            5: "Sortie Puissance vers Feux de Croisement",
+            6: "Sortie Puissance vers Groupe Motoventilateur (GMV)"
+        };
+
+        // Oscilloscope Setup
+        const scopeCanvas = document.getElementById('scopeCanvas');
+        const scopeCtx = scopeCanvas.getContext('2d');
+        const maxPoints = 200;
+        let canPhase = 0;
+
+        // INPUT EVENT HANDLERS
+        function setHorn(isPressed) {
+            inputs.hornPressed = isPressed;
+            document.getElementById('bcm-horn-msg').innerText = isPressed ? "Message: CMD_HORN_01 (ACTIF)" : "Message: CMD_HORN_00";
+            if(isPressed) document.getElementById('bcm-horn-msg').classList.add('text-yellow-400');
+            else document.getElementById('bcm-horn-msg').classList.remove('text-yellow-400');
+            evaluateIpdmLogic();
+        }
+
+        function setLights(mode) {
+            inputs.lightMode = mode;
+            
+            // Button visual updates
+            document.getElementById('btn-light-off').className = "flex-1 py-1.5 text-xs font-bold bg-zinc-800 text-zinc-500 rounded hover:bg-zinc-700 transition";
+            document.getElementById('btn-light-low').className = "flex-1 py-1.5 text-xs font-bold bg-zinc-800 text-zinc-500 rounded hover:bg-zinc-700 transition";
+            
+            if(mode === 'off') {
+                document.getElementById('btn-light-off').className = "flex-1 py-1.5 text-xs font-bold bg-cyan-900 text-cyan-200 rounded border border-cyan-700";
+                document.getElementById('bcm-light-msg').innerText = "Message: CMD_LIGHT_00";
+                document.getElementById('bcm-light-msg').classList.remove('text-blue-400');
+            } else {
+                document.getElementById('btn-light-low').className = "flex-1 py-1.5 text-xs font-bold bg-cyan-900 text-cyan-200 rounded border border-cyan-700";
+                document.getElementById('bcm-light-msg').innerText = "Message: CMD_LIGHT_01 (CROIS.)";
+                document.getElementById('bcm-light-msg').classList.add('text-blue-400');
+            }
+            evaluateIpdmLogic();
+        }
+
+        function updateTemp(val) {
+            inputs.engineTemp = parseInt(val);
+            document.getElementById('tempDisplay').innerText = `${inputs.engineTemp} °C`;
+            
+            if (inputs.engineTemp >= 98) {
+                document.getElementById('ecu-fan-msg').innerText = "Message: CMD_FAN_01 (ON)";
+                document.getElementById('ecu-fan-msg').classList.add('text-red-400');
+                document.getElementById('tempDisplay').classList.add('text-red-500');
+            } else {
+                document.getElementById('ecu-fan-msg').innerText = "Message: CMD_FAN_00";
+                document.getElementById('ecu-fan-msg').classList.remove('text-red-400');
+                document.getElementById('tempDisplay').classList.remove('text-red-500');
+            }
+            evaluateIpdmLogic();
+        }
+
+        // CORE IPDM LOGIC PROCESSOR
+        function evaluateIpdmLogic() {
+            // Reset to defaults based on scenario
+            ipdmState.fuseHornOk = (activeScenario !== 'blown-fuse');
+            ipdmState.canActive = (activeScenario !== 'can-lost');
+
+            // Logic processing
+            if (ipdmState.canActive) {
+                // Normal CAN reception
+                ipdmState.relayHorn = inputs.hornPressed;
+                ipdmState.relayLight = (inputs.lightMode === 'low');
+                ipdmState.relayFan = (inputs.engineTemp >= 98);
+            } else {
+                // FAIL-SAFE MODE: Lost CAN comms
+                // Ignore inputs, force safe states
+                ipdmState.relayHorn = false;
+                ipdmState.relayLight = true; // Turn lights on for safety
+                ipdmState.relayFan = true;   // Turn fan on to prevent overheating
+            }
+
+            // Fault overrides (mechanical/electrical failures post-logic)
+            if (activeScenario === 'stuck-relay') {
+                ipdmState.relayLight = true; // Contact physically stuck closed, regardless of logic
+            }
+
+            updateVisualSchematic();
+            updateMultimeter();
+        }
+
+        // UPDATE SVG SCHEMATIC GRAPHICS
+        function updateVisualSchematic() {
+            // Relay 1: Horn
+            const contactHorn = document.getElementById('contact-horn');
+            const logicHorn = document.getElementById('wire-logic-horn');
+            const outHorn = document.getElementById('wire-out-horn');
+            const fuseHorn = document.getElementById('fuse-horn');
+
+            // Logic wire color (CPU to coil)
+            if (ipdmState.canActive && inputs.hornPressed) logicHorn.classList.add('wire-logic-active');
+            else logicHorn.classList.remove('wire-logic-active');
+
+            // Physical contact movement
+            if (ipdmState.relayHorn) contactHorn.classList.add('relay-closed');
+            else contactHorn.classList.remove('relay-closed');
+
+            // Output power wire
+            // Horn output is energized if relay is closed AND fuse is OK
+            if (ipdmState.relayHorn && ipdmState.fuseHornOk) outHorn.classList.add('wire-active');
+            else outHorn.classList.remove('wire-active');
+
+            // Fuse visual
+            if (!ipdmState.fuseHornOk) {
+                fuseHorn.setAttribute('d', 'M 180,110 Q 183,100 185,110 M 190,110 Q 193,100 196,110'); // Broken line
+                fuseHorn.setAttribute('stroke', '#666');
+            } else {
+                fuseHorn.setAttribute('d', 'M 180,110 Q 188,100 196,110'); // Solid wave
+                fuseHorn.setAttribute('stroke', '#ff3333');
+            }
+
+
+            // Relay 2: Lights
+            const contactLight = document.getElementById('contact-light');
+            const logicLight = document.getElementById('wire-logic-light');
+            const outLight = document.getElementById('wire-out-light');
+
+            // In Stuck Relay, logic might be off, but contact is closed
+            if (ipdmState.canActive && inputs.lightMode === 'low') logicLight.classList.add('wire-logic-active');
+            else if (!ipdmState.canActive) logicLight.classList.add('wire-logic-active'); // fail-safe logic triggers it
+            else logicLight.classList.remove('wire-logic-active');
+
+            if (ipdmState.relayLight || activeScenario === 'stuck-relay') {
+                contactLight.classList.add('relay-closed');
+                outLight.classList.add('wire-active');
+            } else {
+                contactLight.classList.remove('relay-closed');
+                outLight.classList.remove('wire-active');
+            }
+
+            // Relay 3: Fan
+            const contactFan = document.getElementById('contact-fan');
+            const logicFan = document.getElementById('wire-logic-fan');
+            const outFan = document.getElementById('wire-out-fan');
+
+            if ((ipdmState.canActive && inputs.engineTemp >= 98) || !ipdmState.canActive) logicFan.classList.add('wire-logic-active');
+            else logicFan.classList.remove('wire-logic-active');
+
+            if (ipdmState.relayFan) {
+                contactFan.classList.add('relay-closed');
+                outFan.classList.add('wire-active');
+            } else {
+                contactFan.classList.remove('relay-closed');
+                outFan.classList.remove('wire-active');
+            }
+        }
+
+        // PIN PROBING & MULTIMETER
+        function probePin(num) {
+            selectedPin = num;
+            
+            // Reset UI
+            document.querySelectorAll('.pin-btn').forEach(btn => btn.classList.remove('selected-red'));
+            document.getElementById(`pin-${num}`).classList.add('selected-red');
+            document.getElementById('activeProbeLabel').innerText = `Broche ${num} : ${pinDefs[num]}`;
+            
+            updateMultimeter();
+        }
+
+        function getPinVoltage(num) {
+            switch(num) {
+                case 1: return 12.60; // BAT+ always on
+                case 2: // CAN H
+                    return ipdmState.canActive ? "CAN_ACT" : 2.50; 
+                case 3: // CAN L
+                    return ipdmState.canActive ? "CAN_ACT" : 2.50;
+                case 4: // Horn Out
+                    return (ipdmState.relayHorn && ipdmState.fuseHornOk) ? 12.45 : 0.00;
+                case 5: // Light Out
+                    return (ipdmState.relayLight || activeScenario === 'stuck-relay') ? 12.30 : 0.00;
+                case 6: // Fan Out
+                    return (ipdmState.relayFan) ? 12.10 : 0.00;
+                default: return 0.00;
+            }
+        }
+
+        function updateMultimeter() {
+            let v = getPinVoltage(selectedPin);
+            let displayVal = "0.00";
+            
+            if (v === "CAN_ACT") {
+                // If probing CAN actively communicating, multimeter shows average voltage ~2.5V
+                displayVal = (2.5 + Math.random()*0.1).toFixed(2);
+            } else {
+                displayVal = v.toFixed(2);
+            }
+
+            document.getElementById('dmmScreenValue').innerText = displayVal;
+        }
+
+        // FAULT SCENARIO MANAGEMENT
+        function setFaultScenario(scenario) {
+            activeScenario = scenario;
+
+            // Reset UI borders
+            document.querySelectorAll('footer button').forEach(btn => {
+                btn.className = "p-3 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-zinc-500/50 transition flex flex-col justify-between group";
+            });
+
+            const btnMapping = {
+                'normal': ['btn-fault-normal', 'border-green-600/30'],
+                'stuck-relay': ['btn-fault-stuck', 'border-red-600/30'],
+                'blown-fuse': ['btn-fault-fuse', 'border-[#ffaa00]/30'],
+                'can-lost': ['btn-fault-can', 'border-red-600/30']
+            };
+
+            const activeBtn = document.getElementById(btnMapping[scenario][0]);
+            activeBtn.className = `p-3 bg-zinc-900 border-2 ${btnMapping[scenario][1]} text-left rounded-xl transition flex flex-col justify-between group`;
+
+            // Update Status Banner
+            const led = document.getElementById('statusLed');
+            const statusTxt = document.getElementById('canStatusText');
+
+            if (scenario === 'can-lost') {
+                led.className = "w-3 h-3 rounded-full bg-red-500";
+                statusTxt.innerText = "DÉFAUT COM U1000 - FAIL-SAFE ACTIF";
+                statusTxt.className = "text-red-500 font-bold animate-pulse";
+            } else {
+                led.className = "w-3 h-3 rounded-full bg-green-500 animate-pulse";
+                statusTxt.innerText = "COMMUNICATION OK";
+                statusTxt.className = "text-green-400 font-bold";
+            }
+
+            evaluateIpdmLogic();
+        }
+
+        // OSCILLOSCOPE RENDER LOOP
+        function drawScope() {
+            const w = scopeCanvas.width;
+            const h = scopeCanvas.height;
+
+            scopeCtx.clearRect(0, 0, w, h);
+
+            // Grid
+            scopeCtx.strokeStyle = '#121f1f';
+            scopeCtx.lineWidth = 0.5;
+            for (let i = 0; i <= 10; i++) {
+                let x = i * (w/10);
+                scopeCtx.beginPath(); scopeCtx.moveTo(x, 0); scopeCtx.lineTo(x, h); scopeCtx.stroke();
+            }
+            for (let i = 0; i <= 4; i++) {
+                let y = i * (h/4);
+                scopeCtx.beginPath(); scopeCtx.moveTo(0, y); scopeCtx.lineTo(w, y); scopeCtx.stroke();
+            }
+
+            // Center Line (2.5V reference)
+            const yCenter = h/2;
+            scopeCtx.strokeStyle = '#333';
+            scopeCtx.lineWidth = 1;
+            scopeCtx.beginPath(); scopeCtx.moveTo(0, yCenter); scopeCtx.lineTo(w, yCenter); scopeCtx.stroke();
+
+            // Draw CAN Waves
+            canPhase += 1.5; // Scroll speed
+
+            scopeCtx.lineWidth = 1.5;
+            
+            scopeCtx.beginPath(); // CAN H (Cyan)
+            scopeCtx.strokeStyle = '#00e5ff';
+            let activeH = ipdmState.canActive;
+
+            for (let x = 0; x < w; x++) {
+                let y = yCenter; // Default 2.5V
+                if (activeH) {
+                    // Generate square-ish pulses
+                    let pulse = Math.sin((x + canPhase) * 0.5) + Math.sin((x + canPhase) * 0.2);
+                    if (pulse > 0.5) y = yCenter - 15; // Jumps to ~3.5V (up)
+                }
+                if (x === 0) scopeCtx.moveTo(x, y);
+                else scopeCtx.lineTo(x, y);
+            }
+            scopeCtx.stroke();
+
+            scopeCtx.beginPath(); // CAN L (Orange)
+            scopeCtx.strokeStyle = '#ffaa00';
+            for (let x = 0; x < w; x++) {
+                let y = yCenter; // Default 2.5V
+                if (activeH) {
+                    // Exact inverse of CAN H
+                    let pulse = Math.sin((x + canPhase) * 0.5) + Math.sin((x + canPhase) * 0.2);
+                    if (pulse > 0.5) y = yCenter + 15; // Drops to ~1.5V (down)
+                }
+                if (x === 0) scopeCtx.moveTo(x, y);
+                else scopeCtx.lineTo(x, y);
+            }
+            scopeCtx.stroke();
+
+            // Refresh multimeter if it's probing CAN (to simulate minor fluctuations)
+            if (selectedPin === 2 || selectedPin === 3) {
+                updateMultimeter();
+            }
+
+            requestAnimationFrame(drawScope);
+        }
+
+        // INITIALIZATION
+        window.onload = () => {
+            scopeCanvas.width = scopeCanvas.offsetWidth || 300;
+            scopeCanvas.height = scopeCanvas.offsetHeight || 120;
+            
+            evaluateIpdmLogic();
+            drawScope();
+        };
+
+    </script>
+</body>
+</html>

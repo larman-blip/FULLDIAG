@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Systèmes de Charge & Alternateurs (1, 2, 3 Fils)</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.35);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-blue: #00ccff;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media (min-width: 992px) {
+            .container {
+                grid-template-columns: 1.2fr 0.8fr;
+            }
+            .header-full {
+                grid-column: span 2;
+            }
+            .bottom-full {
+                grid-column: span 2;
+            }
+        }
+
+        header {
+            background: linear-gradient(135deg, #111818 0%, #0c1010 100%);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--neon-cyan);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .header-titles h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.7rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-titles .subtitle {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge {
+            background: rgba(0, 255, 204, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        /* Tabs and Architecture select */
+        .tech-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: #182222;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 12px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(180deg, #182e2c 0%, #0d2220 100%);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+
+        /* State Selectors */
+        .state-selector-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #090d0d;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #1a2525;
+        }
+
+        .state-btn {
+            background: #141a1a;
+            border: 1px solid #223333;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .state-btn.active {
+            background: rgba(255, 170, 0, 0.1);
+            border-color: var(--neon-amber);
+            color: var(--neon-amber);
+            box-shadow: 0 0 8px rgba(255, 170, 0, 0.15);
+        }
+
+        /* Synoptic Diagram Layout */
+        .diagram-container {
+            background: #040707;
+            border: 1px solid #1a2525;
+            border-radius: 8px;
+            padding: 15px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .syn-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Interactive Master Table style */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .master-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+            background: #090d0d;
+        }
+
+        .master-table th, .master-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .master-table th {
+            background-color: #111a1a;
+            color: var(--neon-cyan);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .master-table tr.highlight-row {
+            background-color: rgba(0, 255, 204, 0.05);
+            cursor: pointer;
+        }
+
+        .master-table tr.active-row {
+            background-color: rgba(0, 255, 204, 0.12);
+            border-left: 3px solid var(--neon-cyan);
+        }
+
+        .val-badge {
+            font-family: monospace;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .val-high {
+            background: rgba(0, 255, 204, 0.15);
+            color: var(--neon-cyan);
+            border: 1px solid var(--neon-cyan);
+        }
+
+        .val-low {
+            background: rgba(255, 51, 51, 0.15);
+            color: var(--neon-red);
+            border: 1px solid var(--neon-red);
+        }
+
+        .val-mid {
+            background: rgba(255, 170, 0, 0.15);
+            color: var(--neon-amber);
+            border: 1px solid var(--neon-amber);
+        }
+
+        /* Scope Area */
+        .scope-container {
+            background-color: var(--screen-bg);
+            border: 2px solid #1c2727;
+            border-radius: 6px;
+            position: relative;
+            margin-top: 15px;
+            aspect-ratio: 2.2 / 1;
+            overflow: hidden;
+        }
+
+        .scope-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 204, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 204, 0.04) 1px, transparent 1px);
+            background-size: 10% 10%;
+        }
+
+        .scope-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .scope-legend {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+
+        /* Faults Grid */
+        .faults-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .fault-card {
+            background: #151c1c;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .fault-card:hover {
+            border-color: #2b3d3d;
+        }
+
+        .fault-card.active {
+            border-color: var(--neon-amber);
+            background: linear-gradient(135deg, #1b1e16 0%, #11160a 100%);
+            box-shadow: 0 0 12px rgba(255, 170, 0, 0.15);
+        }
+
+        .fault-card.active::after {
+            content: 'PANNE ACTIVE';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            background: var(--neon-amber);
+            color: #000;
+            padding: 1px 6px;
+            border-radius: 3px;
+        }
+
+        .fault-title {
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            color: #eee;
+        }
+
+        .fault-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.3;
+        }
+
+        /* Permanent Deep Diag Orange Button */
+        .deep-diag-btn {
+            background: linear-gradient(135deg, #ffaa00 0%, #cc7700 100%);
+            border: 1px solid #ffcc66;
+            color: #000;
+            font-weight: 800;
+            font-size: 1rem;
+            padding: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        .deep-diag-btn:hover {
+            box-shadow: 0 0 20px rgba(255, 170, 0, 0.5);
+            transform: translateY(-1px);
+        }
+
+        /* Deep Diag Panel - Now at the absolute bottom */
+        .deep-diag-panel {
+            background: #090e0e;
+            border: 1px solid var(--neon-amber);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 25px;
+            display: none; /* Collapsible state */
+            box-shadow: inset 0 0 20px rgba(255, 170, 0, 0.05), 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .deep-diag-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-diag-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .telemetry-card {
+            background: rgba(255, 170, 0, 0.03);
+            border: 1px solid rgba(255, 170, 0, 0.15);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: monospace;
+        }
+
+        .telemetry-label {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .telemetry-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--neon-amber);
+            margin-top: 5px;
+        }
+
+        .diag-analysis-box {
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 4px solid var(--neon-amber);
+            padding: 15px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        /* Field Tips Grid (Astuces de Terrain) */
+        .field-tips-title {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: var(--neon-amber);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px dashed rgba(255, 170, 0, 0.2);
+            padding-bottom: 6px;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        @media(min-width: 768px) {
+            .tips-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .tip-box {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid #1e2929;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .tip-box strong {
+            color: var(--neon-cyan);
+            display: block;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+        }
+
+        /* Tech Theory block */
+        .tech-info {
+            background-color: #0d1212;
+            border-left: 3px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .tech-info h3 {
+            margin-top: 0;
+            color: var(--neon-cyan);
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+
+        .tech-info ul {
+            margin: 8px 0 0 0;
+            padding-left: 20px;
+            color: var(--text-secondary);
+        }
+
+        .tech-info li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Header -->
+        <header class="header-full">
+            <div class="header-titles">
+                <h1>Fiche de Diagnostic - Alternateurs</h1>
+                <p class="subtitle">Analyse comparative des systèmes de charge : architectures 1 Fil, 2 Fils, et 3 Fils sous différentes phases de test</p>
+            </div>
+        </header>
+
+        <!-- Left Column: Schematic & Interactive Matrix -->
+        <div class="panel">
+            <div class="panel-title">
+                Visualisation Synoptique
+                <span class="badge" id="architecture-badge">Alternateur 3 Fils</span>
+            </div>
+
+            <!-- Architecture Tabs Selector -->
+            <div class="tech-tabs">
+                <button class="tab-btn" id="tab-wire1" onclick="switchArchitecture('wire1')">1 Fil (B+ Auto-excité)</button>
+                <button class="tab-btn" id="tab-wire2" onclick="switchArchitecture('wire2')">2 Fils (B+, L/IG)</button>
+                <button class="tab-btn active" id="tab-wire3" onclick="switchArchitecture('wire3')">3 Fils (B+, S, IG, L)</button>
+            </div>
+
+            <!-- State Selector -->
+            <div class="state-selector-bar">
+                <button class="state-btn" id="state-off" onclick="setTestState('off')">IGG OFF (Contact coupé)</button>
+                <button class="state-btn active" id="state-on" onclick="setTestState('on')">IGG ON (Contact mis / Stop)</button>
+                <button class="state-btn" id="state-run" onclick="setTestState('run')">Moteur ON (En charge)</button>
+            </div>
+
+            <!-- SVG Schematic Diagram -->
+            <div class="diagram-container">
+                <svg class="syn-svg" viewBox="0 0 600 280" id="schema-svg">
+                    <!-- Background Box -->
+                    <rect x="5" y="5" width="590" height="270" rx="6" fill="#040707" stroke="#111616" stroke-width="2"/>
+                    
+                    <!-- BATTERY BLOCK -->
+                    <g transform="translate(30, 60)">
+                        <rect x="0" y="0" width="100" height="150" rx="4" fill="#141a1a" stroke="#2c3a3a" stroke-width="2"/>
+                        <rect x="15" y="-10" width="20" height="10" fill="#2c3a3a"/>
+                        <rect x="65" y="-10" width="20" height="10" fill="#2c3a3a"/>
+                        <text x="50" y="80" fill="#a0b2b2" font-size="11" font-family="monospace" text-anchor="middle" font-weight="bold">BATTERIE 12V</text>
+                        <!-- Terminals -->
+                        <circle cx="25" cy="0" r="10" fill="#111" stroke="#ff3333" stroke-width="2"/>
+                        <text x="25" y="4" fill="#ff3333" font-size="12" font-family="monospace" font-weight="bold" text-anchor="middle">+</text>
+                        
+                        <circle cx="75" cy="0" r="10" fill="#111" stroke="#00ffcc" stroke-width="2"/>
+                        <text x="75" y="4" fill="#00ffcc" font-size="12" font-family="monospace" font-weight="bold" text-anchor="middle">-</text>
+                    </g>
+
+                    <!-- IGNITION SWITCH & LAMP BLOCK -->
+                    <g transform="translate(180, 20)">
+                        <rect x="0" y="0" width="120" height="90" rx="4" fill="#141a1a" stroke="#2c3a3a" stroke-width="2"/>
+                        <text x="60" y="25" fill="#a0b2b2" font-size="10" font-family="monospace" text-anchor="middle" font-weight="bold">NEIMAN & TÉMOIN</text>
+                        
+                        <!-- Ignition Switch Contact -->
+                        <circle cx="30" cy="55" r="8" fill="#ffaa00" id="neiman-node"/>
+                        <text x="55" y="59" fill="#fff" font-size="9" font-family="monospace">IGG</text>
+
+                        <!-- Dashboard charge bulb -->
+                        <circle cx="90" cy="55" r="10" fill="#222" stroke="#ffcc00" stroke-width="2" id="bulb-light"/>
+                        <text x="90" y="58" fill="#fff" font-size="9" font-family="monospace" text-anchor="middle" font-weight="bold" id="bulb-text">L</text>
+                    </g>
+
+                    <!-- ALTERNATOR BLOCK -->
+                    <g transform="translate(380, 50)">
+                        <rect x="0" y="0" width="180" height="180" rx="6" fill="#1a2222" stroke="#334444" stroke-width="2"/>
+                        <!-- Pulley/Rotor visual -->
+                        <circle cx="90" cy="90" r="45" fill="none" stroke="#ffaa00" stroke-width="4" stroke-dasharray="10,5" id="rotor-pulley"/>
+                        <text x="90" y="95" fill="#fff" font-size="14" font-family="monospace" text-anchor="middle" font-weight="bold">ALTERNATEUR</text>
+                        
+                        <!-- Internal Regulator block -->
+                        <rect x="15" y="130" width="150" height="40" rx="2" fill="#0d1212" stroke="#223333"/>
+                        <text x="90" y="153" fill="#00ffcc" font-size="9" font-family="monospace" text-anchor="middle">RÉGULATEUR DE TENSION</text>
+                    </g>
+
+                    <!-- WIRING TRACES (Dynamic Colors based on Potential) -->
+                    <!-- Ground Trace -->
+                    <path d="M 105 60 L 105 250 L 380 250" fill="none" stroke="#00ffcc" stroke-width="3" id="wire-gnd"/>
+                    <text x="140" y="245" fill="#00ffcc" font-size="9" font-family="monospace">Masse Châssis (0V)</text>
+
+                    <!-- B+ Power Line -->
+                    <path d="M 55 60 L 55 15 L 430 15 L 430 50" fill="none" stroke="#ff3333" stroke-width="4" id="wire-bplus"/>
+                    <text x="210" y="10" fill="#ff3333" font-size="10" font-family="monospace" font-weight="bold">Ligne de Puissance B+ (Batterie)</text>
+
+                    <!-- S (Sense) Wire -->
+                    <path d="M 55 60 L 55 140 L 380 140" fill="none" stroke="#666" stroke-width="2.5" id="wire-sense"/>
+                    <text x="140" y="135" fill="#aaa" font-size="9" font-family="monospace" id="lbl-wire-sense">S (Sense Terminal)</text>
+
+                    <!-- IG (Ignition) Wire -->
+                    <path d="M 210 75 L 210 180 L 380 180" fill="none" stroke="#666" stroke-width="2.5" id="wire-ig"/>
+                    <text x="220" y="175" fill="#aaa" font-size="9" font-family="monospace" id="lbl-wire-ig">IG (Excitation / Après-Contact)</text>
+
+                    <!-- L (Lamp) Wire -->
+                    <path d="M 270 75 L 270 210 L 380 210" fill="none" stroke="#666" stroke-width="2.5" id="wire-l"/>
+                    <text x="280" y="205" fill="#aaa" font-size="9" font-family="monospace" id="lbl-wire-l">L (Circuit Témoin de Charge)</text>
+                </svg>
+            </div>
+
+            <!-- Master Comparative Data Table -->
+            <div class="panel-title" style="margin-top: 25px;">Tensions attendues aux bornes de mesure</div>
+            <div class="table-responsive">
+                <table class="master-table" id="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Borne / Fil</th>
+                            <th>Description & Rôle</th>
+                            <th>IGG OFF</th>
+                            <th>IGG ON (Moteur Stop)</th>
+                            <th>MOTEUR ON</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-tbody">
+                        <!-- Dynamic content injected by JavaScript based on active architecture -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right Column: Diagnostics and Scope Visualizer -->
+        <div class="panel">
+            <div class="panel-title">Banc de Diagnostic & Signaux</div>
+
+            <!-- Oscilloscope Visualizer -->
+            <div class="scope-container">
+                <div class="scope-grid"></div>
+                <canvas id="scopeCanvas" class="scope-canvas"></canvas>
+            </div>
+
+            <div class="scope-legend">
+                <div class="legend-item">
+                    <span style="display:inline-block; width:12px; height:3px; background-color: var(--neon-cyan);"></span>
+                    <span style="color: var(--neon-cyan);">Trace A : Ondulation Alternative (B+)</span>
+                </div>
+                <div class="legend-item">
+                    <span style="color: var(--text-secondary);">Filtre Couplage AC</span>
+                </div>
+            </div>
+
+            <!-- Interactive Fault Simulator -->
+            <div class="panel-title" style="margin-top: 25px;">Simulation de Défaillances Réelles</div>
+            <div class="faults-grid">
+                <div class="fault-card active" id="f-none" onclick="selectFault('none')">
+                    <div class="fault-title">Aucun Défaut (Fonctionnement Nominal)</div>
+                    <div class="fault-desc">L'alternateur et son régulateur gèrent parfaitement les charges et la consigne de tension de batterie.</div>
+                </div>
+                <div class="fault-card" id="f-sense-cut" onclick="selectFault('sense-cut')">
+                    <div class="fault-title">Ligne S (Sense) Coupée / Résistance Élevée</div>
+                    <div class="fault-desc">Le régulateur ne reçoit plus l'information de tension batterie réelle et sur-excite l'alternateur jusqu'à 15.8V+.</div>
+                </div>
+                <div class="fault-card" id="f-ig-blown" onclick="selectFault('ig-blown')">
+                    <div class="fault-title">Fusible Ligne IG (Ignition) Sauté / Circuit Ouvert</div>
+                    <div class="fault-desc">Le régulateur n'est plus alimenté après contact. L'alternateur refuse de démarrer sa phase de charge.</div>
+                </div>
+                <div class="fault-card" id="f-lamp-short" onclick="selectFault('lamp-short')">
+                    <div class="fault-title">Fil de Témoin L relié à la Masse Châssis</div>
+                    <div class="fault-desc">Le voyant de charge batterie reste allumé en continu sur le tableau de bord, même lorsque le moteur tourne.</div>
+                </div>
+            </div>
+
+            <!-- PERMANENT DEEP DIAG ORANGE BUTTON -->
+            <button class="deep-diag-btn" onclick="toggleDeepDiag()">
+                🔍 DEEP DIAG: LIVE DATA & ANALYSIS
+            </button>
+        </div>
+
+        <!-- Comprehensive Educational Reference Section -->
+        <div class="bottom-full panel">
+            <div class="panel-title">Fiche de Synthèse - Comportement Électrique</div>
+            <div class="tech-info">
+                <h3>1. Différenciation des Terminologies selon l'Architecture</h3>
+                <p>
+                    Le diagnostic des circuits de charge repose sur la connaissance des broches du régulateur d'alternateur :
+                </p>
+                <ul>
+                    <li><strong>Alternateur 1 Fil :</strong> Utilisé sur moteurs simplifiés. Pas d'excitation externe. L'alternateur démarre sa charge de façon autonome grâce au magnétisme rémanent de ses griffes polaires une fois un régime seuil d'amorçage atteint (auto-excitation).</li>
+                    <li><strong>Alternateur 2 Fils :</strong> Combine la puissance (B+) et une commande d'excitation (L ou IG).
+                        <ul>
+                            <li><strong>L (Lamp) :</strong> Alim d'excitation à travers l'ampoule du combiné. Si l'ampoule grille, l'excitation initiale peut échouer.</li>
+                            <li><strong>IG (Ignition) :</strong> Fournit une alimentation stable directe depuis le contact pour alimenter les puces logiques internes du régulateur.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Alternateur 3/4 Fils (Le Standard) :</strong> Dispose de circuits de détection indépendants.
+                        <ul>
+                            <li><strong>S (Sense) :</strong> Relie la broche de détection directement à la cosse positive (+) de la batterie via un fil dédié de faible section. Évite les erreurs de régulation causées par les chutes de tension dans le gros câble de puissance B+.</li>
+                            <li><strong>IG (Ignition) :</strong> Alimentation d'activation logique du régulateur.</li>
+                            <li><strong>L (Lamp) :</strong> Commande de l'indicateur de tableau de bord et excitation d'appoint.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h3 style="margin-top: 15px;">2. Méthodologie Pro - Astuces de Diagnostic Électrique</h3>
+                <ul>
+                    <li><strong>Test d'Intégrité de la Ligne Sense (S) :</strong> Si vous suspectez une surcharge batterie (tension batterie mesurée à plus de 15.5V moteur tournant), débranchez le connecteur du régulateur et vérifiez la tension sur la broche S. Elle doit être strictement identique à la tension de la batterie. Si la tension sur S chute ou est absente (coupure), le régulateur croit que la batterie est déchargée et sur-excite l'alternateur pour compenser.</li>
+                    <li><strong>Test de Circuit Témoin (L) :</strong> Pour tester la continuité du témoin de charge, débranchez la fiche de l'alternateur et reliez brièvement le fil L à la masse (contact mis). Le témoin doit s'allumer en continu. S'il ne s'allume pas, la ligne L est coupée ou l'ampoule du combiné d'instruments est détruite.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Hidden / Collapsible Expert Deep Diag Panel - PLACED AT THE VERY BOTTOM -->
+        <div class="bottom-full deep-diag-panel" id="deep-diag-section">
+            <div class="panel-title" style="color: var(--neon-amber); border-color: var(--neon-amber);">
+                Données d'Analyse Télémétriques & Diagnostics Experts
+                <span class="badge" style="border-color: var(--neon-amber); color: var(--neon-amber);">Mode Expert</span>
+            </div>
+            
+            <div class="deep-diag-grid">
+                <div class="telemetry-card">
+                    <div class="telemetry-label">Courant d'Excitation Rotor (A)</div>
+                    <div class="telemetry-value" id="tel-rotor">3.5 A</div>
+                </div>
+                <div class="telemetry-card">
+                    <div class="telemetry-label">Tension Alternative Résiduelle (AC Ripple)</div>
+                    <div class="telemetry-value" id="tel-ripple">0.03 V</div>
+                </div>
+                <div class="telemetry-card">
+                    <div class="telemetry-label">Rendement de Charge Global</div>
+                    <div class="telemetry-value" id="tel-eff">94 %</div>
+                </div>
+                <div class="telemetry-card">
+                    <div class="telemetry-label">Température du Carter Alternateur</div>
+                    <div class="telemetry-value" id="tel-temp">45 °C</div>
+                </div>
+            </div>
+
+            <div class="diag-analysis-box">
+                <strong style="color: var(--neon-amber);">Analyse du Comportement Système :</strong>
+                <p id="analysis-text" style="margin: 5px 0 0 0;">Système sous surveillance active...</p>
+            </div>
+
+            <!-- Expert Field Tips Added at the bottom of the deep panel -->
+            <div class="field-tips-title">
+                💡 Astuces de Terrain & Pratique d'Atelier (Duo-Test)
+            </div>
+            <div class="tips-grid">
+                <div class="tip-box">
+                    <strong>1. Test de Magnétisme Rapide</strong>
+                    Mettre le contact (IGG ON, moteur coupé) et approcher un tournevis métallique de la poulie ou du carter d'alternateur. S'il est fortement attiré (magnétisme), le circuit d'excitation (rotor, balais, régulateur) est intègre et alimenté.
+                </div>
+                <div class="tip-box">
+                    <strong>2. Diagnostic Sonore (Sifflement)</strong>
+                    Un bruit de sifflement semblable à un sifflement de turbo (qui varie proportionnellement avec le régime moteur) indique presque systématiquement une diode en court-circuit. Le pont de diodes chauffe alors anormalement.
+                </div>
+                <div class="tip-box">
+                    <strong>3. Chute de Tension B+ (Ligne +)</strong>
+                    Mesurer avec un DMM en volt (DC) entre la borne B+ de l'alternateur et la borne (+) de la batterie, phares et ventilation allumés. La tension affichée ne doit pas dépasser 0.3V. Au-delà, le câblage de puissance est résistant.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // System architectures and live states
+        let activeArch = 'wire3'; // wire1, wire2, wire3
+        let activeState = 'on'; // off, on, run
+        let activeFault = 'none'; // none, sense-cut, ig-blown, lamp-short
+
+        // Architectural wire configurations database
+        const archConfigs = {
+            'wire1': [
+                { id: 'bplus', pin: 'B+', desc: 'Ligne de Charge & Puissance principale', off: '12.6V', on: '12.6V', run: '14.4V' }
+            ],
+            'wire2': [
+                { id: 'bplus', pin: 'B+', desc: 'Ligne de Charge & Puissance principale', off: '12.6V', on: '12.6V', run: '14.4V' },
+                { id: 'l', pin: 'L (Lamp)', desc: 'Excitation initiale & Témoin de combiné', off: '0V', on: '1.8V', run: '14.4V' }
+            ],
+            'wire3': [
+                { id: 'bplus', pin: 'B+', desc: 'Ligne de Charge & Puissance principale', off: '12.6V', on: '12.6V', run: '14.4V' },
+                { id: 'sense', pin: 'S (Sense)', desc: 'Ligne de détection de tension Batterie directe', off: '12.6V', on: '12.6V', run: '14.4V' },
+                { id: 'ig', pin: 'IG (Ignition)', desc: 'Alimentation logique après-contact du régulateur', off: '0V', on: '12.4V', run: '14.2V' },
+                { id: 'l', pin: 'L (Lamp)', desc: 'Témoin de combiné d\'instruments', off: '0V', on: '1.8V', run: '14.4V' }
+            ]
+        };
+
+        // Oscilloscope rendering engine setup
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        let scopeAnimId = null;
+        let scopePhase = 0;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Switch System architecture (1, 2, or 3-wires)
+        function switchArchitecture(archId) {
+            activeArch = archId;
+            document.getElementById('tab-wire1').classList.toggle('active', archId === 'wire1');
+            document.getElementById('tab-wire2').classList.toggle('active', archId === 'wire2');
+            document.getElementById('tab-wire3').classList.toggle('active', archId === 'wire3');
+
+            let badgeText = "Alternateur 3 Fils";
+            if (archId === 'wire1') badgeText = "Alternateur 1 Fil";
+            if (archId === 'wire2') badgeText = "Alternateur 2 Fils";
+            document.getElementById('architecture-badge').innerText = badgeText;
+
+            // Reset fault if incompatible
+            if (archId === 'wire1' && (activeFault === 'sense-cut' || activeFault === 'ig-blown' || activeFault === 'lamp-short')) {
+                selectFault('none');
+            } else if (archId === 'wire2' && activeFault === 'sense-cut') {
+                selectFault('none');
+            }
+
+            renderDynamicWiring();
+            renderTableData();
+            updateDeepDiagTelemetry();
+        }
+
+        // Set test operating phases
+        function setTestState(stateId) {
+            activeState = stateId;
+            document.getElementById('state-off').classList.toggle('active', stateId === 'off');
+            document.getElementById('state-on').classList.toggle('active', stateId === 'on');
+            document.getElementById('state-run').classList.toggle('active', stateId === 'run');
+
+            // Handle scope animation start or freeze
+            if (stateId === 'run') {
+                if (!scopeAnimId) animateOscilloscope();
+            } else {
+                if (scopeAnimId) {
+                    cancelAnimationFrame(scopeAnimId);
+                    scopeAnimId = null;
+                }
+                drawStaticGrid();
+            }
+
+            renderDynamicWiring();
+            renderTableData();
+            updateDeepDiagTelemetry();
+        }
+
+        // Handle fault simulations
+        function selectFault(faultId) {
+            // Guard conditions
+            if (activeArch === 'wire1' && faultId !== 'none') return;
+            if (activeArch === 'wire2' && faultId === 'sense-cut') return;
+
+            activeFault = faultId;
+            document.querySelectorAll('.fault-card').forEach(card => {
+                card.classList.toggle('active', card.id === `f-${faultId}`);
+            });
+
+            renderDynamicWiring();
+            renderTableData();
+            updateDeepDiagTelemetry();
+        }
+
+        // Render dynamic table rows reflecting system changes
+        function renderTableData() {
+            const tbody = document.getElementById('matrix-tbody');
+            tbody.innerHTML = '';
+
+            let wires = archConfigs[activeArch];
+
+            wires.forEach(w => {
+                let displayOff = w.off;
+                let displayOn = w.on;
+                let displayRun = w.run;
+
+                // Alter values based on Active Fault Simulation
+                if (activeFault === 'sense-cut' && w.id === 'sense') {
+                    displayOff = '12.6V';
+                    displayOn = '0V'; // No reading back at terminal due to cut
+                    displayRun = '0V';
+                }
+                if (activeFault === 'sense-cut' && w.id === 'bplus') {
+                    displayRun = '15.8V'; // High output surcharge reaction
+                }
+
+                if (activeFault === 'ig-blown' && w.id === 'ig') {
+                    displayOn = '0V'; // Blown fuse cuts active rail
+                    displayRun = '0V';
+                }
+                if (activeFault === 'ig-blown' && w.id === 'bplus' && activeState === 'run') {
+                    displayRun = '12.2V'; // No excitation, no charge (resting battery voltage)
+                }
+
+                if (activeFault === 'lamp-short' && w.id === 'l') {
+                    displayOn = '0V'; // Hard short to ground
+                    displayRun = '0V';
+                }
+
+                // Row elements building
+                let tr = document.createElement('tr');
+                tr.className = 'highlight-row';
+                tr.onclick = function() {
+                    highlightWireOnSVG(w.id);
+                    document.querySelectorAll('#matrix-tbody tr').forEach(r => r.classList.remove('active-row'));
+                    tr.classList.add('active-row');
+                };
+
+                tr.innerHTML = `
+                    <td><strong>${w.pin}</strong></td>
+                    <td>${w.desc}</td>
+                    <td><span class="val-badge ${getBadgeClass(displayOff)}">${displayOff}</span></td>
+                    <td><span class="val-badge ${getBadgeClass(displayOn)}">${displayOn}</span></td>
+                    <td><span class="val-badge ${getBadgeClass(displayRun)}">${displayRun}</span></td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getBadgeClass(val) {
+            let num = parseFloat(val);
+            if (num === 0) return 'val-low';
+            if (num > 15) return 'val-mid'; // Surcharge warning
+            if (num >= 12) return 'val-high';
+            return 'val-mid';
+        }
+
+        // Sync SVG line visibility and colors with state
+        function renderDynamicWiring() {
+            const senseLine = document.getElementById('wire-sense');
+            const senseText = document.getElementById('lbl-wire-sense');
+            const igLine = document.getElementById('wire-ig');
+            const igText = document.getElementById('lbl-wire-ig');
+            const lLine = document.getElementById('wire-l');
+            const lText = document.getElementById('lbl-wire-l');
+            const bulbLight = document.getElementById('bulb-light');
+
+            // 1. Manage visible wires relative to architecture selection
+            if (activeArch === 'wire1') {
+                senseLine.style.display = 'none'; senseText.style.display = 'none';
+                igLine.style.display = 'none'; igText.style.display = 'none';
+                lLine.style.display = 'none'; lText.style.display = 'none';
+                bulbLight.style.fill = '#111';
+            } else if (activeArch === 'wire2') {
+                senseLine.style.display = 'none'; senseText.style.display = 'none';
+                igLine.style.display = 'none'; igText.style.display = 'none';
+                lLine.style.display = 'block'; lText.style.display = 'block';
+            } else {
+                senseLine.style.display = 'block'; senseText.style.display = 'block';
+                igLine.style.display = 'block'; igText.style.display = 'block';
+                lLine.style.display = 'block'; lText.style.display = 'block';
+            }
+
+            // 2. Set colors reflecting real-time voltage flow
+            let batteryHotColor = '#ff3333';
+            let groundColor = '#00ffcc';
+
+            // Main B+ Line charge voltage color shifts
+            let bPlusLine = document.getElementById('wire-bplus');
+            if (activeState === 'run') {
+                if (activeFault === 'sense-cut') {
+                    bPlusLine.setAttribute('stroke', '#ff00ff'); // bright warning surcharge color
+                } else if (activeFault === 'ig-blown') {
+                    bPlusLine.setAttribute('stroke', '#d35400'); // low output
+                } else {
+                    bPlusLine.setAttribute('stroke', '#ffaa00'); // normal strong charging current
+                }
+            } else {
+                bPlusLine.setAttribute('stroke', batteryHotColor);
+            }
+
+            // S line colors
+            if (activeArch === 'wire3') {
+                if (activeFault === 'sense-cut') {
+                    senseLine.setAttribute('stroke', '#444444'); // dead wire
+                } else {
+                    senseLine.setAttribute('stroke', activeState === 'run' ? '#ffaa00' : batteryHotColor);
+                }
+            }
+
+            // IG line colors
+            if (activeArch === 'wire3') {
+                if (activeState === 'off' || activeFault === 'ig-blown') {
+                    igLine.setAttribute('stroke', '#444444');
+                } else {
+                    igLine.setAttribute('stroke', activeState === 'run' ? '#ffaa00' : batteryHotColor);
+                }
+            }
+
+            // L line colors & Combined warning charge bulb state
+            if (activeArch !== 'wire1') {
+                if (activeState === 'off') {
+                    lLine.setAttribute('stroke', '#444444');
+                    bulbLight.style.fill = '#222';
+                } else if (activeState === 'on') {
+                    lLine.setAttribute('stroke', '#ffaa00'); // excited state low potential
+                    bulbLight.style.fill = '#ffaa00'; // bulb LIT!
+                } else if (activeState === 'run') {
+                    if (activeFault === 'lamp-short') {
+                        lLine.setAttribute('stroke', '#444444'); // direct short
+                        bulbLight.style.fill = '#ffaa00'; // stays illuminated on combiné
+                    } else if (activeFault === 'ig-blown') {
+                        lLine.setAttribute('stroke', '#444444');
+                        bulbLight.style.fill = '#ffaa00'; // fails to charge, bulb stays LIT
+                    } else {
+                        lLine.setAttribute('stroke', '#ffaa00'); // both ends equal potential
+                        bulbLight.style.fill = '#222'; // bulb goes OFF
+                    }
+                }
+            }
+        }
+
+        // Highlight selected wire line on diagram to assist technicians
+        function highlightWireOnSVG(wireId) {
+            document.querySelectorAll('#schema-svg path').forEach(path => {
+                path.style.strokeWidth = '2.5';
+                path.style.filter = 'none';
+            });
+
+            const target = document.getElementById(`wire-${wireId}`);
+            if (target) {
+                target.style.strokeWidth = '6';
+                target.style.filter = 'drop-shadow(0px 0px 6px #00ffcc)';
+            }
+        }
+
+        // Toggle collapsible expert diagnosis panel
+        function toggleDeepDiag() {
+            const panel = document.getElementById('deep-diag-section');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateDeepDiagTelemetry();
+                setTimeout(() => {
+                    panel.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+
+        // Expert analysis algorithms & telemetry updates
+        function updateDeepDiagTelemetry() {
+            const telRotor = document.getElementById('tel-rotor');
+            const telRipple = document.getElementById('tel-ripple');
+            const telEff = document.getElementById('tel-eff');
+            const telTemp = document.getElementById('tel-temp');
+            const analysisText = document.getElementById('analysis-text');
+
+            if (activeState === 'off') {
+                telRotor.innerText = '0.0 A';
+                telRipple.innerText = '0.00 V';
+                telEff.innerText = '0 %';
+                telTemp.innerText = '20 °C';
+                analysisText.innerHTML = '<span style="color: var(--text-secondary);">Moteur arrêté. Démarrer pour lancer les boucles d\'analyse.</span>';
+                return;
+            }
+
+            let rotorCurrent = (activeState === 'on') ? 2.1 : 3.8;
+            let rippleValue = 0.02;
+            let efficiency = 95;
+            let temperature = 45;
+            let statusHTML = '';
+
+            // Fault telemetry alters
+            if (activeFault === 'sense-cut') {
+                rotorCurrent = 5.2; // Overexcited
+                efficiency = 60; // Charging dangerously high, thermal runaway risk
+                temperature = 88; // Surcharging makes things hot
+                statusHTML = `<span style="color: var(--neon-red); font-weight: bold;">[ALERTE TECHNIQUE : PERTE RÉFÉRENCE BATTERIE (SENSE)]</span><br>Le fil de détection (Sense) indique une coupure nette. Le régulateur interne ne reçoit plus de rétroaction de tension de batterie et applique le courant d'excitation rotorique maximum (5.2A). La tension de charge a grimpé à 15.8V. Risque d'explosion de la batterie par surcharge et de destruction des équipements embarqués. Rétablir la ligne S immédiatement.`;
+            } else if (activeFault === 'ig-blown') {
+                rotorCurrent = 0.0; // No power to electronics
+                efficiency = 0;
+                temperature = 22; // cold
+                statusHTML = `<span style="color: var(--neon-red); font-weight: bold;">[PANNE CRITIQUE : ABSENCE ALIMENTATION RÉGULATEUR (IG)]</span><br>La ligne IG n'indique aucune tension au contact. L'excitation est impossible et l'alternateur ne produit aucun courant. Vérifier le fusible de charge du compartiment moteur ou le câblage de liaison du commutateur d'allumage.`;
+            } else if (activeFault === 'lamp-short') {
+                statusHTML = `<span style="color: var(--neon-amber); font-weight: bold;">[DÉFAUT FAISCEAU : COURT-CIRCUIT LIGNE L]</span><br>Le voyant de charge batterie reste allumé en continu car la ligne L est reliée à la masse de façon intempestive. Bien que l'alternateur charge nominalement à 14.4V, l'ampoule du tableau de bord reste éclairée par différence de potentiel directe à la masse. Vérifier la gaine de protection du faisceau à l'arrière du bloc moteur.`;
+            } else {
+                statusHTML = `<span style="color: var(--neon-cyan); font-weight: bold;">[CONFORME : ARCHITECTURE FONCTIONNELLE NOMINALE]</span><br>Toutes les tensions de contrôle sont en parfaite corrélation avec les spécifications d'usine. L'alternateur régule la tension de consigne de manière linéaire, le ripple AC de ${rippleValue}V indique que les diodes du pont redresseur sont parfaitement étanches.`;
+            }
+
+            // Injected normal dynamic deviations
+            if (activeState === 'run' && activeFault === 'none') {
+                telRotor.innerText = `${rotorCurrent.toFixed(1)} A`;
+                telRipple.innerText = `${rippleValue.toFixed(2)} V`;
+                telEff.innerText = `${efficiency} %`;
+                telTemp.innerText = `${temperature} °C`;
+            } else {
+                telRotor.innerText = `${rotorCurrent.toFixed(1)} A`;
+                telRipple.innerText = `${rippleValue.toFixed(2)} V`;
+                telEff.innerText = `${efficiency} %`;
+                telTemp.innerText = `${temperature} °C`;
+            }
+
+            analysisText.innerHTML = statusHTML;
+        }
+
+        // Draw basic static oscilloscope display grid
+        function drawStaticGrid() {
+            ctx.fillStyle = '#050a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(0, 255, 204, 0.08)';
+            ctx.lineWidth = 1;
+
+            for (let y = 0; y < canvas.height; y += canvas.height / 8) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            for (let x = 0; x < canvas.width; x += canvas.width / 10) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            // Zero line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+        }
+
+        // Oscilloscope real-time animation loop
+        function animateOscilloscope() {
+            drawStaticGrid();
+
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = 'var(--neon-cyan)';
+            ctx.shadowColor = 'var(--neon-cyan)';
+            ctx.shadowBlur = 4;
+            ctx.beginPath();
+
+            const h = canvas.height;
+            const w = canvas.width;
+
+            for (let x = 0; x < w; x++) {
+                let y = h / 2; // Mid screen baseline (couplage AC)
+
+                // Render specific waveform modifications according to state
+                if (activeState === 'run') {
+                    if (activeFault === 'none') {
+                        // Healthy alternator charging ripple
+                        y += Math.sin((x + scopePhase) * 0.1) * 3;
+                        y += Math.sin((x + scopePhase) * 0.45) * 1; // minor harmonic
+                    } else if (activeFault === 'sense-cut') {
+                        // Heavy charge noise
+                        y += Math.sin((x + scopePhase) * 0.08) * 8;
+                        y += (Math.random() - 0.5) * 2.5; // ignition noise interferences
+                    } else if (activeFault === 'ig-blown') {
+                        // Alternator flat dead, straight line trace
+                        y = h / 2;
+                    }
+                }
+
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+
+            ctx.stroke();
+            ctx.shadowBlur = 0; // reset
+
+            scopePhase += 2.0; // sweep rate
+            scopeAnimId = requestAnimationFrame(animateOscilloscope);
+        }
+
+        // Kickstart everything on window load
+        window.onload = function() {
+            resizeCanvas();
+            drawStaticGrid();
+            switchArchitecture('wire3');
+            setTestState('on');
+        };
+    </script>
+</body>
+</html>

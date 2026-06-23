@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Circuit de Démarrage</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-purple: #b84dff;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container { grid-template-columns: 1.2fr 1fr; }
+            .full-width { grid-column: span 2; }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+        .panel.panel-purple::before { background: var(--neon-purple); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+        .panel-title-purple { color: var(--neon-purple); }
+
+        .icon-svg {
+            width: 20px; height: 20px; fill: none; stroke: currentColor;
+            stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+            display: inline-block; vertical-align: middle;
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid; grid-template-columns: 1fr; gap: 20px;
+        }
+        @media(min-width: 550px) { .dmm-grid { grid-template-columns: 1.2fr 1.1fr; } }
+
+        .multimeter {
+            background: #181d1d; border: 3px solid #ff5500; border-radius: 16px;
+            padding: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; gap: 15px; max-width: 320px; margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21; border: 3px solid #0a0d0a; border-radius: 8px;
+            padding: 10px; text-align: right; font-family: 'Courier New', Courier, monospace;
+            position: relative; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status { font-size: 10px; color: rgba(0,0,0,0.6); position: absolute; top: 5px; left: 10px; font-weight: bold; }
+        .dmm-value { font-size: 38px; color: #0f140f; font-weight: 900; letter-spacing: 2px; }
+
+        .dmm-dial-container { display: flex; justify-content: center; align-items: center; margin: 10px 0; }
+        .dmm-dial { width: 80px; height: 80px; background: #252b2b; border: 4px solid #0f140f; border-radius: 50%; position: relative; }
+        .dmm-dial-pointer { width: 6px; height: 38px; background: #ff5500; position: absolute; top: 4px; left: calc(50% - 3px); border-radius: 3px; }
+
+        .dmm-probe-jack { display: flex; justify-content: space-around; padding-top: 10px; border-top: 2px solid #2a3333; }
+        .jack { width: 26px; height: 26px; border-radius: 50%; background: #0f140f; border: 2px solid #2a3333; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; }
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout */
+        .wiring-diagram {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 10px; padding: 20px;
+        }
+
+        .connector-housing {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+            background: #202828; border: 3px solid #3c4a4a; border-radius: 10px;
+            padding: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+        }
+
+        .pin-terminal {
+            width: 50px; height: 40px; background: #111515; border: 2px solid #4a5a5a;
+            border-radius: 6px; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; cursor: pointer; transition: all 0.2s ease; user-select: none;
+        }
+
+        .pin-terminal:hover { border-color: var(--neon-amber); }
+        .pin-terminal.selected-red { border-color: var(--neon-red); background: rgba(255, 51, 51, 0.1); }
+        .pin-num { font-size: 14px; font-weight: 800; color: var(--text-secondary); }
+
+        /* Selectors */
+        .scenario-selector {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
+        }
+
+        .scenario-btn {
+            background: #172020; border: 1px solid var(--border-color); color: var(--text-secondary);
+            padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px;
+            text-transform: uppercase; transition: all 0.2s ease;
+        }
+
+        .scenario-btn.active { background: var(--neon-amber); color: #080b0b; border-color: var(--neon-amber); box-shadow: 0 0 10px rgba(255,170,0,0.4); }
+
+        .btn-crank {
+            width: 100%; background: linear-gradient(135deg, #111, var(--neon-red));
+            border: 1px solid var(--neon-red); color: #fff; font-size: 16px; font-weight: 900;
+            padding: 15px; border-radius: 8px; cursor: pointer; text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.3); transition: all 0.2s ease; margin-top: 15px;
+            letter-spacing: 2px;
+        }
+        .btn-crank:active { transform: scale(0.98); }
+        .btn-crank.cranking { background: var(--neon-red); animation: pulse 0.5s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+
+        /* Tech table */
+        .tech-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .tech-table th, .tech-table td { border: 1px solid var(--border-color); padding: 12px; text-align: left; font-size: 13px; line-height: 1.5; }
+        .tech-table th { background: #172222; color: var(--neon-cyan); }
+        .tech-table tr:hover { background: rgba(0, 255, 204, 0.02); }
+        
+        .table-purple th { color: var(--neon-purple); background: rgba(184, 77, 255, 0.1); }
+
+        .instruction-box { background: #151a1a; border: 1px dashed var(--border-color); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); }
+
+        /* Scope */
+        .scope-screen-wrapper { background: var(--screen-bg); border: 3px solid #2a3333; border-radius: 12px; padding: 10px; position: relative; }
+        #scopeCanvas { width: 100%; height: 250px; background: #030808; border-radius: 8px; display: block; }
+        .scope-grid-label { position: absolute; font-size: 10px; font-family: monospace; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; color: #ffaa00; }
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; }
+        .badge-amber { background: var(--neon-amber); color: #000; }
+        .badge-cyan { background: var(--neon-cyan); color: #000; }
+        .badge-red { background: var(--neon-red); color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" fill="none"/></svg>
+                Diagnostic Interactif - Circuit de Démarrage (Starter Motor)
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Simulateur de test de <strong>Chute de Tension (Voltage Drop)</strong> en charge. Sélectionnez un scénario de panne, placez votre sonde sur la borne à tester, et simulez un coup de clé (Crank). La clé du diagnostic réside dans la lecture dynamique, pas statique !
+            </p>
+        </div>
+
+        <!-- PRINCIPES FONDAMENTAUX -->
+        <div class="panel full-width panel-purple">
+            <h3 class="panel-title panel-title-purple">
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" fill="none"/></svg>
+                Principes Fondamentaux de Diagnostic
+            </h3>
+            <p style="margin-bottom: 15px; font-size: 13.5px; color: var(--text-secondary);">
+                Un principe fondamental en électricité automobile : <strong>"Une lecture de 12V sur un circuit au repos est trompeuse"</strong>. Voici la structure logique de l'approche de diagnostic en charge :
+            </p>
+            <table class="tech-table table-purple">
+                <thead>
+                    <tr>
+                        <th>Concept Clé</th>
+                        <th>Explication Technique & Logique</th>
+                        <th>Règle d'or (Diagnostic)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Le Mythe de l'Ohmmètre</strong></td>
+                        <td>Un fil composé de 100 brins de cuivre dont 99 sont coupés affichera <strong>0.1 Ohm (Parfait)</strong> au repos. Mais il ne pourra jamais laisser passer les 150 Ampères nécessaires au démarreur.</td>
+                        <td>Ne jamais utiliser l'Ohmmètre pour valider un câble de puissance (Alternateur/Démarreur).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Voltage Drop Test</strong><br>(Chute de Tension)</td>
+                        <td>C'est la mesure de la tension *perdue* dans le câble lorsque le courant circule. On place le multimètre entre la Batterie (+) et le Démarreur (+), et on actionne la clé.</td>
+                        <td>Une chute de tension acceptable sur le câble principal est <strong>< 0.5 Volts</strong> pendant le lancement.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Division du Circuit</strong></td>
+                        <td>Un démarreur possède 2 circuits :<br>1. <strong>Commande :</strong> Neiman -> Relais -> Borne 50 (Solénoïde)<br>2. <strong>Puissance :</strong> Batterie -> Borne 30 -> Moteur DC.</td>
+                        <td>Si ça fait "CLIC", le circuit de commande fonctionne. Le problème vient du circuit de puissance ou du moteur lui-même.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SIMULATEUR -->
+        <div class="panel panel-amber">
+            <h3 class="panel-title panel-title-amber">
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" fill="none"/></svg>
+                Simulateur de Diagnostic (Live Testing)
+            </h3>
+
+            <div class="scenario-selector">
+                <button class="scenario-btn active" id="btn-scen-normal" onclick="setScenario('normal')">1. Système Sain</button>
+                <button class="scenario-btn" id="btn-scen-cable" onclick="setScenario('cable')">2. Câble B+ Oxydé</button>
+                <button class="scenario-btn" id="btn-scen-relay" onclick="setScenario('relay')">3. Relais/Neiman HS</button>
+                <button class="scenario-btn" id="btn-scen-starter" onclick="setScenario('starter')">4. Démarreur HS (Grippé)</button>
+            </div>
+
+            <div class="instruction-box" id="scen-desc">
+                <strong>État : Système Parfait.</strong> Sélectionnez une broche et maintenez "CRANK ENGINE" pour observer le comportement de la tension en charge.
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">12.60</div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black" style="border-color:#555; color:#555;">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:10px;">BORNES DU DÉMARREUR</label>
+                    <div class="connector-housing">
+                        <div class="pin-terminal selected-red" id="pin-BATT" onclick="selectPin('BATT')">
+                            <span class="pin-num" style="font-size:10px;">BAT +</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-30" onclick="selectPin('30')">
+                            <span class="pin-num">30</span>
+                            <div style="font-size:8px; color:#888;">Gros Câble</div>
+                        </div>
+                        <div class="pin-terminal" id="pin-50" onclick="selectPin('50')">
+                            <span class="pin-num">50</span>
+                            <div style="font-size:8px; color:#888;">Excitation</div>
+                        </div>
+                        <div class="pin-terminal" id="pin-GND" onclick="selectPin('GND')">
+                            <span class="pin-num" style="font-size:10px;">MASSE</span>
+                            <div style="font-size:8px; color:#888;">Carcasse</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:15px; font-size:12px; color:var(--text-secondary); width:100%;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>🔴 Sonde (+) :</span> <span id="lbl-red" style="color:var(--neon-red); font-weight:bold;">Batterie (+)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde (-) :</span> <span style="color:#888; font-weight:bold;">Borne (-) Batterie</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-crank" id="btn-crank" onmousedown="startCrank()" onmouseup="stopCrank()" onmouseleave="stopCrank()" ontouchstart="startCrank()" ontouchend="stopCrank()">
+                🔑 Maintenir pour Démarrer (CRANK)
+            </button>
+        </div>
+
+        <!-- OSCILLOSCOPE -->
+        <div class="panel">
+            <h3 class="panel-title">
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 12h3l3-9 4 18 3-12h5" stroke="currentColor" fill="none"/></svg>
+                Oscilloscope : Tension Batterie (Canal A)
+            </h3>
+            
+            <div class="scope-screen-wrapper">
+                <div class="scope-grid-label label-volts">Y: 2.0 V / Div</div>
+                <div class="scope-grid-label label-time">X: 500 ms / Div</div>
+                <canvas id="scopeCanvas"></canvas>
+            </div>
+
+            <table class="tech-table" style="margin-top:20px;">
+                <thead>
+                    <tr>
+                        <th>Point de Test</th>
+                        <th>Lecture Attendue (Pendant Démarrage)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Borne Batterie (+)</strong></td>
+                        <td>Chute à <strong>10.0V - 10.5V</strong> max (Dépend de l'état de la batterie). Une chute sous 9.6V indique une batterie faible.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Borne 30 (Alim Puissance)</strong></td>
+                        <td>Doit être quasiment identique à la batterie (ex: <strong>10.2V</strong>). Si elle affiche 6V, il y a une résistance dans le câble !</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Borne 50 (Solénoïde)</strong></td>
+                        <td>Doit recevoir la tension système (ex: <strong>10.2V</strong>) venant du Neiman/Relais pour coller le contacteur.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TABLEAU DES BRUITS -->
+        <div class="panel full-width" style="border-color: #334444;">
+            <h3 class="panel-title" style="color: #a0b2b2;">
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" fill="none"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" fill="none"/></svg>
+                Symptômes Sonores par Type de Panne
+            </h3>
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Scénario / Panne</th>
+                        <th>Symptôme Sonore (Ce que vous entendez)</th>
+                        <th>Diagnostic Rapide</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-cyan">Système Sain</span></td>
+                        <td><strong>"Clic" franc suivi d'un "Vroum Vroum Vroum"</strong> (Rotation rapide).</td>
+                        <td>Tout est OK. Commande et puissance opérationnelles.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-red">Câble B+ Oxydé</span></td>
+                        <td><strong>"Clic" très faible ou "Mitraillette" (Tac-tac-tac-tac)</strong> ou rotation extrêmement lente.</td>
+                        <td>Le courant n'arrive pas assez fort pour maintenir le solénoïde collé ou tourner le moteur (Chute de tension).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-amber">Relais / Neiman HS</span></td>
+                        <td><strong>Silence Total.</strong> Aucun bruit au niveau du démarreur.</td>
+                        <td>Le signal de commande (12V) n'arrive pas du tout à la Borne 50.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-red">Démarreur Grippé</span></td>
+                        <td><strong>Un seul "CLIC" fort et lourd</strong>, puis plus rien (ou un léger grognement).</td>
+                        <td>Le solénoïde colle bien, mais le moteur électrique est bloqué ou en court-circuit.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        // Database des tensions selon le scénario et l'état (Repos vs Actionné)
+        // Format: { repos: { BATT, 30, 50, GND }, crank: { BATT, 30, 50, GND } }
+        const VOLTAGE_DB = {
+            'normal': {
+                repos: { 'BATT': 12.6, '30': 12.6, '50': 0.0, 'GND': 0.0 },
+                crank: { 'BATT': 10.5, '30': 10.4, '50': 10.4, 'GND': 0.1 }
+            },
+            'cable': { // Câble principal oxydé entre Batterie et Borne 30
+                repos: { 'BATT': 12.6, '30': 12.6, '50': 0.0, 'GND': 0.0 }, // Au repos, pas de courant = pas de chute de tension
+                crank: { 'BATT': 11.2, '30': 6.5,  '50': 11.1, 'GND': 0.1 } // En charge: la tension s'effondre à la borne 30
+            },
+            'relay': { // Relais de commande ou Neiman HS (Coupure)
+                repos: { 'BATT': 12.6, '30': 12.6, '50': 0.0, 'GND': 0.0 },
+                crank: { 'BATT': 12.5, '30': 12.5, '50': 0.0, 'GND': 0.0 } // La tension ne chute pas car le démarreur ne s'enclenche pas
+            },
+            'starter': { // Démarreur en court-circuit ou moteur bloqué (Tire trop d'ampères)
+                repos: { 'BATT': 12.4, '30': 12.4, '50': 0.0, 'GND': 0.0 },
+                crank: { 'BATT': 7.5,  '30': 7.2,  '50': 7.2,  'GND': 0.4 } // Le démarreur met le système à genoux
+            }
+        };
+
+        const SCENARIO_TEXTS = {
+            'normal': "<strong>État : Système Parfait.</strong> La tension chute normalement à ~10.5V pendant l'effort du démarreur. Le câble transmet bien la puissance.",
+            'cable': "<strong>État : Câble B+ Oxydé (Résistance).</strong> <span class='badge badge-red'>PANNE</span> Observez la Borne 30 : Au repos elle affiche 12V, mais en actionnant, elle chute dramatiquement. C'est le principe du Voltage Drop !",
+            'relay': "<strong>État : Relais / Neiman HS.</strong> <span class='badge badge-amber'>PANNE</span> Testez la Borne 50. Quand vous actionnez, aucune tension n'arrive. Le démarreur n'est pas alimenté en commande.",
+            'starter': "<strong>État : Démarreur Grippé.</strong> <span class='badge badge-red'>PANNE</span> Le moteur interne force ou est en court-circuit. Il tire plus de 400 Ampères, ce qui fait effondrer la tension de toute la batterie."
+        };
+
+        const PIN_LABELS = {
+            'BATT': 'Cosses Batterie (+)',
+            '30': 'Borne 30 (Alim Principale)',
+            '50': 'Borne 50 (Fil d\'excitation)',
+            'GND': 'Carcasse Démarreur (Masse)'
+        };
+
+        let currentScenario = 'normal';
+        let currentPin = 'BATT';
+        let isCranking = false;
+
+        function setScenario(scen) {
+            currentScenario = scen;
+            document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-scen-${scen}`).classList.add('active');
+            document.getElementById('scen-desc').innerHTML = SCENARIO_TEXTS[scen];
+            updateMultimeter();
+            drawScopeBase(); // Reset scope
+        }
+
+        function selectPin(pin) {
+            currentPin = pin;
+            document.querySelectorAll('.pin-terminal').forEach(el => el.classList.remove('selected-red'));
+            document.getElementById(`pin-${pin}`).classList.add('selected-red');
+            document.getElementById('lbl-red').innerText = PIN_LABELS[pin];
+            updateMultimeter();
+        }
+
+        function updateMultimeter() {
+            let state = isCranking ? 'crank' : 'repos';
+            let val = VOLTAGE_DB[currentScenario][state][currentPin];
+            
+            // Add a tiny bit of random fluctuation if cranking
+            if (isCranking && currentPin !== 'GND' && currentScenario !== 'relay') {
+                val += (Math.random() * 0.2 - 0.1); 
+            }
+            
+            document.getElementById('dmmValue').innerText = val.toFixed(2);
+        }
+
+        let crankInterval;
+
+        function startCrank() {
+            isCranking = true;
+            document.getElementById('btn-crank').classList.add('cranking');
+            document.getElementById('btn-crank').innerText = "⚙️ Lancement en cours...";
+            
+            // DMM Update loop
+            updateMultimeter();
+            crankInterval = setInterval(updateMultimeter, 100);
+            
+            // Trigger Scope Draw
+            animateScopeCrank();
+        }
+
+        function stopCrank() {
+            if(!isCranking) return;
+            isCranking = false;
+            document.getElementById('btn-crank').classList.remove('cranking');
+            document.getElementById('btn-crank').innerText = "🔑 Maintenir pour Démarrer (CRANK)";
+            clearInterval(crankInterval);
+            updateMultimeter();
+        }
+
+        // ==========================================
+        // OSCILLOSCOPE LOGIC (BATTERY VOLTAGE WAVEFORM)
+        // ==========================================
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        let scopeAnimId;
+
+        function drawScopeGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const w = canvas.width; const h = canvas.height;
+            ctx.strokeStyle = '#122525'; ctx.lineWidth = 1;
+            for(let i=0; i<=10; i++) { ctx.beginPath(); ctx.moveTo(i*(w/10), 0); ctx.lineTo(i*(w/10), h); ctx.stroke(); }
+            for(let i=0; i<=8; i++) { ctx.beginPath(); ctx.moveTo(0, i*(h/8)); ctx.lineTo(w, i*(h/8)); ctx.stroke(); }
+        }
+
+        function drawScopeBase() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            drawScopeGrid();
+            
+            let baseVolts = VOLTAGE_DB[currentScenario]['repos']['BATT'];
+            let y = canvas.height - ((baseVolts / 16) * canvas.height); // Max 16V scale
+
+            ctx.strokeStyle = '#ffaa00';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+        }
+
+        function animateScopeCrank() {
+            if(scopeAnimId) cancelAnimationFrame(scopeAnimId);
+            
+            let startTime = performance.now();
+            let duration = 3000; // 3 seconds scope window
+            let w = canvas.width;
+            let h = canvas.height;
+            
+            let points = [];
+            
+            function draw() {
+                let now = performance.now();
+                let elapsed = now - startTime;
+                let progressX = (elapsed / duration) * w;
+                
+                if (progressX > w) {
+                    drawScopeGrid();
+                    ctx.beginPath(); ctx.moveTo(0, h - (VOLTAGE_DB[currentScenario]['repos']['BATT']/16)*h); ctx.lineTo(w, h - (VOLTAGE_DB[currentScenario]['repos']['BATT']/16)*h); ctx.stroke();
+                    return; // End animation
+                }
+
+                let tMs = (progressX / w) * 3000;
+                let v = VOLTAGE_DB[currentScenario]['repos']['BATT'];
+
+                if (isCranking && tMs > 200) {
+                    let crankVolts = VOLTAGE_DB[currentScenario]['crank']['BATT'];
+                    
+                    if(currentScenario === 'relay') {
+                        v = crankVolts; // Stays flat
+                    } else if (currentScenario === 'starter') {
+                        // Massive drop, slow recovery
+                        if(tMs < 400) v = v - ((v - crankVolts) * ((tMs-200)/200));
+                        else v = crankVolts + Math.random() * 0.3; 
+                    } else {
+                        // Normal cranking signature (Initial drop, then compression ripples)
+                        if(tMs < 300) {
+                            // Inrush current drop
+                            v = crankVolts - 1.5; 
+                        } else {
+                            // Steady crank with compression ripple
+                            let ripple = Math.sin((tMs - 300) * 0.05) * 0.4;
+                            v = crankVolts + ripple;
+                        }
+                    }
+                }
+
+                points.push({x: progressX, y: h - ((v / 16) * h)});
+
+                drawScopeGrid();
+                ctx.strokeStyle = '#ffaa00';
+                ctx.shadowColor = 'rgba(255, 170, 0, 0.5)';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 3;
+                
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for(let i=1; i<points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                scopeAnimId = requestAnimationFrame(draw);
+            }
+            
+            draw();
+        }
+
+        window.onload = function() {
+            setScenario('normal');
+        };
+        window.onresize = drawScopeBase;
+
+    </script>
+</body>
+</html>

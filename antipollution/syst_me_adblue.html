@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Système AdBlue (Dépollution SCR)</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 350px 1fr;
+            }
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--neon-cyan);
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #1a2222;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            border-color: var(--neon-cyan);
+            color: #fff;
+        }
+
+        button.active {
+            background: rgba(0, 255, 204, 0.1);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        button.danger.active {
+            background: rgba(255, 51, 51, 0.1);
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+            box-shadow: 0 0 10px rgba(255,51,51,0.3);
+        }
+
+        .pin-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .pin-badge {
+            flex: 1;
+            background: #161d1d;
+            border: 1px solid var(--border-color);
+            padding: 12px 6px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pin-badge.active {
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+            background: rgba(255,51,51,0.05);
+            box-shadow: 0 0 8px rgba(255,51,51,0.2);
+        }
+
+        .pin-num {
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: block;
+        }
+
+        .pin-name {
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 4px;
+            color: var(--text-secondary);
+        }
+
+        .display-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 600px) {
+            .display-grid {
+                grid-template-columns: 1fr 220px;
+            }
+        }
+
+        .screen-wrapper {
+            background: var(--screen-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 250px;
+        }
+
+        .dmm-case {
+            background: #1e1e1e;
+            border: 3px solid #e67e22;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        .dmm-screen {
+            background: #9cb3a8;
+            color: #111;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 2rem;
+            text-align: right;
+            padding: 10px;
+            border-radius: 4px;
+            border: 2px solid #55665c;
+            box-shadow: inset 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .dmm-unit {
+            font-size: 0.9rem;
+            margin-left: 4px;
+        }
+
+        .tech-data {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        .tech-data strong {
+            color: #fff;
+        }
+
+        .alert-box {
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            background: rgba(0, 255, 204, 0.05);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        .alert-box.danger {
+            background: rgba(255, 51, 51, 0.05);
+            border: 1px solid var(--neon-red);
+            color: var(--neon-red);
+        }
+
+        .alert-box.warning {
+            background: rgba(255, 170, 0, 0.05);
+            border: 1px solid var(--neon-amber);
+            color: var(--neon-amber);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--neon-cyan);
+            border-bottom: 2px solid var(--neon-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Colonne Gauche: Commandes -->
+        <div class="panel">
+            <div class="panel-title">Configuration AdBlue</div>
+            
+            <label class="control-label">Composant SCR :</label>
+            <div class="btn-group">
+                <button id="type-injector" class="active" onclick="switchArchitecture('injector')">Injecteur / Doseur (2 Fils)</button>
+                <button id="type-pump" onclick="switchArchitecture('pump')">Pompe AdBlue (3 Fils)</button>
+            </div>
+
+            <label class="control-label">État du Moteur :</label>
+            <div class="btn-group">
+                <button id="state-off" onclick="changeEngineState('off')">Contact ON (Arrêt)</button>
+                <button id="state-idle" class="active" onclick="changeEngineState('idle')">Moteur Tournant</button>
+            </div>
+
+            <button id="btn-snap" style="width: 100%; border-color: var(--neon-blue); color: var(--neon-blue); margin-bottom: 20px;" onclick="triggerSnap()">
+                🚀 Forcer Séquence d'Injection (Test Actuateur)
+            </button>
+
+            <label class="control-label">Bornages du Connecteur :</label>
+            <div class="pin-container" id="pin-wrapper">
+                <!-- Généré dynamiquement -->
+            </div>
+
+            <div class="panel-title" style="margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 15px;">
+                Tricheries / Anomalies
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="fault-none" class="active" onclick="injectFault('none')">Aucun Défaut (Sain)</button>
+                <button id="fault-clogged" class="danger" onclick="injectFault('clogged')">Cristallisation (Bouché)</button>
+                <button id="fault-unplugged" class="danger" onclick="injectFault('unplugged')">Débranché / Circuit Ouvert</button>
+                <button id="fault-short" class="danger" onclick="injectFault('short')">Court-circuit à la Masse</button>
+            </div>
+        </div>
+
+        <!-- Colonne Droite: Écrans -->
+        <div class="panel">
+            <div class="tabs">
+                <button class="tab active" id="tab-oscilloscope" onclick="switchTab('oscilloscope')">Oscilloscope</button>
+                <button class="tab" id="tab-deepdiag" onclick="switchTab('deepdiag')">DEEP DIAG</button>
+            </div>
+
+            <div id="oscilloscope-view">
+                <div class="panel-title">
+                    Mesures Réelles
+                    <span id="moteur-status" style="font-size:0.8rem; color:var(--neon-cyan);">MOTEUR: TOURNANT</span>
+                </div>
+
+                <div class="display-grid">
+                    <!-- Oscilloscope -->
+                    <div class="screen-wrapper">
+                        <canvas id="scopeCanvas"></canvas>
+                    </div>
+
+                    <!-- Multimètre -->
+                    <div class="dmm-case">
+                        <div style="color: #fff; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">
+                            Multimètre Fluke
+                        </div>
+                        <div class="dmm-screen">
+                            <span id="dmmValue">14.10</span><span class="dmm-unit" id="dmmUnit">V</span>
+                        </div>
+                        <div style="text-align: center; color: #888; font-size: 0.7rem;">
+                            Mode: <span id="dmmMode" style="color:#e67e22; font-weight:bold;">DC Volts</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="deepdiag-view" style="display: none; min-height: 290px;">
+                <div class="panel-title">Diagnostic Approfondi (DEEP DIAG)</div>
+                <div class="tech-data">
+                    <p><strong>Contrôle de la Résistance de l'Injecteur SCR (Doseur) :</strong></p>
+                    <ul>
+                        <li>Débrancher le connecteur de l'injecteur AdBlue. Mesurer la résistance entre les bornes 1 et 2.</li>
+                        <li><strong>Valeur Attendue :</strong> ~ 11 Ω à 15 Ω à 20°C. Si OL (circuit ouvert) ou ~ 0 Ω (court-circuit), remplacer l'injecteur.</li>
+                    </ul>
+
+                    <p><strong>Analyse du Signal PWM (Commande Masse) :</strong></p>
+                    <ul>
+                        <li>Le module SCR est piloté par une mise à la masse séquentielle (Signal Carré PWM).</li>
+                        <li><strong>Fréquence typique :</strong> ~ 10 Hz à 100 Hz selon les stratégies de dosage.</li>
+                        <li>La tension de commande reste à 14V lorsque l'injecteur est inactif, et chute à 0V à chaque impulsion d'injection.</li>
+                    </ul>
+
+                    <p><strong>Défaut de Cristallisation d'Urée :</strong></p>
+                    <ul>
+                        <li>Une panne courante est la cristallisation de l'AdBlue (cyanurate) à l'intérieur de la buse de l'injecteur.</li>
+                        <li><strong>Diagnostic :</strong> Le signal électrique (Oscilloscope) sera parfait et la résistance correcte, mais aucune diminution du taux de NOx ne sera constatée par les sondes Nox, générant un défaut OBD d'efficacité SCR. Nettoyage à l'eau chaude requis.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Documentation -->
+            <div style="margin-top: 20px;" class="tech-data">
+                <h4 style="margin: 0 0 10px 0; color: var(--neon-cyan);">Analyse Documentaire & Astuces :</h4>
+                <div id="techDescription">
+                    Le système SCR (Selective Catalytic Reduction) injecte une solution d'urée (AdBlue) dans l'échappement pour neutraliser les oxydes d'azote (NOx). L'injecteur est commandé en RCO (PWM) par le module de contrôle.
+                </div>
+                <div class="alert-box" id="diagnosticAlert">
+                    Statut : Système nominal. Pression SCR atteinte, dosage en attente.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Variables globales (Identique au MAF)
+        let activeArchitecture = 'injector'; // 'injector' ou 'pump'
+        let activeState = 'idle'; // 'off', 'idle', 'snap'
+        let activeFault = 'none'; // 'none', 'clogged', 'unplugged', 'short'
+        let selectedPin = 1;
+
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let isAnimating = false;
+        let animProgress = 0;
+        let scopeInterval = null;
+        const timeScale = 50; 
+
+        // Bases de données multimètre
+        const database_injector = {
+            off:   { 1: 12.10, 2: 12.10 }, // 1: Commande (pas de masse), 2: Alim
+            idle:  { 1: 14.10, 2: 14.10 }, // 1: Commande (injection quasi nulle au ralenti sans charge), 2: Alim alternateur
+            snap:  { 1: 8.50,  2: 14.05 }  // Tension moyenne chute avec le PWM actif
+        };
+
+        const database_pump = {
+            off:   { 1: 0.01, 2: 12.10, 3: 12.10 }, // 1: Masse, 2: Commande PWM (non pilotée), 3: Alim permanente
+            idle:  { 1: 0.01, 2: 10.50, 3: 14.10 }, // Pompe maintient la pression de 5 bars (PWM léger)
+            snap:  { 1: 0.01, 2: 5.50,  3: 14.05 }  // Pompe débite fort (Rapport cyclique important)
+        };
+
+        function switchArchitecture(arch) {
+            activeArchitecture = arch;
+            document.getElementById('type-injector').classList.toggle('active', arch === 'injector');
+            document.getElementById('type-pump').classList.toggle('active', arch === 'pump');
+            
+            selectPin(1); // Retour pin 1
+            renderPins();
+            updateScopeParameters();
+        }
+
+        function changeEngineState(state) {
+            activeState = state;
+            document.getElementById('state-off').classList.toggle('active', state === 'off');
+            document.getElementById('state-idle').classList.toggle('active', state === 'idle');
+
+            let txt = 'MOTEUR TOURNANT';
+            if (state === 'off') txt = 'CONTACT ON (ARRÊT)';
+            document.getElementById('moteur-status').innerText = `MOTEUR: ${txt}`;
+
+            updateScopeParameters();
+        }
+
+        function renderPins() {
+            const wrapper = document.getElementById('pin-wrapper');
+            wrapper.innerHTML = '';
+
+            const pins = activeArchitecture === 'injector' ? 
+                [{ id: 1, name: 'Commande (PWM Masse)' }, { id: 2, name: 'Alim (+12V)' }] :
+                [{ id: 1, name: 'Masse (GND)' }, { id: 2, name: 'Commande Pompe (PWM)' }, { id: 3, name: 'Alim (+12V)' }];
+
+            pins.forEach(p => {
+                const badge = document.createElement('div');
+                badge.className = 'pin-badge';
+                badge.id = 'pin-' + p.id;
+                if (p.id === selectedPin) badge.classList.add('active');
+
+                badge.onclick = () => selectPin(p.id);
+
+                badge.innerHTML = `
+                    <span class="pin-num">${p.id}</span>
+                    <span class="pin-name">${p.name}</span>
+                `;
+                wrapper.appendChild(badge);
+            });
+        }
+
+        function selectPin(pinNum) {
+            selectedPin = pinNum;
+            const badges = document.querySelectorAll('.pin-badge');
+            badges.forEach(b => b.classList.remove('active'));
+            const activeBadge = document.getElementById('pin-' + pinNum);
+            if (activeBadge) activeBadge.classList.add('active');
+            updateScopeParameters();
+        }
+
+        function injectFault(fault) {
+            activeFault = fault;
+            document.getElementById('fault-none').classList.toggle('active', fault === 'none');
+            document.getElementById('fault-clogged').classList.toggle('active', fault === 'clogged');
+            document.getElementById('fault-unplugged').classList.toggle('active', fault === 'unplugged');
+            document.getElementById('fault-short').classList.toggle('active', fault === 'short');
+
+            updateScopeParameters();
+        }
+
+        function switchTab(tabId) {
+            document.getElementById('tab-oscilloscope').classList.toggle('active', tabId === 'oscilloscope');
+            document.getElementById('tab-deepdiag').classList.toggle('active', tabId === 'deepdiag');
+
+            document.getElementById('oscilloscope-view').style.display = (tabId === 'oscilloscope') ? 'block' : 'none';
+            document.getElementById('deepdiag-view').style.display = (tabId === 'deepdiag') ? 'block' : 'none';
+        }
+
+        function updateScopeParameters() {
+            const valBox = document.getElementById('dmmValue');
+            const modeBox = document.getElementById('dmmMode');
+            const alertBox = document.getElementById('diagnosticAlert');
+            const descBox = document.getElementById('techDescription');
+
+            let db = activeArchitecture === 'injector' ? database_injector : database_pump;
+            let finalVal = db[activeState][selectedPin];
+
+            modeBox.innerText = "DC Volts";
+
+            // Altérations de pannes (Tricheries Multimètre)
+            if (activeFault === 'unplugged') {
+                if (activeArchitecture === 'injector' && selectedPin === 1) finalVal = 14.10; // Câble coupé = reste au +12V
+                if (activeArchitecture === 'pump' && selectedPin === 2) finalVal = 14.10;
+            } else if (activeFault === 'short') {
+                if (selectedPin === 1 || selectedPin === 2) finalVal = 0.00; // Franc court-circuit
+            }
+
+            // Fluctuation électrique
+            if (activeState !== 'off' && finalVal > 0 && finalVal < 14.00) {
+                finalVal += (Math.random() - 0.5) * 0.1;
+            }
+
+            valBox.innerText = finalVal.toFixed(2);
+
+            // Documentation
+            if (activeArchitecture === 'injector') {
+                descBox.innerHTML = `<strong>Injecteur AdBlue (Doseur SCR 2 Fils) :</strong> Reçoit un positif +12V permanent (via relais) et est piloté par l'ECU SCR par des mises à la masse très brèves (PWM) pour pulvériser l'urée dans le flux d'échappement.`;
+            } else {
+                descBox.innerHTML = `<strong>Pompe d'Alimentation AdBlue (3 Fils) :</strong> Maintient une pression constante (env. 5 bars) dans le circuit. Pilotée par un signal PWM pour faire varier sa vitesse de rotation selon la demande.`;
+            }
+
+            // Statuts de Diagnostics
+            if (activeFault === 'none') {
+                alertBox.className = "alert-box";
+                alertBox.innerHTML = "✔ <strong>Statut nominal :</strong> Composant opérationnel. Commandes électriques validées.";
+            } else if (activeFault === 'clogged') {
+                alertBox.className = "alert-box warning";
+                alertBox.innerHTML = "⚠️ <strong>Anomalie Physique - Cristallisation :</strong> L'injecteur (ou la crépine de pompe) est bouché par de l'AdBlue cristallisé. Le signal électrique est parfait, mais le débit physique est nul (Défaut Efficacité NOx).";
+            } else if (activeFault === 'unplugged') {
+                alertBox.className = "alert-box danger";
+                alertBox.innerHTML = "❌ <strong>Défaut Électrique - Circuit Ouvert :</strong> Composant débranché ou faisceau rompu. Le calculateur bloque le démarrage après X kilomètres (Anti-démarrage AdBlue).";
+            } else if (activeFault === 'short') {
+                alertBox.className = "alert-box danger";
+                alertBox.innerHTML = "❌ <strong>Défaut Électrique - Court-circuit à la Masse :</strong> Chute de tension critique. Composant grillé ou fil dénudé touchant le châssis.";
+            }
+
+            drawScope();
+        }
+
+        function triggerSnap() {
+            if (isAnimating) return;
+            isAnimating = true;
+            animProgress = 0;
+            changeEngineState('snap');
+
+            document.getElementById('moteur-status').innerText = "STATUT: TEST ACTUATEUR (INJECTION EN COURS)";
+            document.getElementById('moteur-status').style.color = "var(--neon-blue)";
+
+            if (scopeInterval) clearInterval(scopeInterval);
+            const startTime = Date.now();
+            const duration = 2000;
+
+            scopeInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                animProgress = (elapsed / duration) * canvas.width;
+
+                let representedTime = (animProgress / canvas.width) * (timeScale * 10);
+                
+                // Animation Multimètre
+                if (activeArchitecture === 'injector' && selectedPin === 1) {
+                    if (activeFault === 'unplugged') document.getElementById('dmmValue').innerText = "14.10";
+                    else if (activeFault === 'short') document.getElementById('dmmValue').innerText = "0.00";
+                    else if (representedTime > 200 && representedTime < 1800) {
+                        document.getElementById('dmmValue').innerText = (8.50 + Math.random()*0.5).toFixed(2); // Tension moyenne en dosage
+                    } else {
+                        document.getElementById('dmmValue').innerText = "14.10";
+                    }
+                } else if (activeArchitecture === 'pump' && selectedPin === 2) {
+                    if (activeFault === 'unplugged') document.getElementById('dmmValue').innerText = "14.10";
+                    else if (activeFault === 'short') document.getElementById('dmmValue').innerText = "0.00";
+                    else if (representedTime > 200 && representedTime < 1800) {
+                        document.getElementById('dmmValue').innerText = (5.50 + Math.random()*0.5).toFixed(2);
+                    } else {
+                        document.getElementById('dmmValue').innerText = "10.50";
+                    }
+                }
+
+                drawScope();
+
+                if (elapsed >= duration) {
+                    clearInterval(scopeInterval);
+                    isAnimating = false;
+                    changeEngineState('idle'); 
+                }
+            }, 30);
+        }
+
+        function drawScope() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.fillStyle = '#050a0a';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.strokeStyle = '#112222';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < w; i += 40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
+            }
+            for (let j = 0; j < h; j += 40) {
+                ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(w, j); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#1e2929';
+            ctx.beginPath();
+            ctx.moveTo(0, h / 2);
+            ctx.lineTo(w, h / 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#00ffcc';
+            ctx.shadowColor = 'rgba(0, 255, 204, 0.4)';
+            ctx.shadowBlur = 4;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+
+            let activeLine = false;
+
+            for (let x = 0; x < w; x++) {
+                let y = h - 20; // Ligne 0V en bas
+
+                if (activeState !== 'off') {
+                    if (activeArchitecture === 'injector') {
+                        if (selectedPin === 1) {
+                            // SIGNAL INJECTEUR (Commande Masse PWM)
+                            if (activeFault === 'unplugged') {
+                                y = h - (14.10 * 15); // Reste figé à 14V
+                                activeLine = true;
+                            } else if (activeFault === 'short') {
+                                y = h - 15; // 0V Franc
+                                activeLine = true;
+                            } else {
+                                let isHigh = true; // Ligne à 14V au repos
+                                
+                                if (activeState === 'snap' && x < animProgress) {
+                                    if (x > 40 && x < 450) {
+                                        // Salves d'injection AdBlue
+                                        let pulseCycle = x % 60;
+                                        if (pulseCycle < 15) isHigh = false; // Mise à la masse brève
+                                    }
+                                }
+                                
+                                y = isHigh ? (h - (14.10 * 15)) : (h - 25);
+                                activeLine = true;
+                            }
+                        } else if (selectedPin === 2) {
+                            y = h - (14.10 * 15); // Alim 12V continue
+                            activeLine = true;
+                        }
+                    } else {
+                        // SIGNAL POMPE (Commande Vitesse PWM)
+                        if (selectedPin === 2) {
+                            if (activeFault === 'unplugged') {
+                                y = h - (14.10 * 15);
+                                activeLine = true;
+                            } else if (activeFault === 'short') {
+                                y = h - 15;
+                                activeLine = true;
+                            } else {
+                                let dutyCycle = 0.8; // 80% haut au ralenti (faible charge)
+                                let period = 20;
+
+                                if (activeState === 'snap' && x < animProgress) {
+                                    if (x > 40 && x < 450) {
+                                        dutyCycle = 0.4; // 40% haut (Pompe débite fort)
+                                    }
+                                }
+
+                                let isHigh = (x % period) < (period * dutyCycle);
+                                y = isHigh ? (h - (14.10 * 15)) : (h - 25);
+                                activeLine = true;
+                            }
+                        } else if (selectedPin === 3) {
+                            y = h - (14.10 * 15); // Alim 12V
+                            activeLine = true;
+                        } else if (selectedPin === 1) {
+                            y = h - 20; // Masse
+                            activeLine = true;
+                        }
+                    }
+                } else {
+                    // Moteur Contact ON (Arrêt)
+                    if (activeArchitecture === 'injector') {
+                        if (selectedPin === 1 || selectedPin === 2) {
+                            y = activeFault === 'short' && selectedPin === 1 ? h - 15 : h - (12.10 * 15);
+                            activeLine = true;
+                        }
+                    } else {
+                        if (selectedPin === 2 || selectedPin === 3) {
+                            y = activeFault === 'short' && selectedPin === 2 ? h - 15 : h - (12.10 * 15);
+                            activeLine = true;
+                        } else {
+                            y = h - 20;
+                            activeLine = true;
+                        }
+                    }
+                }
+
+                if (!activeLine) y = h - 20;
+
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            if (isAnimating) {
+                ctx.strokeStyle = '#ff3333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(animProgress, 0);
+                ctx.lineTo(animProgress, h);
+                ctx.stroke();
+            }
+        }
+
+        window.onload = function() {
+            canvas.width = canvas.offsetWidth || 500;
+            canvas.height = canvas.offsetHeight || 250;
+            
+            switchArchitecture('injector');
+            changeEngineState('idle');
+        };
+    </script>
+</body>
+</html>

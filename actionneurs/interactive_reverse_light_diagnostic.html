@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Éclairage & Marche Arrière</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-pink: #ff33cc;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Crisp Vector Icon SVGs */
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Interactive Rear Car Simulation */
+        .rear-car-container {
+            background: #172222;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Symbolic Rear of the Car */
+        .car-bumper {
+            width: 75%;
+            height: 50px;
+            background: #252b2b;
+            border-radius: 10px;
+            position: absolute;
+            bottom: 30px;
+            border: 2px solid #3c4a4a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.5);
+        }
+
+        /* Tail Lights */
+        .tail-light {
+            width: 50px;
+            height: 22px;
+            background: #4a0e0e;
+            border: 2px solid #222;
+            border-radius: 4px;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .light-red {
+            width: 60%;
+            height: 100%;
+            background: #8b0000;
+        }
+
+        .light-white {
+            width: 40%;
+            height: 100%;
+            background: #333; /* closed */
+            transition: all 0.2s ease;
+        }
+
+        .light-white.active {
+            background: #ffffff;
+            box-shadow: 0 0 25px #ffffff, 0 0 10px var(--neon-cyan);
+        }
+
+        /* Parking Radar Sensors */
+        .radar-sensor {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #111;
+            border: 2px solid #4a5a5a;
+            position: relative;
+        }
+
+        .radar-sensor-left { position: absolute; bottom: 50px; left: 25%; }
+        .radar-sensor-mid { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); }
+        .radar-sensor-right { position: absolute; bottom: 50px; left: 75%; }
+
+        .radar-wave {
+            position: absolute;
+            bottom: 12px;
+            left: calc(50% - 15px);
+            width: 30px;
+            height: 15px;
+            border-top: 3px solid var(--neon-amber);
+            border-radius: 50% 50% 0 0;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        @keyframes wavePulse {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; }
+            100% { opacity: 0; transform: scale(1.8); }
+        }
+
+        .radar-wave.active {
+            animation: wavePulse 1.2s infinite linear;
+        }
+
+        /* Gearbox Shifter Layout */
+        .shifter-box {
+            background: #181d1d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gear-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 140px;
+            text-align: center;
+        }
+
+        .gear-btn {
+            background: #202b2b;
+            border: 1.5px solid #3c4a4a;
+            color: var(--text-secondary);
+            font-weight: 800;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .gear-btn:hover {
+            border-color: var(--neon-cyan);
+            color: #fff;
+        }
+
+        .gear-btn.active {
+            background: var(--neon-cyan);
+            color: #000;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .gear-btn.active-reverse {
+            background: var(--neon-amber);
+            color: #000;
+            border-color: var(--neon-amber);
+            box-shadow: 0 0 10px rgba(255,170,0,0.3);
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 15px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 35px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'GEARBOX';
+            position: absolute;
+            top: -10px; left: calc(50% - 35px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 45px;
+            height: 55px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-hole {
+            width: 10px;
+            height: 14px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* FAZET TRICKS CONTROL PANEL */
+        .tricks-selector-title {
+            font-size: 12px;
+            color: var(--neon-amber);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .tricks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .trick-btn {
+            background: #192222;
+            border: 1px dashed var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .trick-btn:hover {
+            border-color: var(--neon-amber);
+            color: #fff;
+        }
+
+        .trick-btn.active {
+            background: var(--neon-amber);
+            color: #000;
+            border-color: var(--neon-amber);
+            border-style: solid;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">
+                <!-- Lighting SVG Icon -->
+                <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" fill="none"/><path d="M12 3v18M3 12h18" stroke="currentColor"/></svg>
+                Diagnostic Technique - Feux de Recul & Radars de Recul
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module interactif simule le diagnostic d'une ligne d'éclairage de marche arrière commandée par un contacteur mécanique sur la boîte de vitesses manuelle. Étudiez la liaison avec les radars de recul (ABS/Ultrasons) et apprenez à effectuer un Shunt sur le connecteur faisceau pour tester l'intégralité du réseau.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Gearbox Shifter Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><circle cx="12" cy="5" r="3" stroke="currentColor" fill="none"/><path d="M12 8v13M8 12h8" stroke="currentColor"/></svg>
+                Levier de Boîte Manuelle & Cible d'Éclairage
+            </h3>
+
+            <!-- CAR GRAPHICAL SIMULATION -->
+            <div class="rear-car-container">
+                <!-- Left Tail Light -->
+                <div class="tail-light" style="position: absolute; left: 15%; bottom: 65px;">
+                    <div class="light-red"></div>
+                    <div class="light-white" id="light-left-white"></div>
+                </div>
+
+                <!-- Car Bumper with sensors inside -->
+                <div class="car-bumper">
+                    <div class="radar-sensor" id="sensor-1">
+                        <div class="radar-wave" id="wave-1"></div>
+                    </div>
+                    <div class="radar-sensor" id="sensor-2">
+                        <div class="radar-wave" id="wave-2"></div>
+                    </div>
+                    <div class="radar-sensor" id="sensor-3">
+                        <div class="radar-wave" id="wave-3"></div>
+                    </div>
+                </div>
+
+                <!-- Right Tail Light -->
+                <div class="tail-light" style="position: absolute; right: 15%; bottom: 65px;">
+                    <div class="light-white" id="light-right-white"></div>
+                    <div class="light-red"></div>
+                </div>
+            </div>
+            
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="color: var(--neon-amber);">Étape 1 : Engager la marche arrière (R)</label>
+            </div>
+            <div class="shifter-box">
+                <div class="gear-grid">
+                    <button class="gear-btn" id="gear-1" onclick="selectGear('1')">1</button>
+                    <button class="gear-btn" id="gear-3" onclick="selectGear('3')">3</button>
+                    <button class="gear-btn" id="gear-5" onclick="selectGear('5')">5</button>
+                    <button class="gear-btn" id="gear-2" onclick="selectGear('2')">2</button>
+                    <button class="gear-btn" id="gear-4" onclick="selectGear('4')">4</button>
+                    <button class="gear-btn" id="gear-r" onclick="selectGear('R')">R</button>
+                </div>
+                <div style="margin-top:10px; font-size:11px; font-weight:bold; color:var(--text-secondary);" id="gearStatus">Etat actuel : Point Mort (N)</div>
+            </div>
+
+            <!-- INTERACTIVE TRICKS & FAZET BUTTONS SECTION -->
+            <div class="tricks-wrapper" style="margin-top:15px;">
+                <div class="tricks-selector-title">💡 Fases de Diagnostic Moustachues (Astuces) :</div>
+                <div class="tricks-grid">
+                    <button class="trick-btn" id="btn-trick-unplug" onclick="toggleTrick('unplug')">Débrancher la fiche</button>
+                    <button class="trick-btn" id="btn-trick-shunt" onclick="toggleTrick('shunt')">Faire un Shunt</button>
+                    <button class="trick-btn" id="btn-trick-ground" onclick="toggleTrick('ground')">Feu à Masse Oxydée</button>
+                </div>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 ou 2) du connecteur de boîte ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. Effectuez un Shunt lorsque le connecteur est débranché pour tester si les feux s'activent !
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;">Connecteur du Contacteur (Harnais)</label>
+                    <div class="connector-housing" id="connectorHousing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole" id="hole-1"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">VCC_APC</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole" id="hole-2"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);">SIG_BCM</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (+12V APC)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th>Nature du Fil (Faisceau Contacteur)</th>
+                        <th>Valeur Attendue (Gear ON - Marche Arrière)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td>Alimentation commutée (+15 APC)</td>
+                        <td>+12.0 V à +14.0 V stable après contact d'allumage (Fusible F15)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td>Retour de signal de recul vers BCM (SIG)</td>
+                        <td>+12.0 V constant (Passe à 0V en point mort pour refermer le feu)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif (Liaison Contacteur, BCM et Radars)
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus ou sélectionnez-les pour voir la ligne s'illuminer et visualiser le cheminement électrique entre le fusible d'allumage, le contacteur de boîte, le calculateur d'habitacle BCM (BSI) et la centrale ABS / Radars de recul.
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 240" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- BOITE A FUSIBLES (APC +15) -->
+                <g id="power-source-block">
+                    <rect x="20" y="20" width="110" height="40" rx="4" fill="#172222" stroke="#ff3333" stroke-width="1.5" />
+                    <text id="power-source-text" x="75" y="44" fill="#ff3333" font-size="8" font-weight="bold" text-anchor="middle">FUSIBLE F15 (+12V)</text>
+                </g>
+
+                <!-- CONTACTEUR SUR BOITE -->
+                <rect x="180" y="90" width="120" height="80" rx="6" fill="#111616" stroke="#ffaa00" stroke-width="2" />
+                <text x="240" y="145" fill="#ffaa00" font-size="9" font-weight="bold" text-anchor="middle" id="diagram-switch-title">CONTACTEUR BOITE</text>
+
+                <!-- Terminal connector dots -->
+                <circle cx="210" cy="100" r="5" fill="#ff3333" />
+                <text x="210" y="115" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                <circle cx="270" cy="100" r="5" fill="#00a8ff" />
+                <text x="270" y="125" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                <!-- CALCULATEUR HABITACLE BCM -->
+                <rect x="370" y="50" width="110" height="150" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="425" y="130" fill="#a0b2b2" font-size="10" font-weight="bold" text-anchor="middle">BCM / BSI</text>
+
+                <!-- LIGNES DE CABLAGE -->
+                <!-- Fil 1: Fusible -> Pin 1 -->
+                <path id="wire-path-1" d="M 75,60 L 75,80 L 210,80 L 210,95" fill="none" stroke="#ff3333" stroke-width="2" style="transition: all 0.3s ease;" />
+
+                <!-- Fil 2: Pin 2 -> BCM Pin 15 (Signal) -->
+                <path id="wire-path-2" d="M 270,100 L 270,85 L 340,85 L 340,110 L 370,110" fill="none" stroke="#00a8ff" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="106" fill="#00a8ff" font-size="7" text-anchor="end">Pin 15</text>
+
+                <!-- Internal wire bridge representing shunt (Drawn dynamically when active) -->
+                <path id="wire-shunt" d="M 210,100 L 210,80 L 270,80 L 270,100" fill="none" stroke="#ffaa00" stroke-width="4" style="display: none; stroke-linecap: round; filter: url(#glow-red);" />
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">
+                <!-- Shield/Diagnostic SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-red);" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" fill="none"/></svg>
+                Procédures de Diagnostic & Stratégies de Panne
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                <div>
+                    <span class="badge-fail">Loi Electrique : L'art du Shunt sur le Contacteur de boîte</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        Si les deux feux de recul et les radars de recul sont en panne totale en même temps : ne perdez pas votre temps à démonter l'échappement ou les garnitures arrière. Débranchez la fiche du contacteur sur la boîte de vitesses et insérez un simple câble (Shunt) entre la Pin 1 (+12V APC) and la Pin 2 (Signal). Si les feux s'allument à cet instant et que le radar sonne, vous venez de prouver que <strong>le câblage, les fusibles, le BCM et les ampoules sont 100% fonctionnels</strong>. Le contacteur mécanique interne de la boîte est H.S. et doit être remplacé d'office.
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: BODY CONTROL MODULE (BCM)
+                        </div>
+                        <div class="live-row"><span>Reverse Switch State (Boîte):</span><span id="live-switch-g">INACTIVE</span></div>
+                        <div class="live-row"><span>Reverse Light Output state:</span><span id="live-light-g" style="color: var(--neon-cyan);">0.0 V (OFF)</span></div>
+                        <div class="live-row"><span>Reverse Lights Current Draw:</span><span id="live-amp-g">0.00 A</span></div>
+                        <div class="live-row"><span>Parking Sensors Commande (CAN):</span><span id="live-radar-g">OFF (Disabled)</span></div>
+                        <div class="live-row"><span>Power line d'alimentation (+30):</span><span id="live-volt-g">12.05 V</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez engager la marche arrière en cliquant sur <strong>"R"</strong> sur la boîte de vitesse ci-dessus ou en actionnant le Shunt pour tester.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentGear = 'N'; // default Neutral
+        let activeTrick = 'none'; // 'none', 'unplug', 'shunt', 'ground'
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+
+        // Databases for measurements
+        const DMM_DATABASE = {
+            N: { 1: 12.05, 2: 0.00 }, // open switch
+            R: { 1: 12.05, 2: 12.05 } // closed switch
+        };
+
+        function toggleTrick(trickName) {
+            if (activeTrick === trickName) {
+                activeTrick = 'none';
+            } else {
+                activeTrick = trickName;
+            }
+
+            // Sync visual active states
+            document.querySelectorAll('.trick-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (activeTrick !== 'none') {
+                const targetBtn = document.getElementById(`btn-trick-${activeTrick}`);
+                if (targetBtn) targetBtn.classList.add('active');
+            }
+
+            // Unplugged connector visual shift
+            const housing = document.getElementById('connectorHousing');
+            const wireShunt = document.getElementById('wire-shunt');
+            const hole1 = document.getElementById('hole-1');
+            const hole2 = document.getElementById('hole-2');
+
+            if (activeTrick === 'unplug') {
+                if (housing) housing.style.opacity = '0.35';
+                if (wireShunt) wireShunt.style.display = 'none';
+                if (hole1) hole1.style.background = '#ffaa00';
+                if (hole2) hole2.style.background = '#ffaa00';
+            } 
+            else if (activeTrick === 'shunt') {
+                if (housing) housing.style.opacity = '1';
+                if (wireShunt) wireShunt.style.display = 'block';
+                if (hole1) hole1.style.background = '#00ffcc';
+                if (hole2) hole2.style.background = '#00ffcc';
+            } 
+            else {
+                if (housing) housing.style.opacity = '1';
+                if (wireShunt) wireShunt.style.display = 'none';
+                if (hole1) hole1.style.background = '#ffaa00';
+                if (hole2) hole2.style.background = '#ffaa00';
+            }
+
+            calculateVoltage();
+            updateLiveScannerData();
+            updateLightsAndSensors();
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if (!panel) return;
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        function calculateVoltage() {
+            let volt = 0.00;
+
+            if (activeTrick === 'unplug') {
+                // Pin 1 (VCC APC) on harness has 12V. Pin 2 (open line on harness) has floating/ECU pull up voltage of ~0V or 5V depending on car, let's say 0V
+                if (selectedRedPin === 1) volt = 12.05;
+                if (selectedRedPin === 2) volt = 0.00;
+                const dmmValEl = document.getElementById('dmmValue');
+                if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+                return;
+            }
+
+            if (activeTrick === 'shunt') {
+                // Harness bridged: Pin 1 and Pin 2 are both connected directly to power line
+                volt = 12.05;
+                const dmmValEl = document.getElementById('dmmValue');
+                if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+                return;
+            }
+
+            let refValues = DMM_DATABASE[currentGear === 'R' ? 'R' : 'N'];
+            if (refValues && refValues[selectedRedPin] !== undefined) {
+                volt = refValues[selectedRedPin];
+            }
+
+            // Ground/Masse Oxydée Trick alters ground measurements on lights but let's test pinouts first
+            const dmmValEl = document.getElementById('dmmValue');
+            if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#ff3333', 2: '#00a8ff' };
+
+            for (let i = 1; i <= 2; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-red)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-blue)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            document.querySelectorAll('.pin-terminal').forEach(el => {
+                el.classList.remove('selected-red');
+            });
+            const targetPin = document.getElementById(`pin-${pinNumber}`);
+            if (targetPin) targetPin.classList.add('selected-red');
+
+            const names = {
+                1: 'Pin 1 (+12V APC Fusible F15)',
+                2: 'Pin 2 (Signal de retour BCM)'
+            };
+            const selectedRedLabel = document.getElementById('selected-red-label');
+            if (selectedRedLabel) selectedRedLabel.innerText = names[pinNumber];
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function selectGear(gear) {
+            currentGear = gear;
+
+            document.querySelectorAll('.gear-btn').forEach(btn => {
+                btn.classList.remove('active', 'active-reverse');
+            });
+
+            const targetBtn = document.getElementById(`gear-${gear.toLowerCase()}`);
+            if (targetBtn) {
+                if (gear === 'R') {
+                    targetBtn.classList.add('active-reverse');
+                } else {
+                    targetBtn.classList.add('active');
+                }
+            }
+
+            const gearStatus = document.getElementById('gearStatus');
+            if (gearStatus) {
+                gearStatus.innerText = gear === 'R' ? "Etat actuel : Marche Arrière (R) engagée" : `Etat actuel : Vitesse ${gear} engagée`;
+            }
+
+            // Automatic resets of tricks for realistic feel
+            if (gear !== 'R' && activeTrick === 'ground') {
+                toggleTrick('ground');
+            }
+
+            calculateVoltage();
+            updateLiveScannerData();
+            updateLightsAndSensors();
+        }
+
+        // Active state renderer for wipers and sensors
+        function updateLightsAndSensors() {
+            let lightsActive = false;
+
+            // Lights open if: Gear is in R (and NOT unplugged), OR if we bridged the harness with a Shunt!
+            if ((currentGear === 'R' && activeTrick !== 'unplug') || activeTrick === 'shunt') {
+                lightsActive = true;
+            }
+
+            const lightLeft = document.getElementById('light-left-white');
+            const lightRight = document.getElementById('light-right-white');
+
+            const wave1 = document.getElementById('wave-1');
+            const wave2 = document.getElementById('wave-2');
+            const wave3 = document.getElementById('wave-3');
+
+            if (lightsActive) {
+                if (lightLeft) lightLeft.classList.add('active');
+                if (lightRight) lightRight.classList.add('active');
+
+                // Activate ultrasonic sensors wave pulsing
+                if (wave1) wave1.classList.add('active');
+                if (wave2) wave2.classList.add('active');
+                if (wave3) wave3.classList.add('active');
+
+                // If Masse Oxydée active, reduce tail light glowing brightness
+                if (activeTrick === 'ground') {
+                    if (lightLeft) lightLeft.style.boxShadow = '0 0 5px #ccc';
+                    if (lightRight) lightRight.style.boxShadow = '0 0 5px #ccc';
+                } else {
+                    if (lightLeft) lightLeft.style.boxShadow = '0 0 25px #fff, 0 0 10px var(--neon-cyan)';
+                    if (lightRight) lightRight.style.boxShadow = '0 0 25px #fff, 0 0 10px var(--neon-cyan)';
+                }
+            } else {
+                if (lightLeft) lightLeft.classList.remove('active');
+                if (lightRight) lightRight.classList.remove('active');
+
+                if (wave1) wave1.classList.remove('active');
+                if (wave2) wave2.classList.remove('active');
+                if (wave3) wave3.classList.remove('active');
+            }
+        }
+
+        // Live Scanner Data Core Engine
+        function updateLiveScannerData() {
+            let switchEl = document.getElementById('live-switch-g');
+            let lightEl = document.getElementById('live-light-g');
+            let ampEl = document.getElementById('live-amp-g');
+            let radarEl = document.getElementById('live-radar-g');
+            let voltEl = document.getElementById('live-volt-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!switchEl) return;
+
+            // Handle hard active tricks
+            if (activeTrick === 'unplug') {
+                switchEl.innerText = "INACTIVE (Fiche débranchée)";
+                lightEl.innerText = "0.0 V (OFF)";
+                ampEl.innerText = "0.00 A";
+                radarEl.innerText = "OFF (Disabled)";
+                if (dtcEl) {
+                    dtcEl.innerText = "B10A2 - REVERSE SWITCH SIGNAL CIRCUIT OPEN";
+                    dtcEl.style.color = "var(--neon-red)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🚨 État : Contacteur de marche arrière débranché</strong><br><br>• <strong>Anomalie :</strong> Le comodo est engagé mais l'ECU d'habitacle BCM ne détecte aucun retour de tension. Le voyant reste muet. Effectuez un **Shunt** pour tester les lignes !";
+                return;
+            }
+
+            if (activeTrick === 'shunt') {
+                switchEl.innerText = "ACTIVE (Bridged / Shunté)";
+                lightEl.innerText = "12.0 V (ON)";
+                ampEl.innerText = "1.80 A";
+                radarEl.innerText = "ACTIVE (Radar de Recul ON)";
+                if (dtcEl) {
+                    dtcEl.innerText = "NO FAULT (Shunt Test Successful)";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🔥 FAZET L-MOUSTACH (Diagnostic par Shunt Réussi) :</strong><br><br>• <strong>Verdict :</strong> Vous avez fait un Shunt avec un simple câble. Les feux s'allument à cet instant et le radar sonne ! Cela **prouve que le câblage, le BCM, les ampoules et les lignes CAN sont 100% fonctionnels**. Le contacteur sur la boîte manuelle est H.S. et doit être remplacé.";
+                return;
+            }
+
+            if (activeTrick === 'ground') {
+                switchEl.innerText = "ACTIVE";
+                lightEl.innerText = "12.0 V (ON - Dimmed)";
+                ampEl.innerText = "0.65 A (Faible)";
+                radarEl.innerText = "ACTIVE (Basse résolution)";
+                if (dtcEl) {
+                    dtcEl.innerText = "B109C - REVERSE LIGHT GROUND CIRCUIT HIGH RESISTANCE";
+                    dtcEl.style.color = "var(--neon-red)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🔥 FAZET L-MOUSTACH (Masse Oxydée sur Feu Arrière) :</strong><br><br>• <strong>Défaut de Masse :</strong> La masse du phare arrière gauche est rouillée (tension de masse lue de 4.2V sur la Pin de masse au lieu de 0.05V). Les ampoules s'éclairent faiblement et l'intensité globale baisse, provoquant des interférences électriques et le code <b>B109C</b>.";
+                return;
+            }
+
+            // Normal operations
+            if (currentGear === 'R') {
+                switchEl.innerText = "ACTIVE";
+                lightEl.innerText = "12.0 V (ON)";
+                ampEl.innerText = "1.80 A (Normal)";
+                radarEl.innerText = "ACTIVE (Radar de Recul ON)";
+                if (dtcEl) {
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🟢 État : Marche Arrière engagée (Conforme)</strong><br><br>• Le contacteur de boîte est fermé. La BCM alimente immédiatement les lampes arrière de marche arrière et envoie une trame multiplexée sur le réseau pour réveiller le bloc d'aide au stationnement.";
+            } else {
+                switchEl.innerText = "INACTIVE";
+                lightEl.innerText = "0.0 V (OFF)";
+                ampEl.innerText = "0.00 A";
+                radarEl.innerText = "OFF (Disabled)";
+                if (dtcEl) {
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🟢 État : Point mort engagé (Conforme)</strong><br><br>• Le contacteur de boîte est ouvert. Les feux de recul et les radars de recul s'éteignent.";
+            }
+        }
+
+        // Scope Grid Renderer
+        function drawScope() {
+            const canvas = document.getElementById('scopeCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const width = canvas.width || 500;
+            const height = canvas.height || 250;
+            const numDivsX = 10;
+            const numDivsY = 6;
+            const gridSpacingX = width / numDivsX;
+            const gridSpacingY = height / numDivsY;
+
+            ctx.strokeStyle = '#122525';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= numDivsX; i++) {
+                ctx.beginPath(); ctx.moveTo(i * gridSpacingX, 0); ctx.lineTo(i * gridSpacingX, height); ctx.stroke();
+            }
+            for (let i = 0; i <= numDivsY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, i * gridSpacingY); ctx.lineTo(width, i * gridSpacingY); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#1e4040';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.stroke();
+
+            // Simple active state line drawing
+            ctx.strokeStyle = '#00ffcc';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            let stateActive = (currentGear === 'R' && activeTrick !== 'unplug') || activeTrick === 'shunt';
+            let lineY = stateActive ? height - 180 : height - 20;
+            ctx.moveTo(0, lineY); ctx.lineTo(width, lineY);
+            ctx.stroke();
+        }
+
+        window.onload = function() {
+            selectPin(1);
+            updateLiveScannerData();
+            updateLightsAndSensors();
+            drawScope();
+        };
+    </script>
+</body>
+</html>

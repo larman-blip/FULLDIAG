@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Lève-Vitre Électrique</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-pink: #ff33cc;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        /* Interactive Car Door Visualizer */
+        .door-container {
+            background: #172222;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            height: 220px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Simulated door frame and window */
+        .car-door-frame {
+            width: 180px;
+            height: 180px;
+            background: #252b2b;
+            border: 3px solid #3c4a4a;
+            border-radius: 15px;
+            position: relative;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+
+        .door-window-frame {
+            width: 100%;
+            height: 90px;
+            background: rgba(0, 255, 204, 0.03);
+            border-bottom: 4px solid #111;
+            position: relative;
+        }
+
+        /* Glass Window (sliding element) */
+        .glass-window {
+            width: calc(100% - 10px);
+            left: 5px;
+            height: 82px;
+            background: linear-gradient(135deg, rgba(0, 255, 204, 0.15), rgba(255,255,255,0.05));
+            border: 1px solid rgba(0, 255, 204, 0.4);
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            position: absolute;
+            top: 5px; /* 5px is completely closed, 85px is open */
+            transition: top 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: inset 0 0 10px rgba(0,255,204,0.1);
+        }
+
+        .door-panel-bottom {
+            width: 100%;
+            height: 90px;
+            background: #191f1f;
+            border-top: 2px solid #3c4a4a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Control Switch Buttons */
+        .switches-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .switch-btn {
+            background: #202b2b;
+            border: 1.5px solid #3c4a4a;
+            color: var(--text-secondary);
+            font-weight: 800;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            user-select: none;
+        }
+
+        .switch-btn:active {
+            background: var(--neon-cyan);
+            color: #000;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 10px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CONNECTEUR COMMANDE (5 VOIES)';
+            position: absolute;
+            top: -10px; left: calc(50% - 85px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 38px;
+            height: 50px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* FAZET TRICKS CONTROL PANEL */
+        .tricks-selector-title {
+            font-size: 12px;
+            color: var(--neon-amber);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .tricks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .trick-btn {
+            background: #192222;
+            border: 1px dashed var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .trick-btn:hover {
+            border-color: var(--neon-amber);
+            color: #fff;
+        }
+
+        .trick-btn.active {
+            background: var(--neon-amber);
+            color: #000;
+            border-color: var(--neon-amber);
+            border-style: solid;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">💺 Diagnostic Technique - Système de Lève-Vitre Électrique (5 Fils)</h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module interactif simule le diagnostic d'un système de lève-vitre électrique avec commande d'inversion de polarité. Expérimentez le changement de قطبية في الأسلاك، واكتشف كيفية تشخيص الأعطال الحقيقية كالمقاومة العالية والأسلاك المقطوعة باستعمال الملتيمتر وأدوات الفحص الميدانية.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">💺 Commande & Animation de la Vitre</h3>
+
+            <!-- WINDSHIELD GRAPHICAL SIMULATION -->
+            <div class="door-container">
+                <div class="car-door-frame">
+                    <div class="door-window-frame">
+                        <div class="glass-window" id="carWindow"></div>
+                    </div>
+                    <div class="door-panel-bottom">
+                        <div class="switches-group">
+                            <!-- Toggle switch behaviors -->
+                            <button class="switch-btn" onmousedown="triggerWindowMovement('up')" onmouseup="stopWindowMovement()">UP</button>
+                            <button class="switch-btn" onmousedown="triggerWindowMovement('down')" onmouseup="stopWindowMovement()">DOWN</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INTERACTIVE TRICKS & FAZET BUTTONS SECTION -->
+            <div class="tricks-wrapper">
+                <div class="tricks-selector-title">Secrets et Astuces du Métier (Diagnostics) :</div>
+                <div class="tricks-grid">
+                    <button class="trick-btn" id="btn-trick-unplug" onclick="toggleTrick('unplug')">Sécurité Enfant active</button>
+                    <button class="trick-btn" id="btn-trick-stuck" onclick="toggleTrick('stuck')">Bouton à haute résistance</button>
+                    <button class="trick-btn" id="btn-trick-shunt" onclick="toggleTrick('shunt')">Alimentation Moteur Directe</button>
+                </div>
+            </div>
+
+            <div class="instruction-box" id="diagnosticGuidance">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 à 5) du connecteur de commande ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. Les Pins 4 & 5 gèrent les sorties inversées vers le moteur de lève-vitre.
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;">Fiche de Commande</label>
+                    <div class="connector-housing" id="connectorHousing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);">VCC_12V</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);">GND</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-3" onclick="selectPin(3)">
+                            <span class="pin-num">3</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);">ILLUM</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-4" onclick="selectPin(4)">
+                            <span class="pin-num">4</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);">MOT_A</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-5" onclick="selectPin(5)">
+                            <span class="pin-num">5</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:7px; color:rgba(255,255,255,0.4);">MOT_B</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (+12V Alimentation)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th>Nature du Fil (Comodo Lève-Vitre)</th>
+                        <th>Valeur Attendue au Repos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td>Alimentation principale (+12V APC)</td>
+                        <td>+12.0 V à +14.0 V constant (Fusible F10)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td>Masse de puissance (GND)</td>
+                        <td>Inférieure à 0.05 V (Liaison masse solide)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3</strong></td>
+                        <td>Illumination interne du bouton (Illum)</td>
+                        <td>+12.0 V constant uniquement lorsque les veilleuses sont ON</td>
+                    </tr>
+                    <tr>
+                        <td><strong>4</strong></td>
+                        <td>Sortie moteur ligne A (MOT_A)</td>
+                        <td>Masse passive au repos (Passe à +12V lors de la montée)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>5</strong></td>
+                        <td>Sortie moteur ligne B (MOT_B)</td>
+                        <td>Masse passive au repos (Passe à +12V lors de la descente)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif (Inversion de Polarité de Moteur)
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus pour observer le routage de puissance. Notez que l'interrupteur reçoit 5 fils d'alimentation et de commande de l'habitacle, tandis que seulement 2 fils partent de celui-ci vers le moteur.
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 240" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-brown" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-pink" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-amber" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- Left Column: Inputs coming from Cabin / Fuse -->
+                <!-- Fuse +12V -->
+                <g id="power-source-block">
+                    <rect x="20" y="20" width="100" height="35" rx="4" fill="#172222" stroke="#ff3333" stroke-width="1.5" />
+                    <text x="70" y="41" fill="#ff3333" font-size="8" font-weight="bold" text-anchor="middle">FUSIBLE F10 (+12V)</text>
+                </g>
+
+                <!-- Ground block -->
+                <g id="ground-source-block">
+                    <rect x="20" y="70" width="100" height="35" rx="4" fill="#172222" stroke="#8b5a2b" stroke-width="1.5" />
+                    <text x="70" y="91" fill="#8b5a2b" font-size="8" font-weight="bold" text-anchor="middle">MASSE CHASSIS</text>
+                </g>
+
+                <!-- Illumination block -->
+                <g id="illum-source-block">
+                    <rect x="20" y="120" width="100" height="35" rx="4" fill="#172222" stroke="#ffaa00" stroke-width="1.5" />
+                    <text x="70" y="141" fill="#ffaa00" font-size="8" font-weight="bold" text-anchor="middle">ILLUM VEILLEUSES</text>
+                </g>
+
+                <!-- Middle Column: The 5-Pin Switch (Interrupteur) -->
+                <rect x="180" y="40" width="140" height="150" rx="8" fill="#111616" stroke="#00ffcc" stroke-width="2" />
+                <text x="250" y="130" fill="#00ffcc" font-size="10" font-weight="bold" text-anchor="middle">BOUTON (5 FILS)</text>
+
+                <!-- 5 Switch terminals aligned vertically inside the switch block -->
+                <circle cx="200" cy="60" r="5" fill="#ff3333" id="circ-p1" />
+                <text x="215" y="63" fill="#fff" font-size="7" font-weight="bold">Pin 1 (VCC)</text>
+
+                <circle cx="200" cy="90" r="5" fill="#8b5a2b" id="circ-p2" />
+                <text x="215" y="93" fill="#fff" font-size="7" font-weight="bold">Pin 2 (GND)</text>
+
+                <circle cx="200" cy="120" r="5" fill="#ffaa00" id="circ-p3" />
+                <text x="215" y="123" fill="#fff" font-size="7" font-weight="bold">Pin 3 (ILL)</text>
+
+                <circle cx="300" cy="75" r="5" fill="#00a8ff" id="circ-p4" />
+                <text x="285" y="78" fill="#fff" font-size="7" font-weight="bold" text-anchor="end">Pin 4 (MOT_A)</text>
+
+                <circle cx="300" cy="155" r="5" fill="#ff33cc" id="circ-p5" />
+                <text x="285" y="158" fill="#fff" font-size="7" font-weight="bold" text-anchor="end">Pin 5 (MOT_B)</text>
+
+                <!-- Right Column: The 2-Pin DC Motor -->
+                <rect x="390" y="80" width="90" height="80" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="435" y="125" fill="#a0b2b2" font-size="9" font-weight="bold" text-anchor="middle">MOTEUR DC</text>
+                <text x="435" y="140" fill="#888" font-size="8" text-anchor="middle">(2 FILS ONLY)</text>
+
+                <circle cx="410" cy="100" r="4" fill="#00a8ff" />
+                <text x="410" y="112" fill="#fff" font-size="6" font-weight="bold" text-anchor="middle">A</text>
+                
+                <circle cx="410" cy="140" r="4" fill="#ff33cc" />
+                <text x="410" y="152" fill="#fff" font-size="6" font-weight="bold" text-anchor="middle">B</text>
+
+                <!-- INPUT LIGNES DE CABLAGE -->
+                <!-- Fil 1: Fuse -> Pin 1 -->
+                <path id="wire-path-1" d="M 120,37 L 155,37 L 155,60 L 195,60" fill="none" stroke="#ff3333" stroke-width="2" style="transition: all 0.3s ease;" />
+                
+                <!-- Fil 2: Ground -> Pin 2 -->
+                <path id="wire-path-2" d="M 120,87 L 195,87" fill="none" stroke="#8b5a2b" stroke-width="2" style="transition: all 0.3s ease;" />
+
+                <!-- Fil 3: Illum -> Pin 3 -->
+                <path id="wire-path-3" d="M 120,137 L 155,137 L 155,120 L 195,120" fill="none" stroke="#ffaa00" stroke-width="2" style="transition: all 0.3s ease;" />
+
+                <!-- OUTPUT LIGNES DE CABLAGE (Switch to Motor) -->
+                <!-- Fil 4: Pin 4 (MOT_A) -> Motor A -->
+                <path id="wire-path-4" d="M 305,75 L 355,75 L 355,100 L 406,100" fill="none" stroke="#00a8ff" stroke-width="2" style="transition: all 0.3s ease;" />
+
+                <!-- Fil 5: Pin 5 (MOT_B) -> Motor B -->
+                <path id="wire-path-5" d="M 305,155 L 355,155 L 355,140 L 406,140" fill="none" stroke="#ff33cc" stroke-width="2" style="transition: all 0.3s ease;" />
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">🛡️ Procédures de Diagnostic & Stratégies de Panne</h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                
+                <div>
+                    <span class="badge-fail" style="background-color: var(--neon-amber); color: #000;">💡 Astuce de Maître : Interversibilité des boutons passagers</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-primary); font-weight: bold; background: rgba(255,170,0,0.05); padding: 12px; border-left: 4px solid var(--neon-amber); border-radius: 4px;">
+                        Les 3 boutons de commande de lève-vitre passagers (porte avant droite, arrière gauche et arrière droite) sont totalement identiques et interchangeables sur la quasi-totalité des modèles de voitures. Si vous suspectez qu'un bouton passager est H.S. (par exemple la vitre ne descend plus), vous pouvez le démonter rapidement en 10 secondes et l'intervertir avec le bouton d'une autre porte qui fonctionne. Si le système refonctionne à ce moment précis, le diagnostic est validé sans aucun outil de mesure !
+                    </p>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <span class="badge-fail">Loi Electrique : L'importance du test de chute de tension sous charge</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        Si le moteur de lève-vitre tourne de manière extrêmement lente ou s'arrête à mi-course : ne démontez pas directement le moteur. Utilisez le voltmètre pour mesurer la tension entre la Pin 1 (+12V) et la Pin 2 (Masse) **pendant que vous appuyez sur le bouton (sous charge)**. Si la tension s'écroule (par exemple à 8.5V au lieu de 12V), cela indique une résistance de contact trop élevée au sein des contacts métalliques internes de l'interrupteur. Le courant n'arrive pas en intensité suffisante, faisant peiner le moteur.
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: BODY CONTROL MODULE (BCM) - WINDOWS
+                        </div>
+                        <div class="live-row"><span>Driver Window Switch Input:</span><span id="live-switch-g">IDLE</span></div>
+                        <div class="live-row"><span>Child Safety Lock state:</span><span id="live-child-g" style="color: var(--neon-cyan);">DISABLED</span></div>
+                        <div class="live-row"><span>Power window output state:</span><span id="live-motor-g">0.0 V (OFF)</span></div>
+                        <div class="live-row"><span>Motor Current consumption:</span><span id="live-amp-g">0.00 A</span></div>
+                        <div class="live-row"><span>Anti-pinch sensor rotation count:</span><span id="live-pinch-g">540 ticks</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez actionner les boutons "UP" ou "DOWN" ou choisir une des astuces de diagnostic pour observer les comportements électriques et l'inversion de polarité.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentMovement = 'none'; // 'none', 'up', 'down'
+        let windowPosition = 5; // 5 is closed, 85 is open (represented as percentage/px top)
+        let activeTrick = 'none'; // 'none', 'unplug', 'stuck', 'shunt'
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+        let windowInterval = null;
+
+        // Base database of pinout states depending on currentMovement
+        // Pin 1: VCC, Pin 2: GND, Pin 3: ILLUM, Pin 4: MOT_A, Pin 5: MOT_B
+        const DMM_DATABASE = {
+            none: { 1: 12.05, 2: 0.02, 3: 0.00, 4: 0.02, 5: 0.02 }, // at rest: both motor pins have passive ground through the switch
+            up: { 1: 12.05, 2: 0.02, 3: 0.00, 4: 12.05, 5: 0.02 },   // UP: Pin 4 becomes +12V, Pin 5 remains ground
+            down: { 1: 12.05, 2: 0.02, 3: 0.00, 4: 0.02, 5: 12.05 }  // DOWN: Pin 4 remains ground, Pin 5 becomes +12V
+        };
+
+        function toggleTrick(trickName) {
+            if (activeTrick === trickName) {
+                activeTrick = 'none';
+            } else {
+                activeTrick = trickName;
+            }
+
+            // Sync visual active states
+            document.querySelectorAll('.trick-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (activeTrick !== 'none') {
+                const targetBtn = document.getElementById(`btn-trick-${activeTrick}`);
+                if (targetBtn) targetBtn.classList.add('active');
+            }
+
+            // Unplugged connector visual shift
+            const housing = document.getElementById('connectorHousing');
+            if (activeTrick === 'unplug') {
+                if (housing) housing.style.opacity = '0.35';
+            } else {
+                if (housing) housing.style.opacity = '1';
+            }
+
+            calculateVoltage();
+            updateLiveScannerData();
+        }
+
+        function calculateVoltage() {
+            let volt = 0.00;
+
+            if (activeTrick === 'unplug') {
+                // Child lock active: cuts power (+12V) going to rear switch Pin 1
+                if (selectedRedPin === 1) volt = 0.00;
+                if (selectedRedPin === 2) volt = 0.02;
+                const dmmValEl = document.getElementById('dmmValue');
+                if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+                return;
+            }
+
+            if (activeTrick === 'stuck' && currentMovement !== 'none') {
+                // High resistance switch: voltage drops heavily under load
+                if (selectedRedPin === 1) volt = 8.50; // drops from 12V to 8.50V under load!
+                if (selectedRedPin === 4 && currentMovement === 'up') volt = 8.50;
+                if (selectedRedPin === 5 && currentMovement === 'down') volt = 8.50;
+                const dmmValEl = document.getElementById('dmmValue');
+                if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+                return;
+            }
+
+            if (activeTrick === 'shunt') {
+                // Direct jumper bypass: Motor Pins are directly powered outside switch
+                if (selectedRedPin === 4 && currentMovement === 'up') volt = 12.05;
+                if (selectedRedPin === 5 && currentMovement === 'down') volt = 12.05;
+                const dmmValEl = document.getElementById('dmmValue');
+                if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+                return;
+            }
+
+            let refValues = DMM_DATABASE[currentMovement];
+            if (refValues && refValues[selectedRedPin] !== undefined) {
+                volt = refValues[selectedRedPin];
+            }
+
+            const dmmValEl = document.getElementById('dmmValue');
+            if (dmmValEl) dmmValEl.innerText = volt.toFixed(2);
+        }
+
+        function triggerWindowMovement(direction) {
+            if (activeTrick === 'unplug') {
+                // Child lock active, no power to window
+                playElectricalClick(false);
+                return;
+            }
+
+            currentMovement = direction;
+            calculateVoltage();
+            updateLiveScannerData();
+            playElectricalClick(true);
+
+            // Animate window sliding
+            if (windowInterval) clearInterval(windowInterval);
+
+            // High resistance moves window slower
+            let step = activeTrick === 'stuck' ? 1 : 2;
+
+            windowInterval = setInterval(() => {
+                if (direction === 'up' && windowPosition > 5) {
+                    windowPosition -= step;
+                    if (windowPosition < 5) windowPosition = 5;
+                } else if (direction === 'down' && windowPosition < 85) {
+                    windowPosition += step;
+                    if (windowPosition > 85) windowPosition = 85;
+                }
+
+                const carWindow = document.getElementById('carWindow');
+                if (carWindow) carWindow.style.top = windowPosition + "px";
+
+                updateLiveScannerData();
+                calculateVoltage();
+
+                // Auto stop at boundaries
+                if (windowPosition === 5 || windowPosition === 85) {
+                    stopWindowMovement();
+                }
+            }, 30);
+        }
+
+        function stopWindowMovement() {
+            currentMovement = 'none';
+            if (windowInterval) clearInterval(windowInterval);
+            calculateVoltage();
+            updateLiveScannerData();
+        }
+
+        function playElectricalClick(success) {
+            try {
+                let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.type = 'square';
+                osc.frequency.value = success ? 150 : 60;
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } catch(e) {
+                console.log("Audio Error", e);
+            }
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#ff3333', 2: '#8b5a2b', 3: '#ffaa00', 4: '#00a8ff', 5: '#ff33cc' };
+
+            for (let i = 1; i <= 5; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-red)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-brown)";
+                if (pinNumber === 3) activePath.style.filter = "url(#glow-amber)";
+                if (pinNumber === 4) activePath.style.filter = "url(#glow-blue)";
+                if (pinNumber === 5) activePath.style.filter = "url(#glow-pink)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            selectedRedPin = pinNumber;
+            document.querySelectorAll('.pin-terminal').forEach(el => {
+                el.classList.remove('selected-red');
+            });
+            const targetPin = document.getElementById(`pin-${pinNumber}`);
+            if (targetPin) targetPin.classList.add('selected-red');
+
+            const names = {
+                1: 'Pin 1 (+12V APC Alimentation)',
+                2: 'Pin 2 (Masse d\'alimentation GND)',
+                3: 'Pin 3 (Illumination interne du bouton)',
+                4: 'Pin 4 (Ligne Moteur A - MOT_A)',
+                5: 'Pin 5 (Ligne Moteur B - MOT_B)'
+            };
+            const selectedRedLabel = document.getElementById('selected-red-label');
+            if (selectedRedLabel) selectedRedLabel.innerText = names[pinNumber];
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if (!panel) return;
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        // Live Scanner Data Core Engine
+        function updateLiveScannerData() {
+            let switchEl = document.getElementById('live-switch-g');
+            let childEl = document.getElementById('live-child-g');
+            let motorEl = document.getElementById('live-motor-g');
+            let ampEl = document.getElementById('live-amp-g');
+            let pinchEl = document.getElementById('live-pinch-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!switchEl) return;
+
+            // Handle active tricks
+            if (activeTrick === 'unplug') {
+                switchEl.innerText = "UP / DOWN BLOCKED";
+                childEl.innerText = "ENABLED (Active)";
+                childEl.style.color = "var(--neon-red)";
+                motorEl.innerText = "0.0 V";
+                ampEl.innerText = "0.00 A";
+                pinchEl.innerText = "No movement";
+                if (dtcEl) {
+                    dtcEl.innerText = "NO FAULT (Child lock is a normal feature)";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🔑 Astuces du Métier : Bouton de Sécurité enfant actif</strong><br><br>• <strong>Analyse :</strong> Le bouton de sécurité enfant sur la porte conducteur coupe l'alimentation d'allumage Pin 1 (+12V) des boutons de porte arrière. Si les vitres arrière ne répondent pas des boutons arrière mais fonctionnent du panneau conducteur, c'est ce contact qui est défectueux ou actif.";
+                return;
+            }
+
+            if (activeTrick === 'stuck') {
+                switchEl.innerText = currentMovement.toUpperCase();
+                childEl.innerText = "DISABLED";
+                childEl.style.color = "var(--neon-cyan)";
+                motorEl.innerText = currentMovement === 'none' ? "0.0 V" : "8.5 V (S'écroule)";
+                ampEl.innerText = currentMovement === 'none' ? "0.00 A" : "4.15 A (Faible)";
+                pinchEl.innerText = currentMovement === 'none' ? "Stopped" : "Moving Slow...";
+                if (dtcEl) {
+                    dtcEl.innerText = "B120C - POWER WINDOW SWITCH CONTACT RESISTANCE HIGH";
+                    dtcEl.style.color = "var(--neon-red)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🔑 Astuces du Métier : Résistance interne de contact</strong><br><br>• <strong>Chute de tension :</strong> Les contacts métalliques internes du bouton sont oxydés. Sous charge (lors de l'appui), la tension d'alimentation s'écroule à 8.5V, ce qui ralentit considérablement la vitesse de déplacement du moteur. Ce test est indispensable avant d'accuser un moteur fatigué.";
+                return;
+            }
+
+            if (activeTrick === 'shunt') {
+                switchEl.innerText = "BYPASS (Shunted)";
+                childEl.innerText = "DISABLED";
+                childEl.style.color = "var(--neon-cyan)";
+                motorEl.innerText = "12.0 V (Direct)";
+                ampEl.innerText = "8.40 A (Plein régime)";
+                pinchEl.innerText = "Moving Fast...";
+                if (dtcEl) {
+                    dtcEl.innerText = "NO FAULT (Bypass test successful)";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🔑 Astuces du Métier : Test d'alimentation en direct</strong><br><br>• <strong>Le Shunt magique :</strong> En shuntant directement l'alimentation batterie (12V) sur les broches du moteur, vous le faites tourner sans passer par l'interrupteur. Si le moteur réagit rapidement, vous venez d'éliminer le moteur et de prouver que la panne se situe au niveau de l'interrupteur ou du câblage de porte.";
+                return;
+            }
+
+            // Normal operations
+            switchEl.innerText = currentMovement.toUpperCase();
+            childEl.innerText = "DISABLED";
+            childEl.style.color = "var(--neon-cyan)";
+
+            if (currentMovement === 'none') {
+                motorEl.innerText = "0.0 V (OFF)";
+                ampEl.innerText = "0.00 A";
+                pinchEl.innerText = "Stopped";
+                if (dtcEl) {
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                }
+                if (expEl) expEl.innerHTML = "<strong>🟢 État : Système au repos conforme</strong><br><br>• <strong>Inversion de polarité :</strong> Au repos, l'interrupteur connecte les deux bornes du moteur à la masse (0V aux Pins 4 & 5). Le moteur est micaniquement bloqué pour empêcher la descente forcée de la vitre à la main.";
+            } else {
+                motorEl.innerText = "12.0 V (Polarité active)";
+                ampEl.innerText = "7.50 A";
+                pinchEl.innerText = "Active pulse ticks...";
+                if (dtcEl) {
+                    dtcEl.innerText = "NO FAULT";
+                    dtcEl.style.color = "var(--neon-cyan)";
+                }
+                if (expEl) expEl.innerHTML = `<strong>🟢 État : Vitre en déplacement (${currentMovement.toUpperCase()})</strong><br><br>• <strong>Activité Électrique :</strong> Le BCM enregistre une intensité de 7.50A. La Pin 4 ou 5 passe à 12V pour faire tourner le moteur dans un sens, et s'inverse pour le sens inverse. L'Anti-pincement vérifie que les pulsations Hall restent constantes.`;
+            }
+        }
+
+        window.onload = function() {
+            selectPin(1);
+            updateLiveScannerData();
+        };
+    </script>
+</body>
+</html>

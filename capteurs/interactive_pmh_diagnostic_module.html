@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Capteur PMH</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 900px) {
+            .container {
+                grid-template-columns: 1.2fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        /* Tech Panels */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-cyan);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-amber { color: var(--neon-amber); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Crisp Vector Icon SVGs */
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Multimeter Engine Layout */
+        .dmm-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 550px) {
+            .dmm-grid {
+                grid-template-columns: 1.2fr 1.1fr;
+            }
+        }
+
+        /* Digital Multimeter CSS Representation */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 38px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* Connector Pinout Selection Interaction */
+        .wiring-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .connector-housing {
+            display: flex;
+            gap: 12px;
+            background: #202828;
+            border: 3px solid #3c4a4a;
+            border-radius: 10px;
+            padding: 15px 25px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .connector-housing::before {
+            content: 'CLIP LOCK';
+            position: absolute;
+            top: -10px; left: calc(50% - 35px);
+            background: #3c4a4a; font-size: 8px; font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; color: #fff;
+        }
+
+        .pin-terminal {
+            width: 38px;
+            height: 50px;
+            background: #111515;
+            border: 2px solid #4a5a5a;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .pin-terminal:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-glow);
+        }
+
+        .pin-terminal.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .pin-terminal.selected-black {
+            border-color: #888888;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pin-hole {
+            width: 8px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px #000;
+        }
+
+        .pin-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-secondary);
+        }
+
+        /* Selectors */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .state-btn.active, .arch-btn.active {
+            background: var(--neon-cyan);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-amber);
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+        }
+
+        /* Oscilloscope Controls & Canvas */
+        .oscillo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .scope-screen-wrapper {
+            background: var(--screen-bg);
+            border: 3px solid #2a3333;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        #scopeCanvas {
+            width: 100%;
+            height: 250px;
+            background: #030808;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .scope-grid-label {
+            position: absolute;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #55c5c5;
+        }
+
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .scope-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #181d1d;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .scope-select {
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .scope-select:focus {
+            border-color: var(--neon-cyan);
+            outline: none;
+        }
+
+        .btn-trigger {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #172222, #00ffcc);
+            border: 1px solid var(--neon-cyan);
+            color: #080b0b;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-trigger:hover {
+            box-shadow: 0 0 20px var(--neon-glow);
+            transform: scale(1.02);
+        }
+
+        /* Tech table and boxes */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #172222;
+            color: var(--neon-cyan);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 204, 0.02);
+        }
+
+        .instruction-box {
+            background: #151a1a;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* DEEP DIAG BUTTON & MODAL EXTENSION */
+        .btn-deep-diag {
+            background: linear-gradient(135deg, #111, #ffaa00);
+            border: 1px solid var(--neon-amber);
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 170, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin: 20px auto 0 auto;
+        }
+
+        .btn-deep-diag:hover {
+            box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .deep-diag-panel {
+            display: none;
+            background: #0b1010;
+            border: 2px solid var(--neon-amber);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .deep-grid {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+        }
+
+        .live-data-header {
+            color: var(--neon-amber);
+            border-bottom: 1px dashed #162a2a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,170,0,0.05);
+            font-size: 13px;
+        }
+
+        .live-row span:last-child {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .diag-explanation-card {
+            background: #141a1a;
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .diag-explanation-card h4 {
+            margin: 0 0 10px 0;
+            color: #99ffff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="panel full-width">
+            <h3 class="panel-title">
+                <!-- Engine/Component SVG Icon -->
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zM12 6a6 6 0 0 0-6 6h12a6 6 0 0 0-6-6z" stroke="currentColor" fill="none"/></svg>
+                Diagnostic Technique - Capteur PMH (Vilebrequin)
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Ce module technique simule le diagnostic d'un capteur de position de vilebrequin (PMH). Il permet de basculer entre la technologie inductive (passive à signal AC sinusoidal) et la technologie à Effet Hall (active à signal carré numérique). Sélectionnez le mode, l'état de fonctionnement et observez les signaux d'oscillation.
+            </p>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Volt/Lightning SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" fill="none"/></svg>
+                Simulateur de Test Guidé
+            </h3>
+            
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="color: var(--neon-amber);">Étape 1 : Sélectionner le type de capteur PMH</label>
+            </div>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-arch-inductif" onclick="changeArchitecture('inductif')">Capteur Inductif (2 Fils - AC)</button>
+                <button class="arch-btn" id="btn-arch-hall" onclick="changeArchitecture('hall')">Capteur Effet Hall (3 Fils - Numérique)</button>
+            </div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label>Étape 2 : Choisir l'état opérationnel du moteur</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-off" onclick="changeEngineState('off')">Contact ON (Moteur OFF)</button>
+                <button class="state-btn" id="btn-state-idle" onclick="changeEngineState('idle')">Moteur Ralenti (750 RPM)</button>
+                <button class="state-btn" id="btn-state-snap" onclick="changeEngineState('snap')">Régime Élevé (3500 RPM)</button>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Sélectionnez la broche à mesurer en cliquant sur la broche (1 à 3) du connecteur ci-dessous.<br>
+                2. Utilisez la sonde rouge (+) pour tester. La sonde noire (-) est connectée à la masse de carrosserie.<br>
+                3. Observez l'impact direct du type de capteur : l'inductif ne produit de la tension QUE lorsque le moteur tourne !
+            </div>
+
+            <div class="dmm-grid">
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">0.00</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial">
+                            <div class="dmm-dial-pointer"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <div class="wiring-diagram">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-secondary); margin-bottom:15px; text-transform:uppercase;">Connecteur PMH</label>
+                    <div class="connector-housing">
+                        <div class="pin-terminal selected-red" id="pin-1" onclick="selectPin(1)">
+                            <span class="pin-num">1</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-1">SIG(+)</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-2" onclick="selectPin(2)">
+                            <span class="pin-num">2</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-2">SIG(-)</span>
+                        </div>
+                        <div class="pin-terminal" id="pin-3" onclick="selectPin(3)">
+                            <span class="pin-num">3</span>
+                            <div class="pin-hole"></div>
+                            <span style="font-size:8px; color:rgba(255,255,255,0.4);" id="label-pin-3">SHIELD</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; margin-top:20px; font-size:12px; color: var(--text-secondary);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                            <span>🔴 Sonde Rouge (+) :</span>
+                            <span id="selected-red-label" style="color:var(--neon-red); font-weight:bold;">Pin 1 (Signal +)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>⚫ Sonde Noire (-) :</span>
+                            <span id="selected-black-label" style="color:#888; font-weight:bold;">Masse Châssis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Pin</th>
+                        <th>Nature du Fil (Inductif)</th>
+                        <th>Nature du Fil (Effet Hall)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td id="table-p1-ind">Signal (+) de l'alternative</td>
+                        <td id="table-p1-hal">Alimentation 12V ou 5V de l'ECU</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td id="table-p2-ind">Retour Signal (-) de l'alternative</td>
+                        <td id="table-p2-hal">Signal numérique (Square wave 0-5V)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3</strong></td>
+                        <td id="table-p3-ind">Tresse de blindage anti-parasite</td>
+                        <td id="table-p3-hal">Masse électronique de capteur</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3 class="panel-title">
+                <!-- Scope/Waveform SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-cyan);" viewBox="0 0 24 24"><path d="M3 12h3l3-9 4 18 3-12h5" stroke="currentColor" fill="none"/></svg>
+                Oscilloscope de Diagnostic Virtuel
+            </h3>
+            <div class="oscillo-container">
+                
+                <div class="scope-screen-wrapper">
+                    <div class="scope-grid-label label-volts" id="voltsDivLabel">Y: 2.0 V / Div</div>
+                    <div class="scope-grid-label label-time" id="timeDivLabel">X: 50 ms / Div</div>
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <div class="scope-controls">
+                    <div class="control-group">
+                        <label>Sensibilité Verticale (Tension)</label>
+                        <select class="scope-select" id="ctrlVolts" onchange="updateScopeParameters()">
+                            <option value="0.5">0.5 V / Div</option>
+                            <option value="1">1.0 V / Div</option>
+                            <option value="2" selected>2.0 V / Div</option>
+                            <option value="5">5.0 V / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Vitesse de Balayage (Temps)</label>
+                        <select class="scope-select" id="ctrlTime" onchange="updateScopeParameters()">
+                            <option value="20">20 ms / Div</option>
+                            <option value="50" selected>50 ms / Div</option>
+                            <option value="100">100 ms / Div</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-trigger" onclick="triggerSnapThrottle()">Lancer Analyse de Démarrage (Crank Test)</button>
+                </div>
+
+                <div class="instruction-box" style="margin-bottom:0;">
+                    <strong>ℹ️ Guide d'interprétation de la courbe :</strong><br>
+                    • <strong>Défaut d'amplitude (Inductif) :</strong> Si l'entrefer (air gap) est trop grand ou s'il y a de la limaille sur le capteur, la tension AC générée sera trop faible lors du démarrage (inférieure à 1.0 V Crête à Crête), empêchant l'ECU de synchroniser et de démarrer la voiture.<br>
+                    • <strong>Fjewa (Tooth Gap) :</strong> L'interruption cyclique dans les dents (généralement 60-2 dents) crée une marque de repérage indispensable pour repérer le Point Mort Haut du cylindre numéro 1.
+                </div>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h3 class="panel-title" style="color: var(--neon-amber);">
+                <!-- Plug/Connector SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M2 12h4m12 0h4" stroke="currentColor" fill="none"/></svg>
+                Schéma Électrique Interactif
+            </h3>
+            <p style="margin: 0 0 15px 0; font-size: 13.5px; color: var(--text-secondary);">
+                Ce schéma unifilaire s'actualise en temps réel. Cliquez sur les broches du connecteur ci-dessus ou sélectionnez-les pour voir la ligne s'illuminer et visualiser le cheminement électrique entre le capteur PMH, la tresse de blindage et l'unité de commande moteur (ECU).
+            </p>
+            
+            <svg id="wiringSvg" viewBox="0 0 500 220" style="width: 100%; height: auto; background: #0a0d0d; border: 1px solid var(--border-color); border-radius: 8px; display: block;">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#121818" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-red" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-brown" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-green" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- TARGET WHEEL -->
+                <circle cx="80" cy="115" r="45" fill="none" stroke="#1e2929" stroke-width="6" stroke-dasharray="8 3" />
+                <path d="M 115,115 L 125,115" stroke="#00ffcc" stroke-width="3" />
+                <text x="80" y="120" fill="#a0b2b2" font-size="8" font-weight="bold" text-anchor="middle">VOLANT MOTEUR</text>
+
+                <!-- CAPTEUR PMH -->
+                <rect x="150" y="85" width="120" height="60" rx="6" fill="#111616" stroke="#00ffcc" stroke-width="2" />
+                <text x="210" y="120" fill="#00ffcc" font-size="10" font-weight="bold" text-anchor="middle" id="diagram-capteur-title">PMH INDUCTIF</text>
+
+                <!-- Terminal connector dots -->
+                <circle cx="165" cy="95" r="5" fill="#ff3333" />
+                <text x="165" y="110" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">1</text>
+
+                <circle cx="210" cy="95" r="5" fill="#00ff66" />
+                <text x="210" y="110" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">2</text>
+
+                <circle cx="255" cy="95" r="5" fill="#8b5a2b" />
+                <text x="255" y="110" fill="#fff" font-size="8" font-weight="bold" text-anchor="middle">3</text>
+
+                <!-- CALCULATEUR MOTEUR (ECU) -->
+                <rect x="370" y="55" width="110" height="120" rx="6" fill="#172222" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="425" y="115" fill="#a0b2b2" font-size="10" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+
+                <!-- LIGNES DE CABLAGE -->
+                <!-- Fil 1: Pin 1 -> ECU Pin 34 -->
+                <path id="wire-path-1" d="M 165,90 L 165,75 L 340,75 L 340,85 L 370,85" fill="none" stroke="#ff3333" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="81" fill="#ff3333" font-size="8" text-anchor="end">Pin 34</text>
+
+                <!-- Fil 2: Pin 2 -> ECU Pin 35 -->
+                <path id="wire-path-2" d="M 210,90 L 210,80 L 330,80 L 330,115 L 370,115" fill="none" stroke="#00ff66" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="111" fill="#00ff66" font-size="8" text-anchor="end">Pin 35</text>
+
+                <!-- Fil 3: Pin 3 -> ECU Masse Blindage -->
+                <path id="wire-path-3" d="M 255,90 L 255,85 L 320,85 L 320,145 L 370,145" fill="none" stroke="#8b5a2b" stroke-width="2" style="transition: all 0.3s ease;" />
+                <text x="365" y="141" fill="#8b5a2b" font-size="8" text-anchor="end">Pin 12 (Shield)</text>
+            </svg>
+        </div>
+
+        <div class="panel full-width panel-red">
+            <h3 class="panel-title panel-title-red">
+                <!-- Shield/Diagnostic SVG Icon -->
+                <svg class="icon-svg" style="color:var(--neon-red);" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" fill="none"/></svg>
+                Procédures de Diagnostic & Stratégies de Panne
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; font-size:13.5px; line-height: 1.6;">
+                <div>
+                    <span class="badge-fail">Loi Electrique : Diagnostic des Capteurs PMH Inductif vs Hall</span>
+                    <p style="margin: 5px 0 15px 0; color: var(--text-secondary);">
+                        Un capteur <b>Inductif</b> possède une résistance interne mesurable (typiquement entre 400 et 1200 Ohms). Si vous lisez une valeur infinie (O.L), la bobine interne est coupée. Lors de la phase de démarrage, l'oscillo doit mesurer au moins 1.0V AC pour valider la synchronisation. 
+                        Un capteur <b>Effet Hall</b> ne peut jamais être testé en résistance (risque de destruction de la puce silicium). Vous devez impérativement valider sa tension d'alimentation de 5V ou 12V, sa masse, et observer un signal carré propre oscillant entre 0V et sa tension d'alimentation lors de la rotation.
+                    </p>
+                </div>
+            </div>
+
+            <!-- BUTTON DEEP DIAG -->
+            <button class="btn-deep-diag" onclick="toggleDeepDiag()">
+                <!-- Magnifying glass / Search SVG Icon -->
+                <svg class="icon-svg" style="width:16px; height:16px; stroke-width:3;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Deep Diag: Live Data & Analysis
+            </button>
+
+            <!-- DEEP DIAG INTERACTIVE PANEL -->
+            <div class="deep-diag-panel" id="deepDiagPanel">
+                <h3 class="panel-title panel-title-amber" style="font-size:16px; margin-bottom:15px;">
+                    <!-- Chart/Analysis SVG Icon -->
+                    <svg class="icon-svg" style="color:var(--neon-amber);" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" fill="none"/></svg>
+                    Scanner Live Data (Lecture des Paramètres Réels)
+                </h3>
+                <div class="deep-grid">
+                    
+                    <div class="live-data-screen">
+                        <div class="live-data-header">
+                            <!-- OBD Scanner Device SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-amber); width:16px; height:16px;" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" fill="none"/><path d="M8 6h8M8 10h8M9 16h6v3H9z" stroke="currentColor"/></svg>
+                            OBD-II PARAMETERS: TIMING & SYNCHRONIZATION
+                        </div>
+                        <div class="live-row"><span>Engine Speed:</span><span id="live-rpm-g">0 RPM</span></div>
+                        <div class="live-row"><span>Crankshaft Sensor Status:</span><span id="live-status-g" style="color: var(--neon-cyan);">NO SIGNAL</span></div>
+                        <div class="live-row"><span>ECU Synchronization Status:</span><span id="live-sync-g" style="color: var(--neon-cyan);">NO</span></div>
+                        <div class="live-row"><span>Tooth Gap Counter status:</span><span id="live-gap-g">0 / 60</span></div>
+                        <div class="live-row"><span>Cam/Crank Correlation Offset:</span><span id="live-offset-g">0.0 deg</span></div>
+                        <div class="live-row"><span>DTC Trouble Codes:</span><span id="live-dtc-g" style="color:var(--neon-cyan);">NO FAULT</span></div>
+                    </div>
+
+                    <div class="diag-explanation-card">
+                        <h4>
+                            <!-- Brain/Analysis SVG Icon -->
+                            <svg class="icon-svg" style="color:var(--neon-cyan); width:16px; height:16px;" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" fill="none"/><path d="M12 6v6l4 2" stroke="currentColor"/></svg>
+                            Analyse Technique & Logique du Calculateur :
+                        </h4>
+                        <div id="deep-diag-explanation" style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                            Veuillez démarrer la simulation en cliquant sur <strong>"Moteur Ralenti"</strong> ou <strong>"Régime Élevé"</strong> ci-dessus pour observer le comportement dynamique du calculateur en temps réel.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Architecture configurations (inductif or hall)
+        let currentArchitecture = 'inductif';
+
+        // Pinout Database:
+        // INDUCTIF:
+        // Pin 1: Signal (+), Pin 2: Signal (-), Pin 3: Shield (Masse blindage)
+        // HALL:
+        // Pin 1: VCC (5V/12V), Pin 2: SIG (Square Wave), Pin 3: Masse (GND)
+        const DMM_DATABASE_INDUCTIF = {
+            off: { 1: 0.00, 2: 0.00, 3: 0.01 },   // Zero voltage at rest
+            idle: { 1: 1.45, 2: 1.45, 3: 0.02 },  // Average AC rms or DC offset (reads low or average)
+            snap: { 1: 4.50, 2: 4.50, 3: 0.02 }   // Amplitude increases with rotation speed
+        };
+
+        const DMM_DATABASE_HALL = {
+            off: { 1: 5.01, 2: 4.50, 3: 0.02 },   // Powered, SIG high or low depending on tooth position (~4.50V)
+            idle: { 1: 5.01, 2: 2.50, 3: 0.03 },  // DMM averages the square wave (50% duty cycle -> ~2.5V)
+            snap: { 1: 5.01, 2: 2.50, 3: 0.03 }   // Digital level remains 5V max, average is still ~2.5V
+        };
+
+        let currentEngineState = 'off';
+        let selectedRedPin = 1;
+        let selectedBlackPin = 'ground';
+
+        function getActiveDatabase() {
+            return currentArchitecture === 'inductif' ? DMM_DATABASE_INDUCTIF : DMM_DATABASE_HALL;
+        }
+
+        function calculateVoltage() {
+            let refOff = getActiveDatabase()[currentEngineState];
+            let vRed = 0;
+            let vBlack = 0;
+
+            if (selectedRedPin && refOff[selectedRedPin] !== undefined) {
+                vRed = refOff[selectedRedPin];
+            }
+            if (selectedBlackPin !== 'ground') {
+                vBlack = refOff[selectedBlackPin] || 0;
+            }
+
+            let difference = vRed - vBlack;
+            if (difference < 0) difference = Math.abs(difference);
+
+            document.getElementById('dmmValue').innerText = difference.toFixed(2);
+        }
+
+        function updateWiringDiagramHighlight(pinNumber) {
+            const defaultColors = { 1: '#ff3333', 2: '#00ff66', 3: '#8b5a2b' };
+
+            for (let i = 1; i <= 3; i++) {
+                let path = document.getElementById(`wire-path-${i}`);
+                if (path) {
+                    path.style.stroke = defaultColors[i];
+                    path.style.strokeWidth = "2";
+                    path.style.filter = "none";
+                    path.style.opacity = "0.35";
+                }
+            }
+
+            let activePath = document.getElementById(`wire-path-${pinNumber}`);
+            if (activePath) {
+                activePath.style.strokeWidth = "4.5";
+                activePath.style.opacity = "1";
+                if (pinNumber === 1) activePath.style.filter = "url(#glow-red)";
+                if (pinNumber === 2) activePath.style.filter = "url(#glow-green)";
+                if (pinNumber === 3) activePath.style.filter = "url(#glow-brown)";
+            }
+        }
+
+        function selectPin(pinNumber) {
+            document.querySelectorAll('.pin-terminal').forEach(el => { el.classList.remove('selected-red'); });
+            selectedRedPin = pinNumber;
+            document.getElementById(`pin-${pinNumber}`).classList.add('selected-red');
+
+            let pinNameText = '';
+            if (currentArchitecture === 'inductif') {
+                const names = {
+                    1: 'Pin 1 (Signal +)',
+                    2: 'Pin 2 (Signal -)',
+                    3: 'Pin 3 (Masse Tresse Blindage)'
+                };
+                pinNameText = names[pinNumber];
+            } else {
+                const names = {
+                    1: 'Pin 1 (Alimentation 5V Ref)',
+                    2: 'Pin 2 (Signal Numérique Moteur)',
+                    3: 'Pin 3 (Masse GND Capteur)'
+                };
+                pinNameText = names[pinNumber];
+            }
+            document.getElementById('selected-red-label').innerText = pinNameText;
+
+            calculateVoltage();
+            updateWiringDiagramHighlight(pinNumber);
+        }
+
+        function changeEngineState(state) {
+            currentEngineState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-state-${state}`).classList.add('active');
+
+            calculateVoltage();
+            updateLiveScannerData();
+            drawScope();
+        }
+
+        function changeArchitecture(arch) {
+            currentArchitecture = arch;
+            document.querySelectorAll('.arch-btn').forEach(btn => { btn.classList.remove('active'); });
+            document.getElementById(`btn-arch-${arch}`).classList.add('active');
+
+            // DOM Label Updates
+            const labelP1 = document.getElementById('label-pin-1');
+            const labelP2 = document.getElementById('label-pin-2');
+            const labelP3 = document.getElementById('label-pin-3');
+
+            const tabP1Ind = document.getElementById('table-p1-ind');
+            const tabP1Hal = document.getElementById('table-p1-hal');
+            const tabP2Ind = document.getElementById('table-p2-ind');
+            const tabP2Hal = document.getElementById('table-p2-hal');
+            const tabP3Ind = document.getElementById('table-p3-ind');
+            const tabP3Hal = document.getElementById('table-p3-hal');
+
+            const capTitle = document.getElementById('diagram-capteur-title');
+
+            if (arch === 'inductif') {
+                labelP1.innerText = "SIG(+)";
+                labelP2.innerText = "SIG(-)";
+                labelP3.innerText = "SHIELD";
+                if(capTitle) capTitle.textContent = "PMH INDUCTIF";
+            } else {
+                labelP1.innerText = "VCC";
+                labelP2.innerText = "SIG";
+                labelP3.innerText = "GND";
+                if(capTitle) capTitle.textContent = "PMH EFFET HALL";
+            }
+
+            selectPin(selectedRedPin); // Re-trigger labels updating
+        }
+
+        function toggleDeepDiag() {
+            let panel = document.getElementById('deepDiagPanel');
+            if(panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                updateLiveScannerData();
+            }
+        }
+
+        // Live Scanner Data Core Engine
+        function updateLiveScannerData() {
+            let rpmEl = document.getElementById('live-rpm-g');
+            let statusEl = document.getElementById('live-status-g');
+            let syncEl = document.getElementById('live-sync-g');
+            let gapEl = document.getElementById('live-gap-g');
+            let offsetEl = document.getElementById('live-offset-g');
+            let dtcEl = document.getElementById('live-dtc-g');
+            let expEl = document.getElementById('deep-diag-explanation');
+
+            if (!rpmEl) return;
+
+            if (currentEngineState === 'off') {
+                rpmEl.innerText = "0 RPM";
+                statusEl.innerText = "NO SIGNAL";
+                statusEl.style.color = "var(--neon-red)";
+                syncEl.innerText = "NO";
+                syncEl.style.color = "var(--neon-red)";
+                gapEl.innerText = "0 / 60";
+                offsetEl.innerText = "0.0 deg";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                expEl.innerHTML = "<strong>🔴 État: Contact ON (Moteur OFF)</strong><br><br>• <strong>Attente de signal :</strong> Le moteur ne tourne pas. L'ECU n'enregistre aucune variation de tension.<br>• <strong>Condition Diagnostique :</strong> S'il s'agit d'un système à Effet Hall, la Pin 1 doit impérativement afficher une tension d'alimentation stable de 5.0V ou 12.0V provenant de l'ECU. L'absence de cette tension indique un fusible grillé, un faisceau coupé ou un court-circuit interne dans le capteur.";
+            } 
+            else if (currentEngineState === 'idle') {
+                rpmEl.innerText = "750 RPM";
+                statusEl.innerText = "ACTIVE SIGNAL";
+                statusEl.style.color = "var(--neon-cyan)";
+                syncEl.innerText = "YES (Cam/Crank Synced)";
+                syncEl.style.color = "var(--neon-cyan)";
+                gapEl.innerText = "58 / 60 (2 Teeth Gap)";
+                offsetEl.innerText = "1.2 deg (Normal)";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+                
+                if (currentArchitecture === 'inductif') {
+                    expEl.innerHTML = "<strong>🟢 État: Moteur au Ralenti stable (Capteur Inductif)</strong><br><br>• <strong>Mesure AC Validée :</strong> Le moteur tourne à 750 RPM. Le flux magnétique produit un signal sinusoïdal régulier d'environ 4.5V Crête-à-Crête. Le calculateur compte 58 dents puis détecte la ferveur (Tooth Gap) de 2 dents manquantes pour caler son injection sur le cylindre 1.<br>• <strong>Astuce de mesure :</strong> Le multimètre en mode AC doit lire une valeur moyenne RMS d'environ 1.45V.";
+                } else {
+                    expEl.innerHTML = "<strong>🟢 État: Moteur au Ralenti stable (Effet Hall)</strong><br><br>• <strong>Mesure Numérique Active :</strong> Le capteur Hall envoie un signal carré propre oscillant rapidement entre 0.1V et 4.9V. L'ECU calcule la vitesse exacte via la fréquence de ce signal digital.<br>• <strong>Comportement DMM :</strong> Comme le signal est carré avec un rapport cyclique d'environ 50%, le multimètre filtre et lisse la valeur à environ 2.50V DC stable.";
+                }
+            } 
+            else if (currentEngineState === 'snap') {
+                rpmEl.innerText = "3500 RPM";
+                statusEl.innerText = "ACTIVE SIGNAL (High Frequency)";
+                statusEl.style.color = "var(--neon-cyan)";
+                syncEl.innerText = "YES";
+                syncEl.style.color = "var(--neon-cyan)";
+                gapEl.innerText = "58 / 60 (2 Teeth Gap)";
+                offsetEl.innerText = "1.1 deg";
+                dtcEl.innerText = "NO FAULT";
+                dtcEl.style.color = "var(--neon-cyan)";
+
+                if (currentArchitecture === 'inductif') {
+                    expEl.innerHTML = "<strong>🚀 État: Régime Élevé (Haute Fréquence - Inductif)</strong><br><br>• <strong>Loi Physique de l'Induction :</strong> À 3500 RPM, le volant moteur tourne très vite. L'amplitude du signal sinusoïdal grimpe de façon spectaculaire pour atteindre plus de 15.0V Crête-à-Crête à l'oscilloscope.<br>• <strong>Diagnostic d'entrefer :</strong> Si la tension n'augmente pas proportionnellement avec le régime, cela indique un capteur trop éloigné de la cible (entrefer déréglé) ou un dépôt de limaille métallique perturbant le champ magnétique.";
+                } else {
+                    expEl.innerHTML = "<strong>🚀 État: Régime Élevé (Effet Hall)</strong><br><br>• <strong>Stabilité du Signal :</strong> À 3500 RPM, la fréquence augmente massivement mais l'amplitude reste strictement verrouillée à 5.0V maximum. C'est la caractéristique du signal numérique actif.<br>• <strong>Coupure de Signal :</strong> Si un faisceau ou un connecteur subit des vibrations, une perte fugitive de la synchronisation (DTC P0335/P0336) causera un raté d'allumage ou l'extinction immédiate du moteur.";
+                }
+            }
+        }
+
+        // ====================================================
+        // OSCILLOSCOPE INTERACTIF
+        // ====================================================
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let voltScale = 2.0;
+        let timeScale = 50;
+        let isAnimating = false;
+        let animProgress = 0;
+        let scopeInterval = null;
+
+        function updateScopeParameters() {
+            voltScale = parseFloat(document.getElementById('ctrlVolts').value);
+            timeScale = parseInt(document.getElementById('ctrlTime').value);
+            document.getElementById('voltsDivLabel').innerText = `Y: ${voltScale.toFixed(1)} V / Div`;
+            document.getElementById('timeDivLabel').innerText = `X: ${timeScale} ms / Div`;
+            drawScope();
+        }
+
+        function drawScope() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const width = canvas.width || 500;
+            const height = canvas.height || 250;
+            const numDivsX = 10;
+            const numDivsY = 6;
+            const gridSpacingX = width / numDivsX;
+            const gridSpacingY = height / numDivsY;
+
+            ctx.strokeStyle = '#122525';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= numDivsX; i++) {
+                ctx.beginPath(); ctx.moveTo(i * gridSpacingX, 0); ctx.lineTo(i * gridSpacingX, height); ctx.stroke();
+            }
+            for (let i = 0; i <= numDivsY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, i * gridSpacingY); ctx.lineTo(width, i * gridSpacingY); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#1e4040';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+            ctx.stroke();
+
+            function voltToY(volts) {
+                const maxVoltsRepresented = numDivsY * voltScale;
+                return height - (volts / maxVoltsRepresented) * height;
+            }
+
+            if (!isAnimating) {
+                // Static Wave at rest
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = 'rgba(0, 255, 204, 0.4)';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                
+                let lineY = voltToY(0); // 0V line at rest
+                if (currentArchitecture === 'hall' && currentEngineState === 'off') {
+                    lineY = voltToY(4.5); // Hall signal rests at high level (pull up)
+                }
+
+                ctx.moveTo(0, lineY); ctx.lineTo(width, lineY);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            } else {
+                // Dynamic Trace Sweep representing actual Crankshaft Rotation
+                let samples = [];
+                const step = 2;
+                
+                // Speed factors depending on the engine mode
+                let speedFactor = currentEngineState === 'idle' ? 1.0 : 3.0;
+
+                for (let x = 0; x < width; x += step) {
+                    let val = 0.0;
+                    let tMs = (x / width) * (timeScale * numDivsX);
+
+                    // Position inside the target flywheel rotation cycle (360 degrees)
+                    let cyclePos = (tMs * speedFactor * 0.15) % 10; // represent periodic cycles
+
+                    if (currentArchitecture === 'inductif') {
+                        let amplitude = currentEngineState === 'idle' ? 1.5 : 4.5; // AC amplitude increases with speed
+                        // Normal sine oscillations
+                        val = Math.sin(cyclePos * Math.PI * 2) * amplitude;
+                        
+                        // Simulate tooth gap (2 missing teeth gap area)
+                        let cycleMod = cyclePos % 5; // one tooth gap mark per cycle
+                        if (cycleMod > 4.2 && cycleMod < 4.8) {
+                            // Bigger swing followed by a short flatline
+                            let gapProgress = (cycleMod - 4.2) / 0.6; // 0 to 1
+                            val = Math.sin(gapProgress * Math.PI * 2) * (amplitude * 2.0);
+                            if (cycleMod > 4.4 && cycleMod < 4.7) {
+                                val = 0.0; // flatline gap
+                            }
+                        }
+                    } else {
+                        // Effet Hall Digital Square wave
+                        val = 0.5; // logic low (0.5V)
+                        let pulseWidth = cyclePos % 1; // square duty cycle representation
+                        if (pulseWidth < 0.5) {
+                            val = 4.5; // logic high (4.5V)
+                        }
+
+                        // Simulate missing pulse gap
+                        let cycleMod = cyclePos % 5;
+                        if (cycleMod > 4.1 && cycleMod < 4.8) {
+                            val = 0.5; // missing pulses (remains low)
+                        }
+                    }
+
+                    samples.push({ x: x, y: voltToY(val) });
+                }
+
+                // Render Trace
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = 'rgba(0, 255, 204, 0.6)';
+                ctx.shadowBlur = 10;
+                ctx.lineWidth = 3;
+                if (samples.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(samples[0].x, samples[0].y);
+                    for (let j = 0; j < samples.length; j++) {
+                        if (samples[j].x < animProgress) {
+                            ctx.lineTo(samples[j].x, samples[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function triggerSnapThrottle() {
+            if (isAnimating) return;
+            isAnimating = true;
+            animProgress = 0;
+            changeEngineState('snap');
+
+            if (scopeInterval) clearInterval(scopeInterval);
+            const startTime = Date.now();
+            const duration = 2000;
+
+            scopeInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                animProgress = (elapsed / duration) * canvas.width;
+
+                let representedTime = (animProgress / canvas.width) * (timeScale * 10);
+                let db = getActiveDatabase();
+
+                if (representedTime < 300) {
+                    document.getElementById('dmmValue').innerText = db['off'][selectedRedPin].toFixed(2);
+                } else if (representedTime >= 300 && representedTime < 900) {
+                    document.getElementById('dmmValue').innerText = db['snap'][selectedRedPin].toFixed(2);
+                } else {
+                    document.getElementById('dmmValue').innerText = db['idle'][selectedRedPin].toFixed(2);
+                }
+
+                drawScope();
+
+                if (elapsed >= duration) {
+                    clearInterval(scopeInterval);
+                    isAnimating = false;
+                    changeEngineState('idle');
+                }
+            }, 30);
+        }
+
+        window.onload = function() {
+            canvas.width = canvas.offsetWidth || 500;
+            canvas.height = canvas.offsetHeight || 250;
+            selectPin(1);
+            updateScopeParameters();
+        };
+    </script>
+</body>
+</html>

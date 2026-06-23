@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Climatisation Habitacle & HVAC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #060909;
+            --panel-bg: #0f1414;
+            --border-color: #1a2626;
+            --neon-green: #39ff14;
+            --neon-blue: #00e5ff;
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #9cb5b5;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-blue);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-amber::before { background: var(--neon-amber); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        /* Climatronic screen styling */
+        .clima-screen {
+            background: #020c0f;
+            border: 2px solid #14353a;
+            box-shadow: inset 0 0 15px rgba(0,229,255,0.15);
+        }
+
+        /* Airflow animation */
+        @keyframes flowLeftToRight {
+            0% { stroke-dashoffset: 24; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .flow-line {
+            stroke-dasharray: 8 4;
+            animation: flowLeftToRight 1s linear infinite;
+        }
+
+        /* Multimeter graphics styling */
+        .multimeter {
+            background: #1c2121;
+            border: 3px solid #ff5500;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+        }
+
+        .dmm-screen {
+            background: #1d261e;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.9);
+        }
+
+        /* Pin interactive design */
+        .pin-btn {
+            background: #121818;
+            border: 2px solid #293d3d;
+            transition: all 0.2s ease;
+        }
+        .pin-btn:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+        }
+        .pin-btn.selected-red {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.5);
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        /* Deep Diag layout */
+        .deep-diag-banner {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(to right, #5c3d00 0%, #ffaa00 100%);
+            border: 1px solid #ffaa00;
+            border-radius: 14px;
+            padding: 12px 28px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 20px rgba(255, 170, 0, 0.15);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .deep-diag-banner:hover {
+            box-shadow: 0 6px 25px rgba(255, 170, 0, 0.3);
+            filter: brightness(1.1);
+        }
+
+        .deep-diag-panel { 
+            display: none; 
+            background: #0b1010; 
+            border: 2px solid var(--neon-amber); 
+            border-radius: 12px; 
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .live-data-screen {
+            background: #030d0d;
+            border: 2px solid #162a2a;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- MODULE HEADER / BANNER -->
+        <header class="panel p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="text-xs font-bold tracking-wider uppercase text-[#00e5ff] bg-cyan-950/40 px-3 py-1 rounded border border-cyan-850">Diagnostic Avancé - Habitacle</span>
+                <h1 class="text-2xl md:text-3xl font-extrabold mt-2 text-white">Gestion Thermique & Centrale HVAC</h1>
+                <p class="text-sm text-[#9cb5b5] mt-1">Étude du bloc de climatisation habitacle : régulation d'air (PWM), sondes NTC et servomoteurs de volets.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-zinc-900/60 p-3 rounded-lg border border-zinc-800">
+                <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse" id="statusLed"></div>
+                <div class="text-xs font-mono">
+                    <span class="text-zinc-400">ÉLECTRONIQUE HVAC :</span><br>
+                    <span id="hvacStatusText" class="text-green-400 font-bold">MODE AUTO OK</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- TWO COLUMN WORKSPACE -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- LEFT PANEL: CABIN WORKSTATION & CLIMATRONIC INTERACTIVE -->
+            <section class="panel lg:col-span-7 p-6 space-y-6">
+                <div class="border-b border-zinc-800 pb-3 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-[#00e5ff]">❄️</span> Commande de Bord & Simulation Habitacle
+                    </h2>
+                    <span class="text-xs bg-[#1f2d2d] px-2 py-1 rounded text-[#9cb5b5]" id="tempRealDisplay">Temp. Habitacle : 22.0°C</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    
+                    <!-- Interactive Climatronic Unit (5 columns) -->
+                    <div class="md:col-span-5 flex flex-col items-center">
+                        <div class="w-full max-w-[280px] bg-zinc-900 border-2 border-zinc-800 p-4 rounded-xl space-y-4 shadow-lg">
+                            <!-- Screen -->
+                            <div class="clima-screen p-3 rounded-lg flex flex-col justify-between h-20 font-mono text-xs">
+                                <div class="flex justify-between text-cyan-400">
+                                    <span id="climaAcMode">A/C ON</span>
+                                    <span id="climaFanLevel">▰▰▰▱▱▱ 3</span>
+                                </div>
+                                <div class="flex justify-between items-end">
+                                    <span class="text-[10px] text-zinc-500" id="climaFlapDir">DIST : FRONT</span>
+                                    <span class="text-xl font-bold text-orange-400" id="climaTargetTemp">21.5 °C</span>
+                                </div>
+                            </div>
+                            <!-- Buttons Grid -->
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="changeClimaTemp(-0.5)" class="p-2 bg-zinc-800 hover:bg-zinc-700 text-[#00e5ff] font-bold rounded-lg text-xs">TEMP -</button>
+                                <button onclick="toggleAcButton()" id="btnAcClima" class="p-2 bg-[#00ffcc]/20 border border-[#00ffcc]/40 text-[#00ffcc] font-bold rounded-lg text-xs">A/C</button>
+                                <button onclick="changeClimaTemp(0.5)" class="p-2 bg-zinc-800 hover:bg-zinc-700 text-[#ffaa00] font-bold rounded-lg text-xs">TEMP +</button>
+                                
+                                <button onclick="changeClimaFan(-1)" class="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-lg text-xs">FAN -</button>
+                                <button onclick="toggleAutoMode()" id="btnAutoClima" class="p-2 bg-cyan-950 border border-cyan-800 text-cyan-400 font-bold rounded-lg text-xs">AUTO</button>
+                                <button onclick="changeClimaFan(1)" class="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-lg text-xs">FAN +</button>
+                            </div>
+                            
+                            <!-- Distribution select -->
+                            <div class="flex gap-1 justify-between">
+                                <button onclick="setDistribution('front')" id="dist-front" class="flex-1 py-1 bg-cyan-950/60 border border-cyan-800 text-[10px] text-cyan-400 font-semibold rounded-md">PAR-BRISE</button>
+                                <button onclick="setDistribution('vent')" id="dist-vent" class="flex-1 py-1 bg-zinc-800 text-[10px] text-zinc-400 font-semibold rounded-md">FRONTAL</button>
+                                <button onclick="setDistribution('floor')" id="dist-floor" class="flex-1 py-1 bg-zinc-800 text-[10px] text-zinc-400 font-semibold rounded-md">PIEDS</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Cabin Airflow Cabin Section (7 columns) -->
+                    <div class="md:col-span-7 space-y-3 bg-zinc-950 p-4 rounded-xl border border-zinc-900">
+                        <span class="text-[11px] font-bold text-zinc-500 uppercase block">État des Volets & Ventilation Habitacle</span>
+                        
+                        <div class="relative w-full h-44 bg-zinc-900/60 rounded-lg overflow-hidden border border-zinc-800">
+                            <!-- Graphical SVG of HVAC Unit & Cabin -->
+                            <svg id="hvacCabinSvg" class="w-full h-full" viewBox="0 0 280 160">
+                                <!-- Cabin outline -->
+                                <path d="M 40,140 L 40,80 L 100,50 L 180,50 L 240,110 L 240,140 Z" fill="none" stroke="#2a3a3a" stroke-width="2"/>
+                                <!-- Dashboard/Evaporator cluster -->
+                                <rect x="40" y="80" width="45" height="60" rx="3" fill="#131e1e" stroke="#2e4242" stroke-width="1.5"/>
+                                <text x="62" y="115" fill="#5c8a8a" font-size="8" font-weight="bold" text-anchor="middle">HVAC BLOC</text>
+                                
+                                <!-- Fan Rotor graphics (changes speed) -->
+                                <circle id="blowerWheel" cx="50" cy="130" r="12" fill="none" stroke="#3c5252" stroke-width="2" stroke-dasharray="4 4" />
+                                <circle cx="50" cy="130" r="3" fill="#3c5252" />
+
+                                <!-- Flap mixing valve physical indicator angle -->
+                                <line id="flapLine" x1="85" y1="90" x2="105" y2="90" stroke="#ffaa00" stroke-width="3" stroke-linecap="round" style="transform-origin: 85px 90px; transition: transform 0.6s ease;"/>
+                                <text x="100" y="82" fill="#ffaa00" font-size="7" font-weight="bold">Volet Mixage</text>
+
+                                <!-- Flow lines toward Cabin (Front/Defrost/Feet) -->
+                                <path id="flowPathDefrost" d="M 85,90 Q 110,65 140,65" fill="none" stroke="#00ffcc" stroke-width="2.5" class="flow-line" />
+                                <path id="flowPathFront" d="M 85,105 Q 130,105 180,105" fill="none" stroke="#00ffcc" stroke-width="2.5" class="flow-line" />
+                                <path id="flowPathFeet" d="M 85,125 Q 110,135 150,135" fill="none" stroke="#00ffcc" stroke-width="2.5" class="flow-line" />
+
+                                <!-- Cabin temperature NTC sensor representation -->
+                                <rect x="150" y="55" width="8" height="8" fill="#ff3333" rx="1"/>
+                                <text x="162" y="62" fill="#ff3333" font-size="6" font-weight="bold">Sonde NTC</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- DIGITAL MULTIMETER AND PINOUT GRID -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 pt-4 border-t border-zinc-800">
+                    
+                    <!-- Multimeter Representation (6 columns) -->
+                    <div class="md:col-span-6 flex flex-col items-center">
+                        <div class="multimeter w-full max-w-[250px] p-4 space-y-3">
+                            <div class="dmm-screen p-3 text-right font-mono relative rounded border-2 border-black">
+                                <span class="absolute top-1 left-2 text-[10px] text-zinc-500 font-bold" id="dmmModeLabel">V DC ⎓</span>
+                                <div class="text-3xl text-green-400 font-extrabold tracking-wider" id="dmmScreenValue">0.00</div>
+                            </div>
+                            <div class="flex justify-center my-1">
+                                <div class="w-14 h-14 bg-zinc-800 rounded-full border-4 border-zinc-950 relative shadow">
+                                    <div class="w-1.5 h-7 bg-[#ff5500] absolute top-1 left-[21px] rounded-full origin-bottom" style="transform: rotate(30deg);"></div>
+                                    <div class="absolute bottom-1 text-[8px] text-center w-full font-bold text-zinc-400">VDC 20</div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between px-4 border-t border-zinc-700/60 pt-3 text-[10px] font-mono text-zinc-400">
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-zinc-900 border border-zinc-500 rounded-full inline-block"></span> COM (-)</span>
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-red-600 rounded-full inline-block"></span> V/Ω (+)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fiche / Connecteur Module Regulator (6 columns) -->
+                    <div class="md:col-span-6 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-[#9cb5b5] uppercase">Composant Sous Test (Sélecteur)</span>
+                            <select id="probeComponentSelector" onchange="changeProbeTarget(this.value)" class="bg-[#121818] border border-zinc-800 text-xs text-[#00e5ff] rounded p-1 font-bold">
+                                <option value="ntc">Sonde Température Habitacle</option>
+                                <option value="pulseur">Régulateur Pulseur (PWM)</option>
+                                <option value="flap">Servomoteur de Mixage</option>
+                            </select>
+                        </div>
+                        
+                        <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex flex-col items-center gap-4">
+                            <!-- Dynamic Pins Layout based on selected component -->
+                            <div class="flex gap-2 p-3 bg-zinc-850 border-4 border-zinc-700 rounded-lg shadow-inner relative pt-6" id="pinsConnectorContainer">
+                                <!-- Generated Dynamically in JS -->
+                            </div>
+
+                            <!-- Diagnostic readings labels -->
+                            <div class="w-full text-xs space-y-1 bg-[#101414] p-3 rounded-lg border border-zinc-800">
+                                <div class="flex justify-between">
+                                    <span class="text-zinc-500">🔴 Sonde active :</span>
+                                    <span id="activeProbeLabel" class="text-red-400 font-bold">Pin 1 (Signal NTC)</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-zinc-500">⚫ Sonde de masse :</span>
+                                    <span class="text-zinc-400 font-semibold">Masse Carrosserie G201</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- RIGHT PANEL: DUAL OSCILLOSCOPE & INTERACTIVE SCHEMATIC -->
+            <section class="lg:col-span-5 space-y-6">
+                
+                <!-- DUAL CHANNEL OSCILLOSCOPE -->
+                <div class="panel p-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span class="text-[#39ff14]">📊</span> Scope Double Trace (HVAC Signals)
+                        </h2>
+                        <!-- Legend indicators -->
+                        <div class="flex flex-col sm:flex-row gap-2 text-[10px] font-bold">
+                            <span class="text-[#00e5ff]">● CH1 (CMD Pulseur PWM)</span>
+                            <span class="text-[#ffaa00]">● CH2 (Signal Sonde NTC)</span>
+                        </div>
+                    </div>
+
+                    <div class="scope-screen p-2 relative">
+                        <canvas id="scopeCanvas" class="w-full h-52 block"></canvas>
+                        <!-- Grid legends -->
+                        <div class="absolute top-4 left-4 bg-zinc-900/80 px-2 py-0.5 rounded text-[9px] font-mono text-[#39ff14]">CH1: 5V/Div | CH2: 1V/Div</div>
+                        <div class="absolute bottom-4 right-4 bg-zinc-900/80 px-2 py-0.5 rounded text-[9px] font-mono text-[#39ff14]">T: 10 ms / Div</div>
+                    </div>
+
+                    <p class="text-[11px] text-zinc-500 italic mt-2 text-center">Faites varier la vitesse du pulseur (CH1) ou la température (CH2) pour observer la réaction.</p>
+                </div>
+
+                <!-- WIRING SCHEMATIC -->
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                        <span class="text-[#ffaa00]">🔌</span> Schéma HVAC & Interconnexion ECU
+                    </h2>
+                    
+                    <div class="bg-black border border-zinc-800 rounded-lg overflow-hidden p-2">
+                        <svg id="wiringSvg" viewBox="0 0 400 180" class="w-full h-auto">
+                            <!-- Grid -->
+                            <rect width="100%" height="100%" fill="#040606"/>
+                            
+                            <!-- BSI / Climate ECU -->
+                            <rect x="10" y="20" width="90" height="140" rx="4" fill="#131919" stroke="#527070" stroke-width="1.5"/>
+                            <text x="55" y="90" fill="#a0bfa0" font-size="9" font-weight="bold" text-anchor="middle">CALC CLIM</text>
+                            
+                            <!-- Pulseur Assembly -->
+                            <rect x="290" y="20" width="100" height="60" rx="4" fill="#181e1e" stroke="#00e5ff" stroke-width="1.5"/>
+                            <text x="340" y="55" fill="#00e5ff" font-size="8" font-weight="bold" text-anchor="middle">REGUL PULSEUR</text>
+                            
+                            <!-- NTC Sensor Assembly -->
+                            <rect x="290" y="100" width="100" height="60" rx="4" fill="#181e1e" stroke="#ffaa00" stroke-width="1.5"/>
+                            <text x="340" y="135" fill="#ffaa00" font-size="8" font-weight="bold" text-anchor="middle">SONDE NTC</text>
+
+                            <!-- Wires -->
+                            <!-- Wire 1: PWM Command -->
+                            <path id="sch-wire-pwm" d="M 100,50 L 290,50" fill="none" stroke="#00e5ff" stroke-width="1.5" />
+                            <text x="195" y="45" fill="#00e5ff" font-size="7" font-family="mono" text-anchor="middle">Commande RCO (PWM)</text>
+                            
+                            <!-- Wire 2: Blower Earth -->
+                            <path d="M 290,65 L 170,65 L 170,170" fill="none" stroke="#7c532e" stroke-width="1.5" />
+                            <line x1="160" y1="170" x2="180" y2="170" stroke="#7c532e" stroke-width="2" />
+                            <line x1="165" y1="174" x2="175" y2="174" stroke="#7c532e" stroke-width="1.5" />
+
+                            <!-- Wire 3: Sonde NTC Ref 5V -->
+                            <path id="sch-wire-ntcref" d="M 100,120 L 290,120" fill="none" stroke="#ffaa00" stroke-width="1.5" />
+                            <text x="195" y="115" fill="#ffaa00" font-size="7" font-family="mono" text-anchor="middle">Signal/Alim 5V Ref</text>
+
+                            <!-- Wire 4: Sonde NTC Ground -->
+                            <path d="M 100,140 L 290,140" fill="none" stroke="#00ffcc" stroke-width="1" stroke-dasharray="2 2" />
+                            <text x="195" y="137" fill="#00ffcc" font-size="6" font-family="mono" text-anchor="middle">Masse Électronique</text>
+                        </svg>
+                    </div>
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- LOWER SECTION: DIAGNOSTIC FAULTS SIMULATION & DEEP DIAG -->
+        <footer class="panel panel-red p-6 space-y-6">
+            <h3 class="text-lg font-bold text-[#ff3333] flex items-center gap-2 border-b border-zinc-800 pb-3">
+                <span>🛑</span> Simulation et Analyse de Pannes Électriques (Mode Diagnostics)
+            </h3>
+            
+            <p class="text-sm text-[#9cb5b5]">
+                Activez l'un des scénarios d'erreurs ci-dessous. Observez l'impact immédiat sur les signaux d'oscilloscope, le multimètre et les paramètres réels lues sur l'outil de diagnostic (OBD-II).
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <!-- SCENARIO 1: NORMAL STATE -->
+                <button onclick="setFaultScenario('normal')" id="btn-fault-normal" class="p-4 bg-zinc-900 border-2 border-green-600/30 text-left rounded-xl hover:border-green-500/80 transition flex flex-col justify-between h-full relative overflow-hidden group">
+                    <div class="absolute top-2 right-2 text-xs font-bold text-green-500">ÉTAT OK</div>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-white group-hover:text-[#00e5ff]">Fonctionnement Normal</h4>
+                        <p class="text-xs text-zinc-400">Régulation automatique de température. Vitesse et mixage opérationnels.</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-zinc-500 mt-3 block">Pas de code défaut</span>
+                </button>
+
+                <!-- SCENARIO 2: BROKEN BLOWER REGULATOR (STUCK PWM HIGH) -->
+                <button onclick="setFaultScenario('pulseur-stuck')" id="btn-fault-pulseur" class="p-4 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-red-500/50 transition flex flex-col justify-between h-full relative overflow-hidden group">
+                    <div class="absolute top-2 right-2 text-xs font-bold text-red-500">PANNE</div>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-white group-hover:text-red-400">Régulateur Pulseur Grillé</h4>
+                        <p class="text-xs text-zinc-400">Le transistor de puissance (MOSFET) s'est mis en court-circuit. Le pulseur tourne à 100% (max) en continu.</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-[#ff3333] mt-3 block">DTC B101E - Pulseur d'air hors consigne</span>
+                </button>
+
+                <!-- SCENARIO 3: NTC SHORT TO GND -->
+                <button onclick="setFaultScenario('ntc-gnd')" id="btn-fault-ntc" class="p-4 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-red-500/50 transition flex flex-col justify-between h-full relative overflow-hidden group">
+                    <div class="absolute top-2 right-2 text-xs font-bold text-red-500">PANNE</div>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-white group-hover:text-[#ffaa00]">Sonde NTC en Court-Circuit</h4>
+                        <p class="text-xs text-zinc-400">Le faisceau est écrasé à la masse. Tension lue = 0V. Le calculateur croit qu'il fait très chaud.</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-[#ff3333] mt-3 block">DTC B1032 - Signal sonde incohérent</span>
+                </button>
+
+                <!-- SCENARIO 4: STUCK FLAP ACTUATOR -->
+                <button onclick="setFaultScenario('flap-stuck')" id="btn-fault-flap" class="p-4 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-red-500/50 transition flex flex-col justify-between h-full relative overflow-hidden group">
+                    <div class="absolute top-2 right-2 text-xs font-bold text-red-500">STUCK</div>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-white group-hover:text-[#ffaa00]">Volet de Mixage Coincé</h4>
+                        <p class="text-xs text-zinc-400">Blocage mécanique du volet de mixage (feuille ou corps étranger). Impossible d'obtenir de l'air froid.</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-[#ffaa00] mt-3 block">DTC B10A3 - Butée servomoteur non atteinte</span>
+                </button>
+
+            </div>
+
+            <!-- INTERACTIVE DEEP DIAGNOSTIC SCANNER -->
+            <div class="pt-4 border-t border-zinc-800">
+                <button class="deep-diag-banner w-full justify-center md:w-auto" onclick="toggleDeepDiag()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    DEEP DIAG: Paramètres OBD-II En Temps Réel
+                    <span class="ml-2 font-mono" id="arrowIcon">▼</span>
+                </button>
+
+                <div class="deep-diag-panel p-6 mt-4" id="deepPanel">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- OBD Live Data (Scanner) -->
+                        <div class="live-data-screen p-4 flex flex-col justify-between">
+                            <div>
+                                <span class="text-orange-400 font-bold text-xs uppercase tracking-wider block border-b border-zinc-800 pb-2 mb-3">Diagnostic Tool - Valeurs Réelles</span>
+                                <div class="space-y-2 text-xs font-mono">
+                                    <div class="flex justify-between border-b border-zinc-900 pb-1">
+                                        <span class="text-zinc-500">Tension d'alimentation ECU Clim :</span>
+                                        <span class="text-cyan-400 font-bold">14.20 V</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-zinc-900 pb-1">
+                                        <span class="text-zinc-500">Sonde Température Habitacle lue :</span>
+                                        <span class="text-cyan-400 font-bold" id="obd-temp-read">22.0 °C</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-zinc-900 pb-1">
+                                        <span class="text-zinc-500">Rapport Cyclique d'ouverture (RCO) :</span>
+                                        <span class="text-cyan-400 font-bold" id="obd-pwm-read">45 %</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-zinc-900 pb-1">
+                                        <span class="text-zinc-500">Courant Absorbé Servomoteur Volet :</span>
+                                        <span class="text-cyan-400 font-bold" id="obd-flap-current">80 mA</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-zinc-900 pb-1">
+                                        <span class="text-zinc-500">Tension Potentiomètre de recopie :</span>
+                                        <span class="text-cyan-400 font-bold" id="obd-pot-read">2.50 V</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-zinc-800 flex justify-between items-center text-xs">
+                                <span class="text-zinc-400 font-mono">Défauts enregistrés : <strong class="text-red-500" id="obdDtcCount">0</strong></span>
+                                <button onclick="clearObdDtc()" class="px-2 py-1 bg-red-950 hover:bg-red-900 text-red-400 rounded text-[10px] font-bold">Effacer Défauts</button>
+                            </div>
+                        </div>
+
+                        <!-- Technical Explanation Card -->
+                        <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-lg flex flex-col justify-between">
+                            <div>
+                                <h4 class="text-sm font-bold text-orange-400 mb-2 flex items-center gap-2">
+                                    <span>📖</span> Stratégie de Commande & Logique Interne
+                                </h4>
+                                <p class="text-xs text-[#9cb5b5] leading-relaxed" id="tech-explanation-text">
+                                    En fonctionnement normal, le calculateur de climatisation adapte la commande PWM du pulseur d'air habitacle pour atteindre de manière optimale la température de consigne. La sonde de température habitacle est un thermistor NTC (la résistance diminue quand la température monte).
+                                </p>
+                            </div>
+                            <div class="text-[10px] text-zinc-500 bg-black/40 p-2 rounded border border-zinc-800/60 mt-3">
+                                <strong>💡 Astuce ScannerDanner :</strong> Pour tester un fil de signal d'une sonde de température sans la démonter, déconnectez-la et court-circuitez les deux bornes avec un fusible de 5A. Si la valeur sur le scanner passe de -40°C à +150°C, votre câblage et l'ECU sont fonctionnels !
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </footer>
+
+    </div>
+
+    <!-- MAIN APP JAVASCRIPT ENGINE -->
+    <script>
+        // System States
+        let activeScenario = 'normal'; // 'normal', 'pulseur-stuck', 'ntc-gnd', 'flap-stuck'
+        let currentTargetTemp = 21.5;
+        let currentActualTemp = 22.0; 
+        let currentFanLevel = 3; // 0 to 6
+        let isAcOn = true;
+        let activeComponent = 'ntc'; // 'ntc', 'pulseur', 'flap'
+        let selectedPin = 1;
+        let isAutoMode = true;
+        let activeDistribution = 'front'; // 'front', 'vent', 'floor'
+        
+        // Physics Engine & Temperature simulation tick
+        let cabinTempTimer = null;
+
+        // Oscilloscope Settings
+        const scopeCanvas = document.getElementById('scopeCanvas');
+        const scopeCtx = scopeCanvas.getContext('2d');
+        const maxDataPoints = 300;
+        const pwmHistory = Array(maxDataPoints).fill(0);
+        const ntcHistory = Array(maxDataPoints).fill(2.5);
+
+        // Component Pin definitions database
+        const componentsDb = {
+            ntc: {
+                title: "Sonde Température Habitacle",
+                pins: [
+                    { num: 1, name: "Signal NTC", role: "Tension variable inversée selon la température" },
+                    { num: 2, name: "Masse Élec", role: "Masse électronique isolée provenant du calculateur" }
+                ],
+                getVoltages: () => {
+                    let voltages = { 1: 2.50, 2: 0.01 };
+                    if (activeScenario === 'ntc-gnd') {
+                        voltages[1] = 0.00; // Hard short to ground
+                    } else {
+                        // Formula mapping temperature (15 to 30) to voltage (3.5V to 1.5V)
+                        let percent = (currentActualTemp - 15) / 15; // 0 to 1
+                        voltages[1] = 3.50 - (percent * 2.0); // Map to 3.5V - 1.5V range
+                        voltages[1] = Math.max(0.5, Math.min(4.5, voltages[1]));
+                    }
+                    return voltages;
+                }
+            },
+            pulseur: {
+                title: "Régulateur Pulseur (PWM)",
+                pins: [
+                    { num: 1, name: "Alim 12V", role: "Alimentation de puissance après relais" },
+                    { num: 2, name: "Commande PWM", role: "Rapport cyclique envoyé par le calculateur" },
+                    { num: 3, name: "Masse Puissance", role: "Masse de raccordement châssis à forte section" }
+                ],
+                getVoltages: () => {
+                    let voltages = { 1: 14.20, 2: 2.50, 3: 0.02 };
+                    if (activeScenario === 'pulseur-stuck') {
+                        voltages[2] = 0.01; // Stuck low pulling the gate hard ON continuously
+                    } else {
+                        // PWM average voltage depending on fan speed
+                        let dutyCycle = currentFanLevel / 6;
+                        voltages[2] = 14.20 * (1 - dutyCycle); // Gate pulled down to switch MOSFET
+                    }
+                    return voltages;
+                }
+            },
+            flap: {
+                title: "Servomoteur de Mixage",
+                pins: [
+                    { num: 1, name: "Alim Pot. (5V)", role: "Alimentation fixe de recopie de position" },
+                    { num: 2, name: "Signal Recopie", role: "Tension variable indiquant l'angle réel du volet" },
+                    { num: 3, name: "Masse Pot.", role: "Masse du potentiomètre" },
+                    { num: 4, name: "Moteur (+)", role: "Alimentation d'entraînement bidirectionnelle" },
+                    { num: 5, name: "Moteur (-)", role: "Alimentation d'entraînement bidirectionnelle" }
+                ],
+                getVoltages: () => {
+                    let voltages = { 1: 5.00, 2: 2.50, 3: 0.01, 4: 0.0, 5: 0.0 };
+                    // Recopie signal depends on targets vs actual mix
+                    let mixFlapPos = getFlapPosition(); // 0 (cold) to 1 (hot)
+                    
+                    if (activeScenario === 'flap-stuck') {
+                        // Stuck mid-way mechanically
+                        voltages[2] = 2.50; 
+                    } else {
+                        voltages[2] = 0.5 + (mixFlapPos * 4.0); // mapped 0.5V to 4.5V
+                    }
+                    return voltages;
+                }
+            }
+        };
+
+        // Render Connector Pins dynamically
+        function renderPins() {
+            const container = document.getElementById('pinsConnectorContainer');
+            container.innerHTML = ''; // reset
+            
+            const component = componentsDb[activeComponent];
+            
+            // Re-select first pin of component if selected pin exceeds limits
+            if (selectedPin > component.pins.length) {
+                selectedPin = 1;
+            }
+
+            component.pins.forEach(pin => {
+                const isSelected = selectedPin === pin.num;
+                const btn = document.createElement('button');
+                btn.className = `pin-btn w-10 h-14 rounded flex flex-col justify-between items-center py-2 text-xs font-mono font-bold text-zinc-300 ${isSelected ? 'selected-red' : ''}`;
+                btn.id = `pin-${pin.num}`;
+                btn.onclick = () => selectPin(pin.num);
+                
+                btn.innerHTML = `
+                    <span>${pin.num}</span>
+                    <div class="pin-hole w-3.5 h-3.5 bg-yellow-600 rounded-full border border-black shadow-inner"></div>
+                    <span class="text-[7px] text-zinc-500 font-sans tracking-tight uppercase">${pin.name.split(' ')[0]}</span>
+                `;
+                container.appendChild(btn);
+            });
+
+            updateMultimeterDisplay();
+        }
+
+        function selectPin(num) {
+            selectedPin = num;
+            document.querySelectorAll('.pin-btn').forEach(btn => btn.classList.remove('selected-red'));
+            
+            const selectedBtn = document.getElementById(`pin-${num}`);
+            if (selectedBtn) {
+                selectedBtn.classList.add('selected-red');
+            }
+
+            const activeCompData = componentsDb[activeComponent];
+            const activePinData = activeCompData.pins.find(p => p.num === num);
+            document.getElementById('activeProbeLabel').innerText = `Pin ${num} - ${activePinData.name} (${activeCompData.title})`;
+            
+            updateMultimeterDisplay();
+            highlightWiringWire();
+        }
+
+        function changeProbeTarget(compVal) {
+            activeComponent = compVal;
+            selectedPin = 1;
+            renderPins();
+        }
+
+        // Return flap position ratio (0 cold to 1 hot)
+        function getFlapPosition() {
+            // Hot target means flap opens to engine matrix
+            let targetRatio = (currentTargetTemp - 15) / 15; // normal boundaries
+            return Math.max(0, Math.min(1, targetRatio));
+        }
+
+        // Multimeter Output Voltage mapping calculation
+        function updateMultimeterDisplay() {
+            const currentVoltages = componentsDb[activeComponent].getVoltages();
+            const voltage = currentVoltages[selectedPin] || 0.0;
+            document.getElementById('dmmScreenValue').innerText = voltage.toFixed(2);
+        }
+
+        // Change Active schematic path highlighting
+        function highlightWiringWire() {
+            // Reset styles
+            const wirePwm = document.getElementById('sch-wire-pwm');
+            const wireNtc = document.getElementById('sch-wire-ntcref');
+            
+            wirePwm.setAttribute('stroke-width', '1.5');
+            wirePwm.style.filter = "none";
+            wireNtc.setAttribute('stroke-width', '1.5');
+            wireNtc.style.filter = "none";
+
+            if (activeComponent === 'pulseur' && selectedPin === 2) {
+                wirePwm.setAttribute('stroke-width', '4.5');
+                wirePwm.style.filter = "drop-shadow(0 0 4px var(--neon-blue))";
+            } else if (activeComponent === 'ntc' && selectedPin === 1) {
+                wireNtc.setAttribute('stroke-width', '4.5');
+                wireNtc.style.filter = "drop-shadow(0 0 4px var(--neon-amber))";
+            }
+        }
+
+        // CLIMATRONIC LOGIC
+        function changeClimaTemp(offset) {
+            if (activeScenario === 'flap-stuck') return; // Coincé
+            currentTargetTemp += offset;
+            currentTargetTemp = Math.max(15, Math.min(30, currentTargetTemp));
+            document.getElementById('climaTargetTemp').innerText = `${currentTargetTemp.toFixed(1)} °C`;
+            updateCabinetGraphics();
+            updateMultimeterDisplay();
+        }
+
+        function toggleAcButton() {
+            isAcOn = !isAcOn;
+            const btn = document.getElementById('btnAcClima');
+            const modeLabel = document.getElementById('climaAcMode');
+            if (isAcOn) {
+                btn.className = "p-2 bg-[#00ffcc]/20 border border-[#00ffcc]/40 text-[#00ffcc] font-bold rounded-lg text-xs";
+                modeLabel.innerText = isAutoMode ? "AUTO A/C" : "A/C ON";
+            } else {
+                btn.className = "p-2 bg-zinc-850 border border-zinc-700 text-zinc-500 font-semibold rounded-lg text-xs";
+                modeLabel.innerText = "A/C OFF";
+            }
+            updateCabinetGraphics();
+        }
+
+        function toggleAutoMode() {
+            isAutoMode = !isAutoMode;
+            const btn = document.getElementById('btnAutoClima');
+            const modeLabel = document.getElementById('climaAcMode');
+            if (isAutoMode) {
+                btn.className = "p-2 bg-cyan-950 border border-cyan-800 text-cyan-400 font-bold rounded-lg text-xs";
+                modeLabel.innerText = isAcOn ? "AUTO A/C" : "AUTO ONLY";
+            } else {
+                btn.className = "p-2 bg-zinc-850 border border-zinc-700 text-zinc-500 font-semibold rounded-lg text-xs";
+                modeLabel.innerText = isAcOn ? "A/C ON" : "MANUAL";
+            }
+        }
+
+        function changeClimaFan(offset) {
+            if (activeScenario === 'pulseur-stuck') return; // Stuck max speed
+            currentFanLevel += offset;
+            currentFanLevel = Math.max(0, Math.min(6, currentFanLevel));
+            
+            // Visual Level bar update
+            let bar = "";
+            for (let i = 1; i <= 6; i++) {
+                bar += i <= currentFanLevel ? "▰" : "▱";
+            }
+            document.getElementById('climaFanLevel').innerText = `${bar} ${currentFanLevel}`;
+            updateCabinetGraphics();
+            updateMultimeterDisplay();
+        }
+
+        function setDistribution(mode) {
+            activeDistribution = mode;
+            document.querySelectorAll("[id^='dist-']").forEach(btn => {
+                btn.className = "flex-1 py-1 bg-zinc-800 text-[10px] text-zinc-400 font-semibold rounded-md";
+            });
+            document.getElementById(`dist-${mode}`).className = "flex-1 py-1 bg-cyan-950 border border-cyan-850 text-[10px] text-cyan-400 font-bold rounded-md";
+            
+            const labels = { front: "DIST : PAR-BRISE", vent: "DIST : FRONTAL", floor: "DIST : PIEDS" };
+            document.getElementById('climaFlapDir').innerText = labels[mode];
+            updateCabinetGraphics();
+        }
+
+        // Cabin Climate physical simulation engine tick
+        function simulateCabinTemperature() {
+            // Target temperature effects actual temperature slowly
+            let coolingPower = isAcOn ? 1.4 : 0.2;
+            let currentTarget = currentTargetTemp;
+            
+            if (currentFanLevel === 0) {
+                // Without ventilation, temperature drifts slowly to exterior ambient temperature (~28°C)
+                currentTarget = 28.0;
+                coolingPower = 0.05;
+            }
+
+            let delta = currentTarget - currentActualTemp;
+            currentActualTemp += delta * (0.015 * currentFanLevel * coolingPower);
+
+            // Bounds
+            currentActualTemp = Math.max(14.0, Math.min(32.0, currentActualTemp));
+            
+            // Write update
+            if (activeScenario === 'ntc-gnd') {
+                document.getElementById('tempRealDisplay').innerText = `Temp. Habitacle : COUPE (---)`;
+            } else {
+                document.getElementById('tempRealDisplay').innerText = `Temp. Habitacle : ${currentActualTemp.toFixed(1)}°C`;
+            }
+
+            updateObdDataPanel();
+            updateMultimeterDisplay();
+        }
+
+        // SCENARIOS & DIAGS MANAGER
+        function setFaultScenario(scenario) {
+            activeScenario = scenario;
+            
+            // Clean buttons highlighting
+            document.querySelectorAll('footer button').forEach(btn => {
+                btn.className = "p-4 bg-zinc-900 border border-zinc-800 text-left rounded-xl hover:border-zinc-500/50 transition flex flex-col justify-between h-full relative overflow-hidden group";
+            });
+
+            const normalBtn = document.getElementById('btn-fault-normal');
+            const pulseurBtn = document.getElementById('btn-fault-pulseur');
+            const ntcBtn = document.getElementById('btn-fault-ntc');
+            const flapBtn = document.getElementById('btn-fault-flap');
+
+            // Reset system overrides
+            document.getElementById('statusLed').className = "w-3 h-3 rounded-full bg-green-500 animate-pulse";
+            document.getElementById('hvacStatusText').innerText = "MODE AUTO OK";
+            document.getElementById('hvacStatusText').className = "text-green-400 font-bold";
+
+            if (scenario === 'normal') {
+                normalBtn.className = "p-4 bg-zinc-900 border-2 border-green-600/30 text-left rounded-xl hover:border-green-500/80 transition flex flex-col justify-between h-full relative overflow-hidden group";
+                document.getElementById('tech-explanation-text').innerText = "En fonctionnement normal, le calculateur de climatisation adapte la commande PWM du pulseur d'air habitacle pour atteindre de manière optimale la température de consigne. La sonde de température habitacle est un thermistor NTC (la résistance diminue quand la température monte).";
+            } 
+            else if (scenario === 'pulseur-stuck') {
+                pulseurBtn.className = "p-4 bg-zinc-900 border-2 border-red-600/30 text-left rounded-xl hover:border-red-500/80 transition flex flex-col justify-between h-full relative overflow-hidden group";
+                document.getElementById('statusLed').className = "w-3 h-3 rounded-full bg-red-500";
+                document.getElementById('hvacStatusText').innerText = "VITESSE SÉCURITÉ DEGRADÉE";
+                document.getElementById('hvacStatusText').className = "text-red-500 font-bold";
+                document.getElementById('tech-explanation-text').innerText = "🚨 Panne classique : Le MOSFET du régulateur est en court-circuit fermé (Drain-Source percé). En conséquence, le ventilateur tourne à pleine vitesse constante (100%), même si le contact ou la console Climatronic demande l'arrêt (OFF). L'oscilloscope affiche un signal PWM plat collé à 0V (masse commandée continue).";
+            } 
+            else if (scenario === 'ntc-gnd') {
+                ntcBtn.className = "p-4 bg-zinc-900 border-2 border-red-600/30 text-left rounded-xl hover:border-[#ffaa00]/80 transition flex flex-col justify-between h-full relative overflow-hidden group";
+                document.getElementById('statusLed').className = "w-3 h-3 rounded-full bg-red-500 animate-pulse";
+                document.getElementById('hvacStatusText').innerText = "DÉFAUT CAPTEUR INT";
+                document.getElementById('hvacStatusText').className = "text-[#ffaa00] font-bold";
+                document.getElementById('tech-explanation-text').innerText = "🚨 Panne NTC Court-Circuit : Le faisceau de la sonde touche la carrosserie. Le calculateur reçoit 0,0 Volts continus sur la ligne de signal. Sur l'outil de diagnostic OBD-II, cela correspond à une valeur de remplacement hors-limite de +150°C. Par conséquent, l'ECU tente d'injecter le maximum d'air froid possible pour contrecarrer cette chaleur imaginaire.";
+            }
+            else if (scenario === 'flap-stuck') {
+                flapBtn.className = "p-4 bg-zinc-900 border-2 border-[#ffaa00]/30 text-left rounded-xl hover:border-[#ffaa00]/80 transition flex flex-col justify-between h-full relative overflow-hidden group";
+                document.getElementById('statusLed').className = "w-3 h-3 rounded-full bg-[#ffaa00] animate-pulse";
+                document.getElementById('hvacStatusText').innerText = "BLOCAGE VOLET MIXAGE";
+                document.getElementById('hvacStatusText').className = "text-[#ffaa00] font-bold";
+                document.getElementById('tech-explanation-text').innerText = "🚨 Panne mécanique : Le micro-réducteur de mixage est coincé par un morceau de plastique ou engrenage brisé. Le signal de recopie reste bloqué à une tension intermédiaire constante (2.5V), ne variant plus. L'ECU détecte un fort appel de courant de commande moteur (80 mA) sans retour de mouvement, enregistrant le code de butée non atteinte.";
+            }
+
+            updateCabinetGraphics();
+            updateMultimeterDisplay();
+            updateObdDataPanel();
+        }
+
+        // Synchronize visual interactive block diagrams
+        function updateCabinetGraphics() {
+            // 1. Fan Rotor speed animation simulation
+            const blower = document.getElementById('blowerWheel');
+            let currentRotation = 0;
+            
+            // Clear old intervals if any to prevent leaks
+            if (window.blowerAnimInterval) clearInterval(window.blowerAnimInterval);
+
+            let animFanLevel = activeScenario === 'pulseur-stuck' ? 6 : currentFanLevel;
+            
+            if (animFanLevel > 0) {
+                window.blowerAnimInterval = setInterval(() => {
+                    currentRotation += animFanLevel * 6;
+                    blower.style.transform = `rotate(${currentRotation}deg)`;
+                    blower.style.transformOrigin = "50px 130px";
+                }, 30);
+            }
+
+            // 2. Air Flow paths based on active distributions & blower speeds
+            const pathDefrost = document.getElementById('flowPathDefrost');
+            const pathFront = document.getElementById('flowPathFront');
+            const pathFeet = document.getElementById('flowPathFeet');
+
+            // Hide/dim paths
+            pathDefrost.style.display = "none";
+            pathFront.style.display = "none";
+            pathFeet.style.display = "none";
+
+            // Determine active color depending on mix flap position (cold = blue, hot = red)
+            let flapRatio = getFlapPosition(); // 0 to 1
+            let color = `rgb(${Math.round(255 * flapRatio)}, ${Math.round(150 * (1-flapRatio))}, ${Math.round(255 * (1-flapRatio))})`;
+            
+            // Show corresponding path
+            let activePath = null;
+            if (activeDistribution === 'front') activePath = pathDefrost;
+            if (activeDistribution === 'vent') activePath = pathFront;
+            if (activeDistribution === 'floor') activePath = pathFeet;
+
+            if (activePath && animFanLevel > 0) {
+                activePath.style.display = "block";
+                activePath.setAttribute('stroke', color);
+                // Faster animation for higher wind speed
+                activePath.style.animationDuration = `${1.5 - (animFanLevel * 0.2)}s`;
+            }
+
+            // 3. Move physical flap selector on schematic
+            const flapLine = document.getElementById('flapLine');
+            // Cold position (down, 45deg), Hot position (up, -45deg)
+            let angle = 45 - (flapRatio * 90);
+            if (activeScenario === 'flap-stuck') {
+                angle = 0; // Stuck in middle
+            }
+            flapLine.style.transform = `rotate(${angle}deg)`;
+        }
+
+        // OBD Data Refresh Panel
+        function updateObdDataPanel() {
+            const tempRead = document.getElementById('obd-temp-read');
+            const pwmRead = document.getElementById('obd-pwm-read');
+            const flapCurrent = document.getElementById('obd-flap-current');
+            const potRead = document.getElementById('obd-pot-read');
+            const dtcCount = document.getElementById('obdDtcCount');
+
+            // Defaults
+            dtcCount.innerText = "0";
+            flapCurrent.innerText = "5 mA"; // standby current
+
+            if (activeScenario === 'normal') {
+                tempRead.innerText = `${currentActualTemp.toFixed(1)} °C`;
+                pwmRead.innerText = `${Math.round((currentFanLevel / 6) * 100)} %`;
+                potRead.innerText = `${(0.5 + getFlapPosition() * 4.0).toFixed(2)} V`;
+            } 
+            else if (activeScenario === 'pulseur-stuck') {
+                tempRead.innerText = `${currentActualTemp.toFixed(1)} °C`;
+                pwmRead.innerText = "100 % (FORCE)";
+                potRead.innerText = `${(0.5 + getFlapPosition() * 4.0).toFixed(2)} V`;
+                dtcCount.innerText = "1";
+            } 
+            else if (activeScenario === 'ntc-gnd') {
+                tempRead.innerText = "VALEUR INCORRECTE : +150.0 °C";
+                pwmRead.innerText = `${Math.round((currentFanLevel / 6) * 100)} %`;
+                potRead.innerText = `${(0.5 + getFlapPosition() * 4.0).toFixed(2)} V`;
+                dtcCount.innerText = "1";
+            }
+            else if (activeScenario === 'flap-stuck') {
+                tempRead.innerText = `${currentActualTemp.toFixed(1)} °C`;
+                pwmRead.innerText = `${Math.round((currentFanLevel / 6) * 100)} %`;
+                potRead.innerText = "BLOQUÉ : 2.50 V";
+                flapCurrent.innerText = "85 mA (MAX - Surcharge)";
+                dtcCount.innerText = "1";
+            }
+        }
+
+        function clearObdDtc() {
+            setFaultScenario('normal');
+        }
+
+        function toggleDeepDiag() {
+            const panel = document.getElementById('deepPanel');
+            const arrow = document.getElementById('arrowIcon');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+                arrow.innerText = '▼';
+            } else {
+                panel.style.display = 'block';
+                arrow.innerText = '▲';
+                updateObdDataPanel();
+            }
+        }
+
+        // Dual trace oscilloscope canvas painter loop
+        function drawScope() {
+            const width = scopeCanvas.width;
+            const height = scopeCanvas.height;
+
+            scopeCtx.clearRect(0, 0, width, height);
+
+            // Grid lines
+            scopeCtx.strokeStyle = '#121f1f';
+            scopeCtx.lineWidth = 0.5;
+
+            const divX = 10;
+            const divY = 6;
+            
+            for (let i = 0; i <= divX; i++) {
+                scopeCtx.beginPath();
+                scopeCtx.moveTo(i * (width / divX), 0);
+                scopeCtx.lineTo(i * (width / divX), height);
+                scopeCtx.stroke();
+            }
+            for (let i = 0; i <= divY; i++) {
+                scopeCtx.beginPath();
+                scopeCtx.moveTo(0, i * (height / divY));
+                scopeCtx.lineTo(width, i * (height / divY));
+                scopeCtx.stroke();
+            }
+
+            // Center lines
+            scopeCtx.strokeStyle = '#1e3030';
+            scopeCtx.lineWidth = 1;
+            scopeCtx.beginPath();
+            scopeCtx.moveTo(0, height / 2);
+            scopeCtx.lineTo(width, height / 2);
+            scopeCtx.stroke();
+
+            // Realtime traces calculations shift
+            let pwmVal = (activeScenario === 'pulseur-stuck') ? 1.0 : (currentFanLevel / 6);
+            let ntcVolt = componentsDb.ntc.getVoltages()[1];
+
+            // Append to rolling history buffers
+            pwmHistory.shift();
+            pwmHistory.push(pwmVal);
+
+            ntcHistory.shift();
+            ntcHistory.push(ntcVolt);
+
+            // Paint CH1: Command PWM Blower (0V is bottom grid, 12V/Max is top)
+            scopeCtx.strokeStyle = '#00e5ff';
+            scopeCtx.lineWidth = 1.5;
+            scopeCtx.shadowColor = 'rgba(0, 229, 255, 0.4)';
+            scopeCtx.shadowBlur = 4;
+            scopeCtx.beginPath();
+            
+            const stepsX = width / maxDataPoints;
+            const periodPixels = 20; // Simulated frequency period width
+
+            for (let i = 0; i < maxDataPoints; i++) {
+                const x = i * stepsX;
+                const duty = pwmHistory[i];
+                
+                // Construct square wave pattern based on current dynamic duty cycle history
+                let y;
+                if (duty === 0) {
+                    y = height - 10; // Plat GND
+                } else if (duty === 1) {
+                    y = 15; // Plat 12V Command
+                } else {
+                    let phase = (x % periodPixels) / periodPixels;
+                    y = (phase < duty) ? 15 : height - 10; // Duty ratio gate
+                }
+
+                if (i === 0) scopeCtx.moveTo(x, y);
+                else scopeCtx.lineTo(x, y);
+            }
+            scopeCtx.stroke();
+
+            // Paint CH2: NTC Voltage signal trace (0V is bottom, 5V top)
+            scopeCtx.strokeStyle = '#ffaa00';
+            scopeCtx.lineWidth = 2;
+            scopeCtx.shadowColor = 'rgba(255, 170, 0, 0.3)';
+            scopeCtx.shadowBlur = 4;
+            scopeCtx.beginPath();
+            for (let i = 0; i < maxDataPoints; i++) {
+                const x = i * stepsX;
+                // Voltages map to pixels (0 to 5V)
+                let y = height - (ntcHistory[i] / 5.0) * height;
+                
+                // Add minor mechanical noise vibration to NTC line
+                y += Math.sin(Date.now() * 0.05 + x) * 0.2;
+
+                if (i === 0) scopeCtx.moveTo(x, y);
+                else scopeCtx.lineTo(x, y);
+            }
+            scopeCtx.stroke();
+
+            // Clear shadow settings
+            scopeCtx.shadowBlur = 0;
+        }
+
+        // Main Animation frame tick loop
+        function animationFrameTick() {
+            drawScope();
+            requestAnimationFrame(animationFrameTick);
+        }
+
+        // Initialize App on load
+        window.onload = function() {
+            // Dimensions configuration
+            scopeCanvas.width = scopeCanvas.offsetWidth || 400;
+            scopeCanvas.height = scopeCanvas.offsetHeight || 220;
+
+            changeProbeTarget('ntc'); // default probed element on connector UI
+            updateCabinetGraphics(); // first draw of HVAC components
+
+            // Kick-off intervals
+            cabinTempTimer = setInterval(simulateCabinTemperature, 100);
+            animationFrameTick();
+        };
+    </script>
+</body>
+</html>

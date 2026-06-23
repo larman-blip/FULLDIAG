@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Diagnostic Réseau CAN Bus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #060909;
+            --panel-bg: #0f1414;
+            --border-color: #1a2525;
+            --neon-green: #00ff66;
+            --neon-glow-green: rgba(0, 255, 102, 0.4);
+            --neon-yellow: #ffcc00;
+            --neon-glow-yellow: rgba(255, 204, 0, 0.4);
+            --neon-red: #ff3333;
+            --text-primary: #ffffff;
+            --text-secondary: #9cb1b1;
+            --screen-bg: #030707;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        /* Tech Panels styling */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-green);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .panel.panel-yellow::before { background: var(--neon-yellow); }
+        .panel.panel-red::before { background: var(--neon-red); }
+
+        .panel-title {
+            color: var(--neon-green);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title-yellow { color: var(--neon-yellow); }
+        .panel-title-red { color: var(--neon-red); }
+
+        /* Multimeter styling */
+        .multimeter {
+            background: #181d1d;
+            border: 3px solid #ffaa00;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .dmm-screen {
+            background: #202b21;
+            border: 3px solid #0a0d0a;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .dmm-status {
+            font-size: 10px;
+            color: rgba(0,0,0,0.6);
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-weight: bold;
+        }
+
+        .dmm-value {
+            font-size: 34px;
+            color: #0f140f;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+        }
+
+        .dmm-dial-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .dmm-dial {
+            width: 80px;
+            height: 80px;
+            background: #252b2b;
+            border: 4px solid #0f140f;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .dmm-dial-pointer {
+            width: 6px;
+            height: 38px;
+            background: #ff5500;
+            position: absolute;
+            top: 4px;
+            left: calc(50% - 3px);
+            border-radius: 3px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+
+        .dmm-probe-jack {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 2px solid #2a3333;
+        }
+
+        .jack {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #0f140f;
+            border: 2px solid #2a3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .jack-red { border-color: var(--neon-red); color: var(--neon-red); }
+        .jack-black { border-color: #555; color: #888; }
+
+        /* OBD-II Port Visual Styling */
+        .obd-connector {
+            background: #172020;
+            border: 2px solid #324545;
+            border-radius: 10px;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 6px;
+            max-width: 400px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .obd-pin {
+            aspect-ratio: 1;
+            background: #0d1212;
+            border: 1px solid #223535;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            color: #608585;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .obd-pin:hover {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-glow-green);
+            color: #fff;
+        }
+
+        .obd-pin.selected-red {
+            border-color: var(--neon-red);
+            background: rgba(255, 51, 51, 0.1);
+            box-shadow: 0 0 10px rgba(255, 51, 51, 0.6);
+            color: var(--neon-red);
+        }
+
+        .obd-pin.selected-black {
+            border-color: #777;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+            color: #fff;
+        }
+
+        /* Selectors and Control Styles */
+        .state-selector, .arch-selector {
+            display: flex;
+            width: 100%;
+            background: #172020;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .state-btn, .arch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .state-btn.active {
+            background: var(--neon-green);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow-green);
+        }
+
+        .arch-btn.active {
+            background: var(--neon-yellow);
+            color: #080b0b;
+            box-shadow: 0 0 10px var(--neon-glow-yellow);
+        }
+
+        /* Oscilloscope Layout */
+        .scope-screen-wrapper {
+            background: var(--screen-bg);
+            border: 3px solid #1e2e2e;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        #scopeCanvas {
+            width: 100%;
+            height: 250px;
+            background: #020606;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .scope-grid-label {
+            position: absolute;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #55c5c5;
+        }
+
+        .label-volts { top: 15px; left: 15px; }
+        .label-time { bottom: 15px; right: 15px; }
+
+        .scope-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: #181d1d;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .scope-select {
+            background: #0a0d0d;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .scope-select:focus {
+            border-color: var(--neon-green);
+            outline: none;
+        }
+
+        /* Tech table */
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tech-table th, .tech-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .tech-table th {
+            background: #121d1d;
+            color: var(--neon-green);
+        }
+
+        .tech-table tr:hover {
+            background: rgba(0, 255, 102, 0.02);
+        }
+
+        .instruction-box {
+            background: #101616;
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .badge-fail {
+            background: var(--neon-red);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        .badge-normal {
+            background: var(--neon-green);
+            color: black;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-[1200px] mx-auto">
+        
+        <!-- INTRO PANEL (FULL WIDTH) -->
+        <div class="panel col-span-1 lg:col-span-2">
+            <h3 class="panel-title">📡 Diagnostic Interactif - Réseau Multiplexé CAN Bus (High &amp; Low)</h3>
+            <p class="m-0 text-sm leading-relaxed" style="color: var(--text-secondary);">
+                Maîtrisez le diagnostic complet du réseau CAN Bus à l'aide d'un double oscilloscope et d'un multimètre virtuel. Testez les résistances de terminaison d'impédance (60 Ω vs 120 Ω) et simulez les pannes réelles les plus mures des ateliers de diagnostic auto selon le livre de Paul Danner (ScannerDanner).[cite: 1]
+            </p>
+        </div>
+
+        <!-- SCENARIO SELECTOR (PANNE DE RESEAU) -->
+        <div class="panel col-span-1 lg:col-span-2 panel-yellow">
+            <h3 class="panel-title panel-title-yellow"><span class="text-[--neon-yellow]">🛠️</span> Sélectionner la Panne Réseau Active</h3>
+            <div class="arch-selector">
+                <button class="arch-btn active" id="btn-scen-normal" onclick="selectScenario('normal')">1. Réseau OK</button>
+                <button class="arch-btn" id="btn-scen-shortgnd" onclick="selectScenario('shortgnd')">2. CAN H à la Masse</button>
+                <button class="arch-btn" id="btn-scen-shortvcc" onclick="selectScenario('shortvcc')">3. CAN L à la Batterie (12V)</button>
+                <button class="arch-btn" id="btn-scen-crossed" onclick="selectScenario('crossed')">4. Lignes Collées (CAN H/L Court-circuités)</button>
+                <button class="arch-btn" id="btn-scen-resistor" onclick="selectScenario('resistor')">5. Résistance de Terminaison HS (120 Ω)</button>
+            </div>
+        </div>
+
+        <!-- LEFT COLUMN: DIAGNOSTIC BENCH & MULTIMETER -->
+        <div class="panel">
+            <h3 class="panel-title"><span class="text-[--neon-yellow]">⚡</span> Banc de Test et Prise OBD-II</h3>
+            
+            <!-- Step 1: Simulated Contact State -->
+            <div class="control-group mb-2">
+                <label style="color: var(--neon-yellow);">Étape 1 : Choisir l'état du contact d'allumage</label>
+            </div>
+            <div class="state-selector">
+                <button class="state-btn active" id="btn-state-koeo" onclick="changeState('koeo')">Contact ON (KOEO)</button>
+                <button class="state-btn" id="btn-state-off" onclick="changeState('off')">Contact OFF (Mesure Résistance)</button>
+            </div>
+
+            <div class="instruction-box">
+                <strong>📝 Consignes de mesure :</strong><br>
+                1. Connectez la <b>sonde noire (-)</b> du multimètre sur le <b>Pin 4</b> (Masse Carrosserie) ou <b>Pin 5</b> (Masse Signal) de la prise OBD-II.<br>
+                2. Connectez la <b>sonde rouge (+)</b> sur le <b>Pin 6 (CAN High)</b> ou <b>Pin 14 (CAN Low)</b> pour mesurer les valeurs physiques.[cite: 1]
+            </div>
+
+            <!-- Multimeter & OBD-II layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                
+                <!-- Multimeter UI -->
+                <div class="multimeter">
+                    <div class="dmm-screen">
+                        <span class="dmm-status" id="dmmStatus">DC V</span>
+                        <div class="dmm-value" id="dmmValue">2.70</div>
+                    </div>
+                    <div class="dmm-dial-container">
+                        <div class="dmm-dial" id="dmmDial" onclick="toggleMultimeterMode()">
+                            <div class="dmm-dial-pointer" id="dmmPointer" style="transform: rotate(0deg);"></div>
+                        </div>
+                    </div>
+                    <div class="dmm-probe-jack">
+                        <div class="jack jack-black">COM</div>
+                        <div class="jack jack-red">V/Ω</div>
+                    </div>
+                </div>
+
+                <!-- OBD-II Female Diagnostic Port Layout -->
+                <div class="flex flex-col items-center gap-4 w-full">
+                    <label class="text-[10px] font-bold uppercase text-[#9cb1b1]">Prise Diagnostic OBD-II (Vue Face)</label>
+                    <div class="obd-connector">
+                        <!-- Pins 1 to 8 -->
+                        <div class="obd-pin" id="obd-1" onclick="selectObdPin(1, 'red')">1</div>
+                        <div class="obd-pin" id="obd-2" onclick="selectObdPin(2, 'red')">2</div>
+                        <div class="obd-pin" id="obd-3" onclick="selectObdPin(3, 'red')">3</div>
+                        <div class="obd-pin selected-black" id="obd-4" onclick="selectObdPin(4, 'black')">4<br><span style="font-size:5px;">GND</span></div>
+                        <div class="obd-pin" id="obd-5" onclick="selectObdPin(5, 'black')">5</div>
+                        <div class="obd-pin selected-red" id="obd-6" onclick="selectObdPin(6, 'red')">6<br><span style="font-size:5px;">CAN_H</span></div>
+                        <div class="obd-pin" id="obd-7" onclick="selectObdPin(7, 'red')">7</div>
+                        <div class="obd-pin" id="obd-8" onclick="selectObdPin(8, 'red')">8</div>
+                        <!-- Pins 9 to 16 -->
+                        <div class="obd-pin" id="obd-9" onclick="selectObdPin(9, 'red')">9</div>
+                        <div class="obd-pin" id="obd-10" onclick="selectObdPin(10, 'red')">10</div>
+                        <div class="obd-pin" id="obd-11" onclick="selectObdPin(11, 'red')">11</div>
+                        <div class="obd-pin" id="obd-12" onclick="selectObdPin(12, 'red')">12</div>
+                        <div class="obd-pin" id="obd-13" onclick="selectObdPin(13, 'red')">13</div>
+                        <div class="obd-pin" id="obd-14" onclick="selectObdPin(14, 'red')">14<br><span style="font-size:5px;">CAN_L</span></div>
+                        <div class="obd-pin" id="obd-15" onclick="selectObdPin(15, 'red')">15</div>
+                        <div class="obd-pin" id="obd-16" onclick="selectObdPin(16, 'red')">16<br><span style="font-size:5px;">12V</span></div>
+                    </div>
+                    <div class="text-center text-xs text-[#9cb1b1]">
+                        🔴 Sonde (+) : <span id="lblRedProbe" class="text-[--neon-green] font-bold">Pin 6 (CAN High)</span><br>
+                        ⚫ Sonde (-) : <span id="lblBlackProbe" class="text-white font-bold">Pin 4 (Masse Châssis)</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Pinout Specifications Table -->
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Pin OBD</th>
+                        <th style="width: 45%;">Rôle du Réseau</th>
+                        <th style="width: 40%;">Valeur attendue (Ignition ON / Système OK)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Pin 6</strong></td>
+                        <td>CAN High (Ligne Haute Tension d'information)</td>
+                        <td><strong>~2.7V</strong> (Trafic actif oscillant de 2.5V à 3.5V)[cite: 1]</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pin 14</strong></td>
+                        <td>CAN Low (Ligne Basse Tension d'information)</td>
+                        <td><strong>~2.3V</strong> (Trafic actif oscillant de 2.5V à 1.5V)[cite: 1]</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pins 4/5</strong></td>
+                        <td>Masses de référence (Châssis / Signal électronique)</td>
+                        <td>0.00 V (Chute de tension maximale tolérée &lt; 0.05V)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- RIGHT COLUMN: DUAL-CHANNEL OSCILLOSCOPE -->
+        <div class="panel">
+            <h3 class="panel-title"><span class="text-[--neon-green]">📊</span> Oscilloscope Double Trace (Dual-Channel)</h3>
+            
+            <div class="flex flex-col gap-4">
+                <div class="scope-screen-wrapper">
+                    <div class="scope-grid-label label-volts" id="scopeVoltsLabel">Y: 1.0 V / Div</div>
+                    <div class="scope-grid-label label-time" id="scopeTimeLabel">X: 20 ms / Div</div>
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <div class="scope-controls">
+                    <div class="control-group">
+                        <label>Sonde Volts (Y)</label>
+                        <select class="scope-select" id="scopeVolts" onchange="adjustScopeSettings()">
+                            <option value="0.5">0.5 V / Div</option>
+                            <option value="1.0" selected>1.0 V / Div</option>
+                            <option value="2.0">2.0 V / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Base de Temps (X)</label>
+                        <select class="scope-select" id="scopeTime" onchange="adjustScopeSettings()">
+                            <option value="10">10 ms / Div</option>
+                            <option value="20" selected>20 ms / Div</option>
+                            <option value="50">50 ms / Div</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Couplage Canal</label>
+                        <select class="scope-select" id="scopeCoupling" onchange="adjustScopeSettings()">
+                            <option value="DC" selected>DC (Courant Continu)</option>
+                            <option value="AC">AC (Courant Alternatif)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Technical recall box -->
+                <div class="bg-[#050707] border border-[#172222] rounded-lg p-4">
+                    <span class="text-xs font-bold text-[--neon-green] block mb-2 uppercase">💡 Règle d'or de l'oscilloscope : Couplage DC</span>
+                    <p class="text-xs text-[--text-secondary] leading-relaxed">
+                        Pour diagnostiquer un réseau multiplexé, réglez d'abord votre oscilloscope en couplage <strong>DC</strong>. Cela permet de valider le positionnement des lignes par rapport à la masse physique. Le signal dominant CAN H doit grimper à 3.5V et le CAN L descendre à 1.5V[cite: 1].
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- INTERACTIVE WIRING DIAGRAM PANEL -->
+        <div class="panel col-span-1 lg:col-span-2">
+            <h3 class="panel-title" style="color: var(--neon-yellow);">🔌 Topologie du Réseau CAN Bus &amp; Résistances de Terminaison</h3>
+            <p class="m-0 mb-4 text-xs" style="color: var(--text-secondary);">
+                Le réseau CAN Bus relie plusieurs calculateurs moteur (ECU, Gateway, ABS, SRS) en série/étoile. Les deux bouts physiques de la paire de lignes torsadées sont reliés par deux résistances de terminaison de 120 Ω montées en parallèle. Cela permet de stopper la réflexion des signaux électriques (ringing)[cite: 1].
+            </p>
+
+            <svg id="wiringSvg" viewBox="0 0 500 240" class="w-full h-auto bg-[#050707] border border-[#172222] rounded-lg block">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#0e1414" stroke-width="0.5"/>
+                    </pattern>
+                    <filter id="glow-green" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-yellow" x="-30%" y="-30%" width="160%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <!-- ECU 1 Node (Terminating Node) -->
+                <rect x="30" y="50" width="100" height="140" rx="4" fill="#131a1a" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="80" y="70" fill="#a0b2b2" font-size="9" font-weight="bold" text-anchor="middle">ECU (MOTEUR)</text>
+                <!-- Terminal resistor 120 ohms inside -->
+                <path d="M 110,100 L 110,110 L 105,112 L 115,116 L 105,120 L 115,124 L 110,126 L 110,140" fill="none" stroke="#ffaa00" stroke-width="1.5" />
+                <text x="80" y="123" fill="#ffaa00" font-size="7" font-weight="bold">120 Ω</text>
+
+                <!-- ECU 2 Node (Terminating Node) -->
+                <rect x="370" y="50" width="100" height="140" rx="4" fill="#131a1a" stroke="#a0b2b2" stroke-width="1.5" />
+                <text x="420" y="70" fill="#a0b2b2" font-size="9" font-weight="bold" text-anchor="middle">GATEWAY (BSI)</text>
+                <!-- Terminal resistor 120 ohms inside -->
+                <path id="res-2" d="M 390,100 L 390,110 L 385,112 L 395,116 L 385,120 L 395,124 L 390,126 L 390,140" fill="none" stroke="#ffaa00" stroke-width="1.5" />
+                <text x="420" y="123" fill="#ffaa00" font-size="7" font-weight="bold" id="txt-res-2">120 Ω</text>
+
+                <!-- Twisted Pair Cable Representations -->
+                <!-- CAN High Wire (Green) -->
+                <path id="wire-canh" d="M 110,100 L 180,100 Q 200,80 250,100 Q 300,120 320,100 L 390,100" fill="none" stroke="var(--neon-green)" stroke-width="2" />
+                <text x="250" y="85" fill="var(--neon-green)" font-size="8" font-weight="bold" text-anchor="middle">LIGNE CAN HIGH</text>
+
+                <!-- CAN Low Wire (Yellow) -->
+                <path id="wire-canl" d="M 110,140 L 180,140 Q 200,160 250,140 Q 300,120 320,140 L 390,140" fill="none" stroke="var(--neon-yellow)" stroke-width="2" />
+                <text x="250" y="165" fill="var(--neon-yellow)" font-size="8" font-weight="bold" text-anchor="middle">LIGNE CAN LOW</text>
+
+                <!-- Dotted representation highlighting connection to OBD diagnostics -->
+                <path d="M 230,100 L 230,210" fill="none" stroke="#fff" stroke-dasharray="2,3" style="opacity:0.3;" />
+                <path d="M 270,140 L 270,210" fill="none" stroke="#fff" stroke-dasharray="2,3" style="opacity:0.3;" />
+                <rect x="210" y="210" width="80" height="20" rx="3" fill="#0d1212" stroke="#324545" />
+                <text x="250" y="222" fill="#fff" font-size="7" text-anchor="middle">PRISE DIAGNOSTIC</text>
+            </svg>
+        </div>
+
+        <!-- ADVICE & TROUBLESHOOTING GUIDE -->
+        <div class="panel col-span-1 lg:col-span-2 panel-red">
+            <h3 class="panel-title panel-title-red">🛑 Stratégies de Diagnostic &amp; Mindset de Recherche de Panne Réseau</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm leading-relaxed" id="adviceContainer">
+                <!-- Loaded dynamically depending on scenario -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentScenario = 'normal'; // normal, shortgnd, shortvcc, crossed, resistor
+        let currentState = 'koeo'; // koeo, off
+        let selectedRedPin = 6; // default COM/chassis test on Pin 6 (CAN H)
+        let selectedBlackPin = 4; // default chassis ground Pin 4
+        let multimeterMode = 'DC'; // DC, AC, OHM
+
+        // DATABASE: Ignition ON (KOEO) Voltages
+        const DB_DC = {
+            normal:      { 6: 2.70, 14: 2.30, 4: 0.00, 16: 12.40 },
+            shortgnd:    { 6: 0.00, 14: 2.30, 4: 0.00, 16: 12.40 }, // CAN H dead flat ground
+            shortvcc:    { 6: 2.70, 14: 12.40, 4: 0.00, 16: 12.40 }, // CAN L pulled high
+            crossed:     { 6: 2.50, 14: 2.50, 4: 0.00, 16: 12.40 }, // Collapsed mirror line
+            resistor:    { 6: 2.70, 14: 2.30, 4: 0.00, 16: 12.40 } // Standard voltage, but ringing is visual
+        };
+
+        // DATABASE: Ignition OFF Resistance (Ohms) Measurements
+        const DB_OHM = {
+            normal:      { 6: 60.0, 14: 60.0 }, // Two parallel 120 resistors in parallel
+            shortgnd:    { 6: 10.0, 14: 60.0 }, // Ground path disruption
+            shortvcc:    { 6: 60.0, 14: 10.0 }, 
+            crossed:     { 6: 0.2,  14: 0.2 }, // Direct short between pins
+            resistor:    { 6: 120.0, 14: 120.0 } // 1 of the resistors has been removed or cut
+        };
+
+        // ====================================================
+        // SCENARIO SELECTION HANDLER
+        // ====================================================
+        function selectScenario(scenario) {
+            currentScenario = scenario;
+            
+            // Toggle active status on buttons
+            document.getElementById('btn-scen-normal').classList.toggle('active', scenario === 'normal');
+            document.getElementById('btn-scen-shortgnd').classList.toggle('active', scenario === 'shortgnd');
+            document.getElementById('btn-scen-shortvcc').classList.toggle('active', scenario === 'shortvcc');
+            document.getElementById('btn-scen-crossed').classList.toggle('active', scenario === 'crossed');
+            document.getElementById('btn-scen-resistor').classList.toggle('active', scenario === 'resistor');
+
+            injectDynamicExpls();
+            updateSimulation();
+        }
+
+        function injectDynamicExpls() {
+            const adviceContainer = document.getElementById('adviceContainer');
+
+            if (currentScenario === 'normal') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-normal">Paul Danner : Pourquoi 60 Ohms ?</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Principe physique :</b> Un réseau CAN Bus fonctionnel doit mesurer environ <b>60 Ω</b> entre les broches 6 et 14 (Ignition OFF)[cite: 1]. C'est le résultat mathématique de deux résistances de terminaison de 120 Ω montées en parallèle à chaque extrémité de la paire torsadée ($120 / 2 = 60$)[cite: 1]. Si vous déconnectez un calculateur contenant un terminateur, le multimètre affiche directement 120 Ω[cite: 1].
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-normal">Corrélation de tension en miroir</span>
+                        <p style="color: var(--text-secondary);">
+                            En mode récessif, CAN High et CAN Low dorment ensemble à **2.5V**[cite: 1]. Lorsqu'une trame passe, le CAN High monte à **3.5V** tandis que le CAN Low s'écrase à **1.5V**[cite: 1]. La somme des tensions est d'environ **5V** en permanence. Cette symétrie permet au transceiver de rejeter le bruit par soustraction différentielle.
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'shortgnd') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">Court-Circuit du CAN H à la Masse (0V)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Symptôme :</b> Une coupure sur le faisceau a frotté contre la colonne de direction ou le berceau moteur. Le signal CAN High est tiré en permanence à **0V**[cite: 1]. L'oscilloscope n'affiche plus qu'une ligne plate verte au sol, et l'autre ligne CAN Low est parasitée car le réseau ne peut plus soustraire les tensions de manière différentielle.
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Méthode de Diagnostic Guidée (ScannerDanner)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Comment localiser ?</b> Ne commencez jamais par démonter le faisceau. Débranchez les calculateurs un par un. Si la ligne de tension remonte soudainement à 2.5V sur le Pin 6 après avoir débranché le module ABS, cela prouve que c'est le circuit émetteur interne de l'ABS qui met le réseau à la masse !
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'shortvcc') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">Court-circuit du CAN L à la Batterie (12.4V)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Symptôme :</b> Une ligne d'alimentation d'injecteur ou de ventilateur a fondu contre la ligne du réseau multiplexé. CAN Low s'envolera instantanément à **12.4V**. La communication est rompue sur l'ensemble du bus et tous les calculateurs génèrent des codes d'erreur de communication de type "U-Code" (ex : U0100 - Absence communication calculateur moteur).
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Le Danger d'un réseau verrouillé</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Fait d'atelier :</b> Lorsqu'une ligne dépasse les spécifications d'alimentation (5V), les émetteurs transceivers du bus coupent leurs communications pour se protéger de la chaleur générée. Vous perdrez également le dialogue avec votre outil de diagnostic (scanner) via la prise OBD !
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'crossed') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">Court-circuit entre CAN High et CAN Low (Lignes Collées)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Symptôme :</b> Les deux fils torsadés sont écrasés ensemble dans un connecteur ou sous un collier trop serré. Sur votre oscilloscope, vous verrez les deux traces verte et jaune se superposer exactement à **2.5V** sans aucun décalage en miroir. La différence de tension est nulle ($V_{diff} = 0\text{V}$), ce qui rend toute transmission d'octets impossible.
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">Ohmmètre à la rescousse</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Vérification clé :</b> Contact coupé, mesurez la résistance entre le Pin 6 et 14. Si le multimètre affiche une valeur proche de **0 Ω (court-circuit direct)** au lieu de 60 Ω, vous avez la preuve formelle que les deux fils s'interconnectent directement[cite: 1].
+                        </p>
+                    </div>
+                `;
+            } else if (currentScenario === 'resistor') {
+                adviceContainer.innerHTML = `
+                    <div>
+                        <span class="badge-fail">Résistance de Terminaison HS (Mesure à 120 Ω)</span>
+                        <p style="color: var(--text-secondary);">
+                            <b>Symptôme sournois :</b> L'un des deux calculateurs contenant une résistance de terminaison (souvent l'ECU moteur ou le Gateway) est débranché ou sa résistance interne a lâché. Le multimètre (Ignition OFF) mesurera **120 Ω** au lieu des 60 Ω attendus[cite: 1].
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-fail">L'impact invisible : Ringing et Réflexion</span>
+                        <p style="color: var(--text-secondary);">
+                            La communication peut sembler fonctionner au ralenti, mais sous forte sollicitation, des erreurs de trame apparaissent. Sans l'amortissement des deux résistances, les ondes de signaux se heurtent au bout de la ligne et rebondissent (réflexion). Sur l'oscilloscope, vous observerez des "pics parasites" (ringing/overshoot) sur chaque front de transition.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // ====================================================
+        // INTERACTIVE STATE CONTROLS
+        // ====================================================
+        function selectObdPin(pinNum, color) {
+            if (color === 'red') {
+                selectedRedPin = pinNum;
+                document.querySelectorAll('.obd-pin').forEach(el => {
+                    el.classList.remove('selected-red');
+                });
+                document.getElementById(`obd-${pinNum}`).classList.add('selected-red');
+            } else {
+                selectedBlackPin = pinNum;
+                document.querySelectorAll('.obd-pin').forEach(el => {
+                    el.classList.remove('selected-black');
+                });
+                document.getElementById(`obd-${pinNum}`).classList.add('selected-black');
+            }
+
+            // Sync indicators labels
+            const labels = {
+                4: "Chassis GND",
+                5: "Signal GND",
+                6: "CAN High",
+                14: "CAN Low",
+                16: "12V Battery"
+            };
+            document.getElementById('lblRedProbe').innerText = `Pin ${selectedRedPin} (${labels[selectedRedPin] || 'Non branché'})`;
+            document.getElementById('lblBlackProbe').innerText = `Pin ${selectedBlackPin} (${labels[selectedBlackPin] || 'Non branché'})`;
+
+            updateSimulation();
+        }
+
+        function changeState(state) {
+            currentState = state;
+            document.getElementById('btn-state-koeo').classList.toggle('active', state === 'koeo');
+            document.getElementById('btn-state-off').classList.toggle('active', state === 'off');
+
+            // Force switch to Ohm mode if contact goes off as a guide helper
+            if (state === 'off') {
+                setMultimeterMode('OHM');
+            } else {
+                setMultimeterMode('DC');
+            }
+
+            updateSimulation();
+        }
+
+        // ====================================================
+        // MULTIMETER DIAL ENGINE
+        // ====================================================
+        function toggleMultimeterMode() {
+            if (multimeterMode === 'DC') setMultimeterMode('AC');
+            else if (multimeterMode === 'AC') setMultimeterMode('OHM');
+            else setMultimeterMode('DC');
+            updateSimulation();
+        }
+
+        function setMultimeterMode(mode) {
+            multimeterMode = mode;
+            const pointer = document.getElementById('dmmPointer');
+            const status = document.getElementById('dmmStatus');
+
+            let rot = 0;
+            if (mode === 'AC') {
+                rot = 40;
+                status.innerText = "AC V";
+            } else if (mode === 'OHM') {
+                rot = -40;
+                status.innerText = "Ω";
+            } else {
+                rot = 0;
+                status.innerText = "DC V";
+            }
+            pointer.style.transform = `rotate(${rot}deg)`;
+        }
+
+        function updateSimulation() {
+            let value = 0.00;
+
+            // Resistance is only computed if Contact is OFF. If Contact is ON, electrical noise disturbs Ohmmeter.
+            if (multimeterMode === 'OHM') {
+                if (currentState === 'koeo') {
+                    // Safety teaching detail : voltage on line when measuring resistance returns an error/unstable value
+                    document.getElementById('dmmValue').innerText = "ERR.P";
+                    return;
+                }
+
+                // If measuring between Pin 6 and Pin 14
+                if ((selectedRedPin === 6 && selectedBlackPin === 14) || (selectedRedPin === 14 && selectedBlackPin === 6)) {
+                    value = DB_OHM[currentScenario][6];
+                } else {
+                    value = Infinity; // open circuit
+                }
+            } else {
+                // Voltage DC/AC mode
+                if (currentState === 'off') {
+                    value = 0.00;
+                } else {
+                    // Contact is ON
+                    let refDataset = DB_DC[currentScenario];
+                    let redVolt = refDataset[selectedRedPin] || 0.00;
+                    let blackVolt = refDataset[selectedBlackPin] || 0.00;
+
+                    value = Math.abs(redVolt - blackVolt);
+
+                    // If measuring in AC mode under traffic
+                    if (multimeterMode === 'AC') {
+                        if (currentScenario === 'normal' || currentScenario === 'resistor') {
+                            if (selectedRedPin === 6 || selectedRedPin === 14) value = 0.42; // AC amplitude residual
+                            else value = 0.02;
+                        } else if (currentScenario === 'crossed') {
+                            value = 0.01; // collapsed
+                        } else {
+                            value = 0.05;
+                        }
+                    }
+                }
+            }
+
+            // Render output
+            const dmmValEl = document.getElementById('dmmValue');
+            if (multimeterMode === 'OHM') {
+                if (value === Infinity) dmmValEl.innerText = "O.L";
+                else dmmValEl.innerText = value.toFixed(1);
+            } else {
+                dmmValEl.innerText = value.toFixed(2);
+            }
+
+            updateWiringHighlight();
+            drawScope();
+        }
+
+        // ====================================================
+        // SCHEMATIC WIRE HIGHLIGHTS (SVG)
+        // ====================================================
+        function updateWiringHighlight() {
+            const canh = document.getElementById('wire-canh');
+            const canl = document.getElementById('wire-canl');
+            const res2 = document.getElementById('res-2');
+            const txtRes2 = document.getElementById('txt-res-2');
+
+            // Reset
+            canh.style.stroke = 'var(--neon-green)';
+            canh.style.filter = 'none';
+            canh.style.opacity = '0.4';
+
+            canl.style.stroke = 'var(--neon-yellow)';
+            canl.style.filter = 'none';
+            canl.style.opacity = '0.4';
+
+            res2.style.stroke = '#ffaa00';
+            txtRes2.style.fill = '#ffaa00';
+            txtRes2.innerText = "120 Ω";
+
+            // Normal highlight on selected lines
+            if (selectedRedPin === 6) {
+                canh.style.opacity = '1.0';
+                canh.style.filter = 'url(#glow-green)';
+            } else if (selectedRedPin === 14) {
+                canl.style.opacity = '1.0';
+                canl.style.filter = 'url(#glow-yellow)';
+            }
+
+            // Fault visualization inside SVG
+            if (currentScenario === 'shortgnd') {
+                canh.style.stroke = '#ff3333';
+                canh.style.opacity = '0.8';
+            } else if (currentScenario === 'shortvcc') {
+                canl.style.stroke = '#ff3333';
+                canl.style.opacity = '0.8';
+            } else if (currentScenario === 'crossed') {
+                canh.style.stroke = '#ffaa00';
+                canl.style.stroke = '#ffaa00';
+                canh.style.opacity = '0.9';
+                canl.style.opacity = '0.9';
+            } else if (currentScenario === 'resistor') {
+                res2.style.stroke = '#555';
+                txtRes2.style.fill = '#555';
+                txtRes2.innerText = "COUPÉ";
+            }
+        }
+
+        // ====================================================
+        // OSCILLOSCOPE GRAPHICS CANVAS ENGINE (RE-BUILT SAFE)
+        // ====================================================
+        let voltScale = 1.0; // Y
+        let timeScale = 20;  // X
+        let coupling = 'DC';
+
+        function adjustScopeSettings() {
+            voltScale = parseFloat(document.getElementById('scopeVolts').value);
+            timeScale = parseInt(document.getElementById('scopeTime').value);
+            coupling = document.getElementById('scopeCoupling').value;
+
+            document.getElementById('scopeVoltsLabel').innerText = `Y: ${voltScale.toFixed(1)} V / Div`;
+            document.getElementById('scopeTimeLabel').innerText = `X: ${timeScale} ms / Div`;
+            drawScope();
+        }
+
+        // CORRECTED scaleY function to eliminate image crash syntax error!
+        function scaleY(v, h) {
+            if (coupling === 'AC') {
+                // Remove 2.5V static bias
+                v = v - 2.5;
+                // Scale offset amplified around center screen
+                return h / 2 - (v / 1.5) * (h / 2);
+            }
+            const maxVolts = 5.0; // full scale is 5V
+            return h - (v / maxVolts) * h;
+        }
+
+        function drawScope() {
+            const canvasEl = document.getElementById('scopeCanvas');
+            if (!canvasEl) return;
+
+            const ctx = canvasEl.getContext('2d');
+            if (!ctx) return;
+
+            ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            const w = canvasEl.width || 500;
+            const h = canvasEl.height || 250;
+            const divisionsX = 10;
+            const divisionsY = 6;
+            const stepX = w / divisionsX;
+            const stepY = h / divisionsY;
+
+            // Background Grid Lines
+            ctx.strokeStyle = '#102222';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= divisionsX; i++) {
+                ctx.beginPath(); ctx.moveTo(i * stepX, 0); ctx.lineTo(i * stepX, h); ctx.stroke();
+            }
+            for (let i = 0; i <= divisionsY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, i * stepY); ctx.lineTo(w, i * stepY); ctx.stroke();
+            }
+
+            // Draw ground level reference offset marker (recess line)
+            ctx.strokeStyle = '#142a2a';
+            ctx.beginPath();
+            ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+            ctx.stroke();
+
+            // If contact is OFF (battery disconnected), everything is dead flat 0V lines
+            if (currentState === 'off') {
+                ctx.lineWidth = 2.5;
+                // CAN H (Green)
+                ctx.strokeStyle = '#00ff66';
+                ctx.beginPath(); ctx.moveTo(0, scaleY(0, h)); ctx.lineTo(w, scaleY(0, h)); ctx.stroke();
+                // CAN L (Yellow)
+                ctx.strokeStyle = '#ffcc00';
+                ctx.beginPath(); ctx.moveTo(0, scaleY(0, h)); ctx.lineTo(w, scaleY(0, h)); ctx.stroke();
+                return;
+            }
+
+            ctx.lineWidth = 2.0;
+
+            // CAN High waveform generation
+            ctx.strokeStyle = '#00ff66';
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = 'rgba(0, 255, 102, 0.4)';
+            ctx.beginPath();
+            let startedH = false;
+
+            for (let x = 0; x < w; x++) {
+                let tMs = (x / w) * (timeScale * divisionsX);
+                let vVal = 2.5; // Recessive base voltage
+
+                if (currentScenario === 'shortgnd') {
+                    vVal = 0.00; // pulled flat to ground
+                } else if (currentScenario === 'crossed') {
+                    // Both lines collapsed to the same recessive voltage
+                    vVal = 2.50 + Math.sin(tMs * 2.5) * 0.15;
+                } else {
+                    // Generate square packet trame data
+                    let period = 6; // packet length 6ms
+                    let relativeT = tMs % period;
+                    if (relativeT < 2.5) {
+                        vVal = 3.5; // Dominant high
+                        // If one terminator resistor is open, display "ringing overshoot"
+                        if (currentScenario === 'resistor') {
+                            vVal += Math.sin(relativeT * 18.0) * 0.45 * Math.exp(-relativeT * 2.0);
+                        }
+                    }
+                }
+
+                if (!startedH) { ctx.moveTo(x, scaleY(vVal, h)); startedH = true; }
+                else ctx.lineTo(x, scaleY(vVal, h));
+            }
+            ctx.stroke();
+
+            // CAN Low waveform generation
+            ctx.strokeStyle = '#ffcc00';
+            ctx.shadowColor = 'rgba(255, 204, 0, 0.4)';
+            ctx.beginPath();
+            let startedL = false;
+
+            for (let x = 0; x < w; x++) {
+                let tMs = (x / w) * (timeScale * divisionsX);
+                let vVal = 2.5; // Recessive base voltage
+
+                if (currentScenario === 'shortvcc') {
+                    vVal = 12.4; // pulled flat to VCC (off screen or clamped at top)
+                } else if (currentScenario === 'crossed') {
+                    vVal = 2.50 + Math.sin(tMs * 2.5) * 0.15; // identical collapsed
+                } else if (currentScenario === 'shortgnd') {
+                    // CAN H shorted to ground also dampens CAN L ability to compute differential signal
+                    let period = 6;
+                    let relativeT = tMs % period;
+                    if (relativeT < 2.5) vVal = 2.2;
+                } else {
+                    // Generate mirror square packet trame data
+                    let period = 6;
+                    let relativeT = tMs % period;
+                    if (relativeT < 2.5) {
+                        vVal = 1.5; // Dominant low
+                        // If one terminator resistor is open, display "ringing overshoot"
+                        if (currentScenario === 'resistor') {
+                            vVal -= Math.sin(relativeT * 18.0) * 0.45 * Math.exp(-relativeT * 2.0);
+                        }
+                    }
+                }
+
+                if (!startedL) { ctx.moveTo(x, scaleY(vVal, h)); startedL = true; }
+                else ctx.lineTo(x, scaleY(vVal, h));
+            }
+            ctx.stroke();
+
+            ctx.shadowBlur = 0; // reset
+        }
+
+        // ====================================================
+        // BOOTSTRAP INITIALIZATION
+        // ====================================================
+        window.onload = function() {
+            const canvasEl = document.getElementById('scopeCanvas');
+            if (canvasEl) {
+                canvasEl.width = canvasEl.offsetWidth || 500;
+                canvasEl.height = canvasEl.offsetHeight || 250;
+            }
+            selectScenario('normal');
+        };
+
+        window.addEventListener('resize', function() {
+            const canvasEl = document.getElementById('scopeCanvas');
+            if (canvasEl) {
+                canvasEl.width = canvasEl.offsetWidth || 500;
+                canvasEl.height = canvasEl.offsetHeight || 250;
+                drawScope();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Technique - Capteur PMH & Régime Moteur (Deep Diag)</title>
+    <style>
+        :root {
+            --bg-color: #080b0b;
+            --panel-bg: #111616;
+            --border-color: #1e2929;
+            --neon-cyan: #00ffcc;
+            --neon-glow: rgba(0, 255, 204, 0.4);
+            --neon-amber: #ffaa00;
+            --neon-red: #ff3333;
+            --neon-blue: #00ccff;
+            --text-primary: #ffffff;
+            --text-secondary: #a0b2b2;
+            --screen-bg: #050a0a;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media(min-width: 950px) {
+            .container {
+                grid-template-columns: 420px 1fr;
+            }
+        }
+
+        /* Panels Style */
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+            margin-bottom: 5px;
+            color: var(--neon-cyan);
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Controls */
+        .control-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            display: block;
+            font-weight: 600;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 8px;
+        }
+
+        button {
+            background: #1a2222;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            border-color: var(--neon-cyan);
+            color: #fff;
+        }
+
+        button.active {
+            background: rgba(0, 255, 204, 0.1);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        button.danger.active {
+            background: rgba(255, 51, 51, 0.1);
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+            box-shadow: 0 0 10px rgba(255,51,51,0.3);
+        }
+
+        /* Interactive Wiring Diagram Styles */
+        .diagram-container {
+            background: #0d1111;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            position: relative;
+        }
+
+        .diagram-svg {
+            width: 100%;
+            height: 120px;
+        }
+
+        .wire {
+            fill: none;
+            stroke-width: 3;
+            cursor: pointer;
+            transition: stroke 0.3s;
+        }
+
+        .wire:hover {
+            stroke-width: 5;
+        }
+
+        .wire-active {
+            stroke-dasharray: 4;
+            animation: dash 1s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -20;
+            }
+        }
+
+        /* Pin Connector Styling */
+        .pin-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        .pin-badge {
+            flex: 1;
+            background: #161d1d;
+            border: 1px solid var(--border-color);
+            padding: 10px 4px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .pin-badge.selected-red {
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+            background: rgba(255,51,51,0.05);
+            box-shadow: 0 0 8px rgba(255,51,51,0.2);
+        }
+
+        .pin-badge.selected-black {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+            background: rgba(0,204,255,0.05);
+            box-shadow: 0 0 8px rgba(0,204,255,0.2);
+        }
+
+        .pin-num {
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: block;
+        }
+
+        .pin-name {
+            font-size: 0.7rem;
+            display: block;
+            margin-top: 4px;
+            color: var(--text-secondary);
+        }
+
+        /* Tabs System */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 15px;
+            gap: 5px;
+        }
+
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: bold;
+            font-size: 0.9rem;
+            border-radius: 4px 4px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: rgba(0, 255, 204, 0.08);
+            color: var(--neon-cyan);
+            border-bottom: 2px solid var(--neon-cyan);
+        }
+
+        /* Displays Layout */
+        .display-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 600px) {
+            .display-grid {
+                grid-template-columns: 1fr 220px;
+            }
+        }
+
+        /* Screen Wrapper */
+        .screen-wrapper {
+            background: var(--screen-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 260px;
+        }
+
+        /* DMM Display */
+        .dmm-case {
+            background: #1e1e1e;
+            border: 3px solid #e67e22;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        .dmm-screen {
+            background: #9cb3a8;
+            color: #111;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 2rem;
+            text-align: right;
+            padding: 10px;
+            border-radius: 4px;
+            border: 2px solid #55665c;
+            box-shadow: inset 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .dmm-unit {
+            font-size: 0.9rem;
+            margin-left: 4px;
+        }
+
+        /* Documentation & Alerts */
+        .tech-data {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        .tech-data strong {
+            color: #fff;
+        }
+
+        .alert-box {
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            background: rgba(0, 255, 204, 0.05);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        .alert-box.danger {
+            background: rgba(255, 51, 51, 0.05);
+            border: 1px solid var(--neon-red);
+            color: var(--neon-red);
+        }
+
+        .alert-box.warning {
+            background: rgba(255, 170, 0, 0.05);
+            border: 1px solid var(--neon-amber);
+            color: var(--neon-amber);
+        }
+
+        /* Custom diagnostic procedures (DEEP DIAG panel) */
+        .deep-diag-panel {
+            background: rgba(26, 34, 34, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            display: none;
+        }
+
+        .deep-diag-panel.active {
+            display: block;
+        }
+
+        /* Diagnostic Rules & Tips layout */
+        .rules-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        @media(min-width: 600px) {
+            .rules-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .rule-card {
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid var(--neon-cyan);
+            padding: 10px;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.85rem;
+        }
+
+        .rule-card-title {
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Column Left: Controls, Configuration & Diagram -->
+        <div class="panel">
+            <div class="panel-title">Configuration PMH</div>
+            
+            <div>
+                <label class="control-label">Type d'architecture</label>
+                <div class="btn-group">
+                    <button id="type-inductive" class="active" onclick="switchTech('inductive')">2 Fils (Inductif)</button>
+                    <button id="type-hall" onclick="switchTech('hall')">3 Fils (Effet Hall)</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="control-label">État du Moteur</label>
+                <div class="btn-group">
+                    <button id="state-off" onclick="changeEngineState('off')">Arrêt</button>
+                    <button id="state-crank" onclick="changeEngineState('crank')">Démarreur</button>
+                    <button id="state-idle" class="active" onclick="changeEngineState('idle')">Ralenti</button>
+                </div>
+            </div>
+
+            <button id="btn-snap" style="width: 100%; border-color: var(--neon-blue); color: var(--neon-blue);" onclick="triggerSnap()">
+                🚀 Coup d'Accélérateur ! (Snap)
+            </button>
+
+            <!-- Wiring Diagram Section -->
+            <div>
+                <label class="control-label">Schéma de Câblage Interactif</label>
+                <div class="diagram-container">
+                    <svg class="diagram-svg" viewBox="0 0 400 120">
+                        <!-- Sensor symbol on left -->
+                        <rect x="10" y="20" width="80" height="80" rx="5" fill="#1e2525" stroke="#3e4d4d" stroke-width="2"/>
+                        <text x="50" y="65" fill="#fff" font-size="11" text-anchor="middle" font-weight="bold">PMH</text>
+                        
+                        <!-- ECU on right -->
+                        <rect x="300" y="20" width="90" height="80" rx="5" fill="#1e2525" stroke="#3e4d4d" stroke-width="2"/>
+                        <text x="345" y="65" fill="#fff" font-size="11" text-anchor="middle" font-weight="bold">ECU (Moteur)</text>
+
+                        <!-- Connector terminals -->
+                        <circle cx="90" cy="40" r="5" fill="#111" stroke="#ffaa00" stroke-width="2"/>
+                        <circle cx="90" cy="65" r="5" fill="#111" stroke="#ffaa00" stroke-width="2"/>
+                        <circle id="diag-pin3-marker" cx="90" cy="90" r="5" fill="#111" stroke="#ffaa00" stroke-width="2" style="display:none;"/>
+
+                        <!-- Wires connecting Capteur to ECU -->
+                        <!-- Signal (+) Wire 1 -->
+                        <path id="wire-sig" class="wire wire-active" d="M 95 40 L 300 40" stroke="#00ffcc" onclick="toggleWireState('sig')"/>
+                        <text x="190" y="34" fill="#00ffcc" font-size="9" text-anchor="middle">Signal (+)</text>
+
+                        <!-- Signal (-) / Mass Wire 2 -->
+                        <path id="wire-gnd" class="wire" d="M 95 65 L 300 65" stroke="#00ccff" onclick="toggleWireState('gnd')"/>
+                        <text x="190" y="60" fill="#00ccff" font-size="9" text-anchor="middle" id="wire-gnd-text">Masse / (-) </text>
+
+                        <!-- Supply Wire 3 (Only for Hall effect) -->
+                        <path id="wire-vcc" class="wire" d="M 95 90 L 300 90" stroke="#ffaa00" onclick="toggleWireState('vcc')" style="display:none;"/>
+                        <text id="wire-vcc-text" x="190" y="85" fill="#ffaa00" font-size="9" text-anchor="middle" style="display:none;">Alim +12V</text>
+                    </svg>
+                    <div style="font-size:0.75rem; text-align:center; color:var(--text-secondary); margin-top:5px;">
+                        * Cliquez sur un fil pour simuler un circuit ouvert (coupure)
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="control-label">Bornage Physique du Connecteur</label>
+                <div class="pin-wrapper" id="pins-container">
+                    <!-- Dynamic pins rendered here -->
+                </div>
+            </div>
+
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 15px;">
+                <label class="control-label">Anomalies Mécaniques & Cible</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button id="fault-none" class="active" onclick="injectFault('none')">Cible saine & Entrefer Nominal</button>
+                    <button id="fault-gap" class="danger" onclick="injectFault('gap')">Entrefer excessif (> 1.5 mm)</button>
+                    <button id="fault-tooth" class="danger" onclick="injectFault('tooth')">Cible Endommagée (Dent cassée)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column Right: Oscilloscope & Multimeter & Tabs system (Standard vs DEEP DIAG vs Rules) -->
+        <div class="panel">
+            <div class="tabs">
+                <div id="tab-std" class="tab active" onclick="switchTab('std')">DIAGNOSTIC STANDARD</div>
+                <div id="tab-deep" class="tab" onclick="switchTab('deep')">DEEP DIAG (APPOFONDIT)</div>
+                <div id="tab-rules" class="tab" onclick="switchTab('rules')">ASTUCES & CAH-CHARGE</div>
+            </div>
+
+            <div class="panel-title">
+                Diagnostic Temps Réel
+                <span id="moteur-status" style="font-size:0.85rem; color:var(--neon-cyan); font-weight: bold;">STATUT: RALENTI</span>
+            </div>
+
+            <!-- Standard Diagnostic UI -->
+            <div id="panel-std" class="display-grid">
+                <!-- Scope -->
+                <div class="screen-wrapper">
+                    <canvas id="scopeCanvas"></canvas>
+                </div>
+
+                <!-- Multimeter Case -->
+                <div class="dmm-case">
+                    <div style="color: #fff; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">
+                        Multimètre Sim
+                    </div>
+                    <div class="dmm-screen">
+                        <span id="dmmValue">2.45</span><span class="dmm-unit" id="dmmUnit">V</span>
+                    </div>
+                    <div style="text-align: center; color: #888; font-size: 0.75rem;">
+                        Mode: <span id="dmmMode" style="color:#e67e22; font-weight:bold;">AC Volts</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deep Diag (Approndi) Specialized Panel -->
+            <div id="panel-deep" class="deep-diag-panel">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div>
+                        <strong style="color:var(--neon-cyan); display:block; margin-bottom:5px;">Mesures de Résistance (Moteur Arrêté)</strong>
+                        <button id="btn-test-res" style="width:100%;" onclick="runResistanceTest()">Lancer Mesure Ohmètre</button>
+                    </div>
+                    <div>
+                        <strong style="color:var(--neon-cyan); display:block; margin-bottom:5px;">Mode Analyse Temporel (Double Trace)</strong>
+                        <button id="btn-sync-view" style="width:100%;" onclick="toggleDualTrace()">Activer Synchro PMH / AAC</button>
+                    </div>
+                </div>
+                <div class="tech-data" id="deep-diag-results" style="background:#090d0d; padding:10px; border-radius:4px; font-family: monospace;">
+                    [Sélectionner un protocole ci-dessus pour lancer le diagnostic approfondi]
+                </div>
+            </div>
+
+            <!-- Rules & Tips Panel -->
+            <div id="panel-rules" style="display:none;">
+                <div class="rules-container">
+                    <div class="rule-card">
+                        <div class="rule-card-title">Cahier des Charges - Capteur Inductif</div>
+                        Résistance de bobine standard attendue : **300 Ω à 900 Ω**. 
+                        Amplitude minimale au démarreur (Cranking) : **> 1.2 V AC**. 
+                        Entre-fer constructeur recommandé : **0.8 mm à 1.2 mm**.
+                    </div>
+                    <div class="rule-card" style="border-color:var(--neon-amber);">
+                        <div class="rule-card-title">Cahier des Charges - Capteur Effet Hall</div>
+                        Tension d'alimentation : **5V ou 12V DC** stable.
+                        Tension de signal : Créneaux propres entre **0V et 5V/12V**.
+                        Vitesse de rotation : Lit à partir de 0 tr/min (idéal pour Start & Stop).
+                    </div>
+                    <div class="rule-card" style="border-color:var(--neon-red);">
+                        <div class="rule-card-title">Astuce #1 : Phénomène de Limaille</div>
+                        Le nez métallique du capteur inductif étant magnétisé, il attire la **limaille métallique de l'embrayage**. Cela perturbe l'entrefer et étouffe le signal sans qu'il n'y ait de panne électrique.
+                    </div>
+                    <div class="rule-card" style="border-color:var(--neon-blue);">
+                        <div class="rule-card-title">Astuce #2 : Test de Synchro</div>
+                        Un défaut de décalage de distribution (courroie détendue d'une dent) se détecte par la perte de corrélation temporelle entre le capteur AAC (arbre à cames) et le PMH.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentation / Technical Description Box -->
+            <div class="tech-data">
+                <h4 style="margin: 0 0 10px 0; color: var(--neon-cyan);">Analyse Documentaire & Astuces :</h4>
+                <div id="techDescription">
+                    Le capteur inductif génère sa propre tension alternative. Sa résistance interne caractéristique se situe généralement entre 300 Ω et 900 Ω.
+                </div>
+                <div class="alert-box" id="diagnosticAlert">
+                    Statut : Système nominal. Synchronisation vilebrequin OK.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Module configurations & globals
+        let selectedTech = 'inductive';
+        let currentEngineState = 'idle'; // 'off', 'crank', 'idle', 'snap'
+        let selectedFault = 'none'; // 'none', 'gap', 'tooth'
+        
+        let wires = {
+            sig: true,  // Signal (+)
+            gnd: true,  // Signal (-) or ground
+            vcc: true   // Supply (For hall only)
+        };
+
+        let selectedRedPin = 1;
+        let selectedBlackPin = 2;
+
+        let activeTab = 'std';
+        let dualTraceActive = false;
+
+        const canvas = document.getElementById('scopeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Animation markers
+        let isAnimating = false;
+        let animProgress = 0;
+        let scopeInterval = null;
+        let timeScale = 50; 
+
+        // Electrical metrics DB
+        const db_inductive = {
+            off:   { 1: 0.00, 2: 0.00 },
+            crank: { 1: 1.85, 2: 0.02 },
+            idle:  { 1: 4.45, 2: 0.02 },
+            snap:  { 1: 12.20, 2: 0.02 }
+        };
+
+        const db_hall = {
+            off:   { 1: 12.00, 2: 4.80, 3: 0.01 },
+            crank: { 1: 12.00, 2: 2.42, 3: 0.01 },
+            idle:  { 1: 12.00, 2: 2.45, 3: 0.01 },
+            snap:  { 1: 12.00, 2: 2.45, 3: 0.01 }
+        };
+
+        // Switch Tabs (Standard, Deep Diag, Rules)
+        function switchTab(tabId) {
+            activeTab = tabId;
+            document.getElementById('tab-std').classList.toggle('active', tabId === 'std');
+            document.getElementById('tab-deep').classList.toggle('active', tabId === 'deep');
+            document.getElementById('tab-rules').classList.toggle('active', tabId === 'rules');
+
+            document.getElementById('panel-std').style.display = (tabId === 'std') ? 'grid' : 'none';
+            document.getElementById('panel-deep').classList.toggle('active', tabId === 'deep');
+            document.getElementById('panel-rules').style.display = (tabId === 'rules') ? 'block' : 'none';
+        }
+
+        // Switch architecture
+        function switchTech(tech) {
+            selectedTech = tech;
+            document.getElementById('type-inductive').classList.toggle('active', tech === 'inductive');
+            document.getElementById('type-hall').classList.toggle('active', tech === 'hall');
+            
+            selectedRedPin = 1;
+            selectedBlackPin = (tech === 'inductive') ? 2 : 3;
+
+            // Adjust interactive wiring diagram
+            if (tech === 'inductive') {
+                document.getElementById('wire-vcc').style.display = 'none';
+                document.getElementById('wire-vcc-text').style.display = 'none';
+                document.getElementById('diag-pin3-marker').style.display = 'none';
+                document.getElementById('wire-gnd-text').textContent = 'Signal (-)';
+            } else {
+                document.getElementById('wire-vcc').style.display = 'block';
+                document.getElementById('wire-vcc-text').style.display = 'block';
+                document.getElementById('diag-pin3-marker').style.display = 'block';
+                document.getElementById('wire-gnd-text').textContent = 'Masse (GND)';
+            }
+
+            renderPins();
+            updateDMM();
+            drawScope();
+            // Reset resistance report
+            document.getElementById('deep-diag-results').innerHTML = '[Sélectionner un protocole ci-dessus pour lancer le diagnostic approfondi]';
+        }
+
+        // Toggle wiring harness continuity
+        function toggleWireState(wireId) {
+            wires[wireId] = !wires[wireId];
+            const wirePath = document.getElementById(`wire-${wireId}`);
+            if (wires[wireId]) {
+                wirePath.style.stroke = (wireId === 'sig') ? '#00ffcc' : ((wireId === 'gnd') ? '#00ccff' : '#ffaa00');
+                wirePath.classList.add('wire-active');
+            } else {
+                wirePath.style.stroke = '#ff3333';
+                wirePath.classList.remove('wire-active');
+            }
+            updateDMM();
+            drawScope();
+        }
+
+        // Change engine speed state
+        function changeEngineState(state) {
+            currentEngineState = state;
+            document.getElementById('state-off').classList.toggle('active', state === 'off');
+            document.getElementById('state-crank').classList.toggle('active', state === 'crank');
+            document.getElementById('state-idle').classList.toggle('active', state === 'idle');
+
+            const statusText = document.getElementById('moteur-status');
+            if (state === 'off') {
+                statusText.innerText = "STATUT: ARRÊT (0 RPM)";
+                statusText.style.color = "var(--neon-red)";
+            } else if (state === 'crank') {
+                statusText.innerText = "STATUT: PHASES DÉMARREUR (~250 RPM)";
+                statusText.style.color = "var(--neon-amber)";
+            } else if (state === 'idle') {
+                statusText.innerText = "STATUT: RALENTI (800 RPM)";
+                statusText.style.color = "var(--neon-cyan)";
+            }
+
+            updateDMM();
+            drawScope();
+        }
+
+        // Snap acceleration trigger
+        function triggerSnap() {
+            if (isAnimating) return;
+            isAnimating = true;
+            animProgress = 0;
+            changeEngineState('snap');
+
+            document.getElementById('moteur-status').innerText = "STATUT: SNAP ACCÉLÉRATION (5500 RPM)";
+            document.getElementById('moteur-status').style.color = "var(--neon-blue)";
+
+            if (scopeInterval) clearInterval(scopeInterval);
+            const startTime = Date.now();
+            const duration = 2000;
+
+            scopeInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                animProgress = (elapsed / duration) * canvas.width;
+
+                let representedTime = (animProgress / canvas.width) * (timeScale * 10);
+                let db = selectedTech === 'inductive' ? db_inductive : db_hall;
+
+                if (!wires.sig || (selectedTech === 'hall' && !wires.vcc)) {
+                    document.getElementById('dmmValue').innerText = "0.00";
+                } else if (representedTime < 300) {
+                    document.getElementById('dmmValue').innerText = db['off'][selectedRedPin].toFixed(2);
+                } else if (representedTime >= 300 && representedTime < 1400) {
+                    let maxVal = db['snap'][selectedRedPin];
+                    let noise = (Math.random() - 0.5) * 0.15;
+                    document.getElementById('dmmValue').innerText = (maxVal + noise).toFixed(2);
+                } else {
+                    document.getElementById('dmmValue').innerText = db['idle'][selectedRedPin].toFixed(2);
+                }
+
+                drawScope();
+
+                if (elapsed >= duration) {
+                    clearInterval(scopeInterval);
+                    isAnimating = false;
+                    changeEngineState('idle');
+                }
+            }, 30);
+        }
+
+        // Connection pins rendering
+        function renderPins() {
+            const container = document.getElementById('pins-container');
+            container.innerHTML = '';
+
+            const pins = selectedTech === 'inductive' ? 
+                [{ id: 1, name: 'Signal (+)' }, { id: 2, name: 'Signal (-)' }] :
+                [{ id: 1, name: 'Alim (+12V)' }, { id: 2, name: 'Signal (Carré)' }, { id: 3, name: 'Masse (GND)' }];
+
+            pins.forEach(p => {
+                const badge = document.createElement('div');
+                badge.className = 'pin-badge';
+                if (p.id === selectedRedPin) badge.classList.add('selected-red');
+                if (p.id === selectedBlackPin) badge.classList.add('selected-black');
+
+                badge.onclick = (e) => {
+                    if (e.shiftKey || p.id === selectedBlackPin) {
+                        selectedBlackPin = p.id;
+                    } else {
+                        selectedRedPin = p.id;
+                    }
+                    renderPins();
+                    updateDMM();
+                    drawScope();
+                };
+
+                badge.innerHTML = `
+                    <span class="pin-num">${p.id}</span>
+                    <span class="pin-name">${p.name}</span>
+                `;
+                container.appendChild(badge);
+            });
+        }
+
+        // Fault handling
+        function injectFault(fault) {
+            selectedFault = fault;
+            document.getElementById('fault-none').classList.toggle('active', fault === 'none');
+            document.getElementById('fault-gap').classList.toggle('active', fault === 'gap');
+            document.getElementById('fault-tooth').classList.toggle('active', fault === 'tooth');
+
+            updateDMM();
+            drawScope();
+        }
+
+        // Update Multimeter values
+        function updateDMM() {
+            const modeText = document.getElementById('dmmMode');
+            const unitText = document.getElementById('dmmUnit');
+            const valueText = document.getElementById('dmmValue');
+
+            if (selectedTech === 'inductive') {
+                modeText.innerText = "AC Volts";
+                unitText.innerText = "V";
+            } else {
+                modeText.innerText = "DC Volts";
+                unitText.innerText = "V";
+            }
+
+            // If critical wires are cut
+            if (!wires.sig || (selectedTech === 'hall' && !wires.vcc)) {
+                valueText.innerText = "0.00";
+                return;
+            }
+
+            let db = selectedTech === 'inductive' ? db_inductive : db_hall;
+            let currentVal = db[currentEngineState]?.[selectedRedPin] || 0;
+
+            if (currentEngineState !== 'off' && currentVal > 0) {
+                currentVal += (Math.random() - 0.5) * 0.05;
+            }
+
+            valueText.innerText = currentVal.toFixed(2);
+
+            // Diagnostics alert / documentation handler
+            const desc = document.getElementById('techDescription');
+            const alertBox = document.getElementById('diagnosticAlert');
+
+            if (selectedTech === 'inductive') {
+                desc.innerHTML = `<strong>Capteur Inductif (Passif):</strong> Ce capteur génère sa propre tension alternative lors du passage des dents métalliques. La résistance de son enroulement se situe généralement entre <strong>300 Ω et 900 Ω</strong>. Mesure à effectuer en mode alternatif (AC).`;
+            } else {
+                desc.innerHTML = `<strong>Capteur Effet Hall (Actif):</strong> Nécessite une alimentation (+12V ou +5V) fournie par le calculateur et une masse. Le signal de sortie est un signal carré qui commute entre 0V et la tension d'alimentation.`;
+            }
+
+            // Complex system diagnostics combining harness states & target defects
+            if (!wires.sig) {
+                alertBox.className = "alert-box danger";
+                alertBox.innerHTML = "❌ <strong>Défaut - Signal Coupé (Circuit Ouvert) :</strong> Le fil de signal (+) présente une coupure franche sur le schéma de câblage. Aucune tension ne parvient à l'ECU.";
+            } else if (selectedTech === 'hall' && !wires.vcc) {
+                alertBox.className = "alert-box danger";
+                alertBox.innerHTML = "❌ <strong>Défaut - Alimentation manquante :</strong> Le fil de d'alimentation (+12V) est coupé. Le capteur à effet Hall est éteint et incapable de commuter.";
+            } else if (selectedFault === 'gap') {
+                alertBox.className = "alert-box danger";
+                alertBox.innerHTML = "❌ <strong>Défaut - Entrefer trop important :</strong> Le capteur est trop éloigné de la cible. L'amplitude du signal est insuffisante pour l'ECU (Démarrage impossible).";
+            } else if (selectedFault === 'tooth') {
+                alertBox.className = "alert-box warning";
+                alertBox.innerHTML = "⚠️ <strong>Défaut - Cible endommagée :</strong> Dent cassée ou tordue sur la couronne. Distorsion cyclique du signal provoquant des ratés d'injection.";
+            } else {
+                alertBox.className = "alert-box";
+                alertBox.innerHTML = "✔ <strong>Statut nominal :</strong> Synchronisation vilebrequin acquise. Le signal est conforme aux tolérances constructeur.";
+            }
+        }
+
+        // Deep Diagnostic procedures execution
+        function runResistanceTest() {
+            const reportDiv = document.getElementById('deep-diag-results');
+            if (currentEngineState !== 'off') {
+                reportDiv.innerHTML = `<span style="color:var(--neon-red);">⚠️ ERREUR : La mesure de résistance doit se faire impérativement MOTEUR ARRÊTÉ pour ne pas fausser le multimètre !</span>`;
+                return;
+            }
+
+            reportDiv.innerHTML = `⏳ Mesure de la résistance interne en cours...`;
+
+            setTimeout(() => {
+                if (!wires.sig || !wires.gnd) {
+                    reportDiv.innerHTML = `<span style="color:var(--neon-red);">❌ RÉSISTANCE : R = OL (Overload / Circuit Ouvert)</span><br>Le faisceau présente une rupture d'isolement ou le bobinage interne du capteur est grillé.`;
+                } else if (selectedTech === 'inductive') {
+                    let rValue = selectedFault === 'gap' ? 620 : 620; // Resistance doesn't change on air gap
+                    reportDiv.innerHTML = `<span style="color:var(--neon-cyan);">✔ COHÉRENCE : R = ${rValue} Ω (Dans la tolérance 300 - 900 Ω)</span><br>La bobine du capteur inductif est saine. Aucun court-circuit interne détecté.`;
+                } else {
+                    reportDiv.innerHTML = `<span style="color:var(--neon-amber);">⚠️ INFO : Résistance infinie mesurée (Jonctions semi-conducteurs actives)</span><br>Un capteur à effet Hall ne se teste pas en résistance mais en tension d'alimentation / signal carré !`;
+                }
+            }, 800);
+        }
+
+        // Toggle cam/crank dual trace sync scope display
+        function toggleDualTrace() {
+            dualTraceActive = !dualTraceActive;
+            const btn = document.getElementById('btn-sync-view');
+            const reportDiv = document.getElementById('deep-diag-results');
+
+            if (dualTraceActive) {
+                btn.classList.add('active');
+                btn.innerText = "Désactiver Synchro PMH / AAC";
+                reportDiv.innerHTML = `<span style="color:var(--neon-cyan);">✔ ANALYSE TEMPORELLE ACTIVE :</span><br>Oscilloscope double-trace. Canal CH1 (Cyan) : Capteur PMH (Crankshaft) | Canal CH2 (Jaune) : Capteur AAC (Camshaft). Permet de vérifier la corrélation physique de la distribution.`;
+            } else {
+                btn.classList.remove('active');
+                btn.innerText = "Activer Synchro PMH / AAC";
+                reportDiv.innerHTML = `Mode Double-trace désactivé.`;
+            }
+            drawScope();
+        }
+
+        // Dual-trace & Single trace complex Scope drawing
+        function drawScope() {
+            ctx.fillStyle = '#050a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Dynamic Grid Lines
+            ctx.strokeStyle = '#112222';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+            for (let j = 0; j < canvas.height; j += 40) {
+                ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(canvas.width, j); ctx.stroke();
+            }
+
+            // Central zero line
+            ctx.strokeStyle = '#1e2929';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+
+            // Set main trace style
+            ctx.strokeStyle = '#00ffcc';
+            ctx.shadowColor = 'rgba(0, 255, 204, 0.4)';
+            ctx.shadowBlur = 4;
+            ctx.lineWidth = 2;
+
+            // DRAW PMH SIGNAL (CH1)
+            ctx.beginPath();
+            let activeLineDrawn = false;
+
+            for (let x = 0; x < canvas.width; x++) {
+                let y = dualTraceActive ? (canvas.height * 0.35) : (canvas.height / 2);
+
+                // Wavephase calculation
+                let waveRad = x * 0.15;
+                let targetToothCycle = x % 160;
+                let isGap = targetToothCycle < 20; // Index tooth gap
+
+                if (currentEngineState !== 'off' && wires.sig) {
+                    if (selectedTech === 'inductive') {
+                        if (selectedRedPin === 1) {
+                            let amp = currentEngineState === 'idle' ? 30 : 12;
+                            if (currentEngineState === 'snap') {
+                                amp = x < animProgress ? 45 : 30;
+                            }
+
+                            if (selectedFault === 'gap') amp *= 0.15; // Wide airgap drops amplitude
+
+                            if (isGap) {
+                                if (selectedFault === 'tooth') {
+                                    y += Math.sin(waveRad * 0.4) * (amp * 0.3) + (Math.random() - 0.5) * 4;
+                                } else {
+                                    y += Math.sin(waveRad * 0.2) * (amp * 0.15);
+                                }
+                            } else {
+                                y += Math.sin(waveRad) * amp;
+                            }
+                            activeLineDrawn = true;
+                        } 
+                        else if (selectedRedPin === 2) {
+                            // Inverted phase reference trace
+                            let amp = currentEngineState === 'idle' ? 30 : 12;
+                            if (currentEngineState === 'snap') amp = x < animProgress ? 45 : 30;
+                            if (selectedFault === 'gap') amp *= 0.15;
+
+                            if (isGap) {
+                                y -= Math.sin(waveRad * 0.2) * (amp * 0.15);
+                            } else {
+                                y -= Math.sin(waveRad) * amp;
+                            }
+                            activeLineDrawn = true;
+                        }
+                    } else {
+                        // EFFET HALL SIGNAL
+                        if (selectedRedPin === 2 && wires.vcc) {
+                            let highVal = dualTraceActive ? (canvas.height * 0.20) : (canvas.height / 2 - 40);
+                            let lowVal = dualTraceActive ? (canvas.height * 0.50) : (canvas.height / 2 + 40);
+
+                            if (selectedFault === 'gap') {
+                                y = highVal;
+                            } else {
+                                let squareTrigger = Math.sin(waveRad) > 0;
+                                if (isGap) {
+                                    squareTrigger = false;
+                                    if (selectedFault === 'tooth') {
+                                        squareTrigger = Math.random() > 0.45;
+                                    }
+                                }
+                                y = squareTrigger ? highVal : lowVal;
+                            }
+                            activeLineDrawn = true;
+                        }
+                        else if (selectedRedPin === 1 && wires.vcc) {
+                            y = dualTraceActive ? (canvas.height * 0.15) : (canvas.height / 2 - 50); // flat alim trace
+                            activeLineDrawn = true;
+                        }
+                        else if (selectedRedPin === 3) {
+                            y = dualTraceActive ? (canvas.height * 0.55) : (canvas.height / 2 + 55); // flat ground trace
+                            activeLineDrawn = true;
+                        }
+                    }
+                }
+
+                if (!activeLineDrawn) {
+                    y = dualTraceActive ? (canvas.height * 0.35) : (canvas.height / 2);
+                }
+
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // DRAW SECOND TRACE (CH2 - Capteur AAC) IF DEEP DIAG SYNC ENABLED
+            if (dualTraceActive) {
+                ctx.strokeStyle = '#ffaa00';
+                ctx.shadowColor = 'rgba(255, 170, 0, 0.4)';
+                ctx.beginPath();
+
+                for (let x = 0; x < canvas.width; x++) {
+                    let y2 = canvas.height * 0.75; // Lower trace base
+                    let waveRadAAC = x * 0.03; // AAC frequency is 2x slower than PMH
+
+                    if (currentEngineState !== 'off') {
+                        let highVal = canvas.height * 0.65;
+                        let lowVal = canvas.height * 0.85;
+
+                        // Clean digital hall trace for Camshaft with a 50% duty cycle
+                        let squareTrigger = Math.sin(waveRadAAC) > 0;
+                        y2 = squareTrigger ? highVal : lowVal;
+                    }
+
+                    if (x === 0) ctx.moveTo(x, y2);
+                    else ctx.lineTo(x, y2);
+                }
+                ctx.stroke();
+            }
+
+            // Draw sweep vertical bar during active animation
+            if (isAnimating) {
+                ctx.strokeStyle = '#ff3333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(animProgress, 0);
+                ctx.lineTo(animProgress, canvas.height);
+                ctx.stroke();
+            }
+        }
+
+        // Initialize display configuration on window load
+        window.onload = function() {
+            canvas.width = canvas.offsetWidth || 500;
+            canvas.height = canvas.offsetHeight || 260;
+            
+            switchTech('inductive');
+            changeEngineState('idle');
+        };
+    </script>
+</body>
+</html>
